@@ -1622,7 +1622,7 @@ function renderRecipe(){
   const gn=names(gs.map(g=>g.name));
   let t;
   if(!mood&&!gs.length) t='No mood or genre picked: Generate chooses from every mood at random.';
-  else if(!gs.length) t=`<b>${mood.name}</b>: ${mood.blurb.toLowerCase().replace(/\.$/,'')}. Chords are coloured as far as your vocabulary allows.`;
+  else if(!gs.length) t=`<b>${mood.name}</b>: ${mood.blurb.toLowerCase().replace(/\.$/,'')}. Chords are coloured as far as Chords allowed lets them.`;
   else {
     const style=gs.map(g=>g.blurb).join('; ');
     if(!mood) t=`<b>${gn}</b>: ${style}.`;
@@ -1633,7 +1633,7 @@ function renderRecipe(){
   const want=[...new Set(gs.flatMap(g=>g.wants))].filter(f=>!famOn(f)), fn=f=>FAMS.find(x=>x.id===f).name;
   let need='';
   if(gs.length&&S.genreVocab) need=`<div class="need"><span>The ${gs.length>1?'genres choose':'genre chooses'} the chords: ${esc(names(['triads',...genreFamilies().map(fn)]))}.</span></div>`;
-  else if(want.length) need=`<div class="need"><span>${gs.length>1?'These genres sound':'This genre sounds'} best with ${names(want.map(fn))}, which ${want.length>1?'are':'is'} off in your vocabulary, so ${want.length>1?'they':'it'} won’t be used.</span><button type="button" class="btn small" data-addfams="${want.join(',')}">Turn on ${names(want.map(fn))}</button></div>`;
+  else if(want.length) need=`<div class="need"><span>${gs.length>1?'These genres sound':'This genre sounds'} best with ${names(want.map(fn))}, which ${want.length>1?'are':'is'} not in Chords allowed, so ${want.length>1?'they':'it'} won’t be used.</span><button type="button" class="btn small" data-addfams="${want.join(',')}">Turn on ${names(want.map(fn))}</button></div>`;
   $('#recipe').innerHTML=`<div>${t}</div>${need}`;
   renderGenreChords(gs);
 }
@@ -1741,9 +1741,9 @@ function renderDetail(){
   {
     const br=real(c)?c.root:S.tonic, bq=real(c)?c.q:'', bb=real(c)?c.bass:null;
     const rootOpts=Array.from({length:12},(_,i)=>mod(S.tonic+i)).map(pc=>`<option value="${pc}" ${pc===br?'selected':''}>${esc(prettyNote(spell(pc)))}</option>`).join('');
-    const qOpts=FAMS.filter(f=>f.qs.length).map(f=>`<optgroup label="${f.name}${famOn(f.id)?'':' (off in vocabulary)'}">${f.qs.map(q=>`<option value="${esc(q)}" ${q===bq?'selected':''}>${esc(prettySfx(Q[q].d)||'major')}</option>`).join('')}</optgroup>`).join('');
+    const qOpts=FAMS.filter(f=>f.qs.length).map(f=>`<optgroup label="${f.name}${famOn(f.id)?'':' (not in Chords allowed)'}">${f.qs.map(q=>`<option value="${esc(q)}" ${q===bq?'selected':''}>${esc(prettySfx(Q[q].d)||'major')}</option>`).join('')}</optgroup>`).join('');
     const bassOpts='<option value="">root</option>'+Array.from({length:12},(_,i)=>mod(S.tonic+i)).map(pc=>`<option value="${pc}" ${pc===bb?'selected':''}>/${esc(prettyNote(spell(pc)))}</option>`).join('');
-    h+=`<div class="sub-h adv"><h3>Build any chord</h3><span class="hint">Every chord type, whatever the vocabulary</span></div>
+    h+=`<div class="sub-h adv"><h3>Build any chord</h3><span class="hint">Every chord type, whatever Chords allowed says</span></div>
       <div class="builder"><div class="field"><label class="label" for="bRoot">Root</label><select id="bRoot">${rootOpts}</select></div>
       <div class="field"><label class="label" for="bQual">Type</label><select id="bQual">${qOpts}</select></div>
       <div class="field"><label class="label" for="bBass">Bass</label><select id="bBass">${bassOpts}</select></div>
@@ -2067,7 +2067,7 @@ function openPicker(id){
     <div class="cp-row" role="group" aria-label="Chords in ${esc(keyName())}">${tri.map(chip).join('')}</div>
     ${ext.length?`<div class="cp-row" role="group" aria-label="With sevenths and colour">${ext.map(chip).join('')}</div>`:''}
     <div class="cp-build"><select id="cpRoot" aria-label="Root">${notes.map(pc=>`<option value="${pc}" ${pc===r?'selected':''}>${esc(prettyNote(spell(pc)))}</option>`).join('')}</select>
-      <select id="cpQual" aria-label="Chord type">${FAMS.map(f=>`<optgroup label="${f.name}${famOn(f.id)?'':' (off in vocabulary)'}">${(f.id==='triad'?['','m','dim','aug']:f.qs).map(x=>`<option value="${esc(x)}" ${x===q?'selected':''}>${esc(prettySfx(Q[x].d)||'major')}</option>`).join('')}</optgroup>`).filter(g=>!g.includes('<optgroup label="Slash')).join('')}</select>
+      <select id="cpQual" aria-label="Chord type">${FAMS.map(f=>`<optgroup label="${f.name}${famOn(f.id)?'':' (not in Chords allowed)'}">${(f.id==='triad'?['','m','dim','aug']:f.qs).map(x=>`<option value="${esc(x)}" ${x===q?'selected':''}>${esc(prettySfx(Q[x].d)||'major')}</option>`).join('')}</optgroup>`).filter(g=>!g.includes('<optgroup label="Slash')).join('')}</select>
       <select id="cpBass" aria-label="Bass note"><option value="">root bass</option>${notes.map(pc=>`<option value="${pc}" ${pc===bb?'selected':''}>/${esc(prettyNote(spell(pc)))}</option>`).join('')}</select></div>
     <div class="cp-act"><button type="button" class="btn small" data-cphear>▶ Hear</button><button type="button" class="btn small" data-cpblank>Make blank</button><button type="button" class="btn small primary" data-cpapply>Apply</button></div>`;
   el.hidden=false; placePicker(); (el.querySelector('.chip[aria-pressed="true"]')||el.querySelector('.chip,select'))?.focus();
