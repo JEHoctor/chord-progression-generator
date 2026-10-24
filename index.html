@@ -313,6 +313,11 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .copybox textarea{width:100%;font-family:var(--f-mono);font-size:12.5px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
 .copybox button{align-self:flex-end}
 #printSheet{display:none}
+.soundbox h3{font-size:16px;font-weight:600;margin:0}
+.soundbox .sb-btns{display:flex;flex-wrap:wrap;gap:6px}
+.soundbox dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;margin:0;font-size:13px}
+.soundbox dt{color:var(--muted)} .soundbox dd{margin:0;font-family:var(--f-mono);font-size:12px;overflow-wrap:anywhere}
+.soundbox ol{margin:0;padding-left:18px;font-size:13.5px;display:flex;flex-direction:column;gap:4px}
 .slot .cpk{display:inline-block;margin-left:5px;font-size:12px;color:var(--muted);padding:2px 4px;border-radius:5px;cursor:pointer;vertical-align:2px;font-weight:600}
 .slot .cpk:hover{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
 .addtile{grid-row:1;margin:18px 3px 12px;border:1.5px dashed var(--line);border-radius:10px;background:transparent;color:var(--muted);font-weight:600;font-size:14px;min-width:0}
@@ -467,6 +472,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
       <span class="io-pair"><button class="btn small" id="midiExport" type="button">Export MIDI</button><select id="midiTracks" aria-label="MIDI export tracks"><option value="chords">Chords only</option><option value="bass">Chords + bass line</option></select></span>
       <button class="btn small" id="shareLink" type="button">Share link</button>
       <button class="btn small" id="printBtn" type="button">Print</button>
+      <button class="btn small" id="soundCheck" type="button" title="Test what your device can play">Sound check</button>
       <span class="io-pair" id="midiOutWrap" hidden><label class="label" for="midiOut">MIDI out</label><select id="midiOut"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select></span>
     </div>
     <div class="prog-input">
@@ -510,6 +516,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
 <div class="copybox" id="copybox" role="dialog" aria-label="Copy this text" hidden><p>Copying isn’t allowed here. The text is selected: press ⌘C or Ctrl+C.</p><textarea readonly rows="3" aria-label="Text to copy"></textarea><button class="btn small" type="button" id="copyboxDone">Done</button></div>
 <div id="printSheet" class="ps" aria-hidden="true"></div>
 <div class="cpick" id="cpick" role="dialog" aria-label="Pick a chord" hidden></div>
+<div class="copybox soundbox" id="soundbox" role="dialog" aria-label="Sound check" hidden></div>
 
 <script>
 /* ============ theory core ============ */
@@ -1304,14 +1311,18 @@ let actx=null, master=null, session=null, timers=[], playing=false;
    can be "interrupted", not just suspended). */
 const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
 let silentEl=null;
-function silentWav(){ const n=800, b=new Uint8Array(44+n), v=new DataView(b.buffer), w=(o,t)=>{ for(let i=0;i<t.length;i++) b[o+i]=t.charCodeAt(i); };
-  w(0,'RIFF'); v.setUint32(4,36+n,true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
-  v.setUint32(24,8000,true); v.setUint32(28,8000,true); v.setUint16(32,1,true); v.setUint16(34,8,true); w(36,'data'); v.setUint32(40,n,true); b.fill(128,44);
-  let t=''; b.forEach(x=>t+=String.fromCharCode(x)); return 'data:audio/wav;base64,'+btoa(t); }
+/* 16-bit PCM WAV at 44.1 kHz, the format every iOS version plays: silence for the unlock clip, or a tone for the sound check */
+function wavURI(seconds,freq=0,vol=0){ const sr=44100, n=Math.round(sr*seconds), b=new Uint8Array(44+n*2), v=new DataView(b.buffer), w=(o,t)=>{ for(let i=0;i<t.length;i++) b[o+i]=t.charCodeAt(i); };
+  w(0,'RIFF'); v.setUint32(4,36+n*2,true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,n*2,true);
+  if(freq) for(let k=0;k<n;k++){ const env=Math.min(1,k/400,(n-k)/2000); v.setInt16(44+k*2,Math.round(Math.sin(2*Math.PI*freq*k/sr)*vol*env*32767),true); }
+  let t=''; for(let k=0;k<b.length;k+=8192) t+=String.fromCharCode.apply(null,b.subarray(k,k+8192)); return 'data:audio/wav;base64,'+btoa(t); }
+/* both routes on iOS: the audio session setting where Safari has it, and always the silent media loop, since support for
+   the first has varied between iOS versions */
 function audioUnlock(){
   try{ if(navigator.audioSession&&navigator.audioSession.type!=='playback') navigator.audioSession.type='playback'; }catch(e){}
-  if(IOS&&!navigator.audioSession){ try{ if(!silentEl){ silentEl=new Audio(silentWav()); silentEl.loop=true; silentEl.setAttribute('playsinline',''); silentEl.volume=.01; }
-    if(silentEl.paused){ const pr=silentEl.play(); if(pr&&pr.catch) pr.catch(()=>{}); } }catch(e){} }
+  if(IOS){ try{ if(!silentEl){ silentEl=new Audio(wavURI(.25)); silentEl.loop=true; silentEl.setAttribute('playsinline',''); silentEl.setAttribute('x-webkit-airplay','deny'); silentEl.preload='auto'; }
+    if(silentEl.paused){ const pr=silentEl.play(); if(pr&&pr.catch) pr.catch(e=>{ silentEl.lastError=String(e&&e.name||e); }); } }catch(e){} }
   if(actx&&actx.state!=='running'){ try{ const pr=actx.resume(); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} }
 }
 ['touchend','click','keydown'].forEach(t=>document.addEventListener(t,()=>{ if(actx&&actx.state!=='running') audioUnlock(); },{capture:true,passive:true}));
@@ -1861,6 +1872,26 @@ function rebar(oldL,newL){
     else { out.push({...c,beats:Math.max(1,Math.round(c.beats*newL/oldL))}); pos+=c.beats; i++; }
   }
   chords=out;
+}
+
+/* ============ sound check ============ */
+/* two test beeps take different paths through the device: the app's Web Audio engine, and plain media playback. Which
+   one is heard narrows a silent device down to the engine, the silent switch, or the volume and output. */
+let beepEl=null;
+function soundState(){ const ua=navigator.userAgent;
+  return [['Device',IOS?'iPhone or iPad':/Android/.test(ua)?'Android':'Computer'],['Browser',(ua.match(/(CriOS|FxiOS|EdgiOS|Version)\/[\d.]+/)||[''])[0].replace('Version','Safari')||ua.slice(0,60)],
+    ['Audio engine',actx?`${actx.state}, ${actx.sampleRate} Hz, ${actx.currentTime.toFixed(1)} s`:'not started yet'],
+    ['Audio session',navigator.audioSession?navigator.audioSession.type:'not available'],
+    ['Silent-switch clip',IOS?(silentEl?(silentEl.paused?`not playing${silentEl.lastError?` (${silentEl.lastError})`:''}`:'playing'):'not started yet'):'not needed']]; }
+function renderSoundBox(){
+  $('#soundbox').innerHTML=`<h3>Sound check</h3><div class="sb-btns"><button type="button" class="btn small primary" data-sb="web">▶ Beep 1: app sound</button><button type="button" class="btn small" data-sb="media">▶ Beep 2: media playback</button></div>
+    <ol><li>Hear both: sound works; try Play again.</li><li>Hear only beep 2: the app's sound engine is blocked. Please tell me what the lines below say.</li><li>Hear neither: check the volume buttons and the output (Bluetooth or headphones), then try again${IOS?'; on iPhone also try with the ring/silent switch on ring':''}.</li></ol>
+    <dl>${soundState().map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl><button type="button" class="btn small" data-sb="close">Done</button>`;
+}
+function soundBeep(kind){
+  if(kind==='web'){ const a=ac(), out=newSession(); tone(69,a.currentTime+.05,.6,.25,out); tone(76,a.currentTime+.35,.6,.2,out); }
+  else{ try{ if(!beepEl){ beepEl=new Audio(wavURI(.7,660,.5)); beepEl.setAttribute('playsinline',''); } beepEl.currentTime=0; const pr=beepEl.play(); if(pr&&pr.catch) pr.catch(e=>{ beepEl.lastError=String(e&&e.name||e); }); }catch(e){} audioUnlock(); }
+  setTimeout(renderSoundBox,400);
 }
 
 /* ============ in-chart chord picker ============ */
@@ -2416,6 +2447,10 @@ function boot(){
   $('#recipe').onclick=e=>{ const b=e.target.closest('[data-addfams]'); if(!b) return; S.vocab=[...new Set([...S.vocab,...b.dataset.addfams.split(',')])]; commit(); toast(`Vocabulary updated: ${vocabName()}`); };
   $('#gen').onclick=generate;
   $('#regen').onclick=regenUnlocked;
+  $('#soundCheck').onclick=()=>{ const b=$('#soundbox'); b.hidden=false; renderSoundBox(); b.querySelector('button')?.focus(); };
+  $('#soundbox').addEventListener('click',e=>{ const t=e.target.closest('[data-sb]'); if(!t) return; if(t.dataset.sb==='close'){ $('#soundbox').hidden=true; return; } soundBeep(t.dataset.sb); });
+  $('#soundbox').addEventListener('keydown',e=>{ if(e.key==='Escape') $('#soundbox').hidden=true; });
+  if(location.hash==='#soundcheck') setTimeout(()=>$('#soundCheck').click(),0);
   const cp=$('#cpick');
   cp.addEventListener('click',e=>{ const t=e.target;
     if(t.closest('[data-cpclose]')){ closePicker(); return; }
