@@ -1297,7 +1297,26 @@ function pianoVoicing(c){
 
 /* ============ audio ============ */
 let actx=null, master=null, session=null, timers=[], playing=false;
-function ac(){ if(!actx){ actx=new (window.AudioContext||window.webkitAudioContext)(); const comp=actx.createDynamicsCompressor(); master=actx.createGain(); master.gain.value=.7; master.connect(comp).connect(actx.destination); } if(actx.state==='suspended') actx.resume(); return actx; }
+/* iPhone and iPad: Safari treats Web Audio as "ambient" sound, so the ring/silent switch mutes it. The page's sound is
+   marked as media playback instead: through the audio session API where Safari has it (iOS 17+), otherwise by keeping
+   a silent media element playing, which moves the page into the playback category. The audio engine is also resumed
+   inside the touch or click that asks for sound, because iOS only allows it there (and after a call or app switch it
+   can be "interrupted", not just suspended). */
+const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
+let silentEl=null;
+function silentWav(){ const n=800, b=new Uint8Array(44+n), v=new DataView(b.buffer), w=(o,t)=>{ for(let i=0;i<t.length;i++) b[o+i]=t.charCodeAt(i); };
+  w(0,'RIFF'); v.setUint32(4,36+n,true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,8000,true); v.setUint32(28,8000,true); v.setUint16(32,1,true); v.setUint16(34,8,true); w(36,'data'); v.setUint32(40,n,true); b.fill(128,44);
+  let t=''; b.forEach(x=>t+=String.fromCharCode(x)); return 'data:audio/wav;base64,'+btoa(t); }
+function audioUnlock(){
+  try{ if(navigator.audioSession&&navigator.audioSession.type!=='playback') navigator.audioSession.type='playback'; }catch(e){}
+  if(IOS&&!navigator.audioSession){ try{ if(!silentEl){ silentEl=new Audio(silentWav()); silentEl.loop=true; silentEl.setAttribute('playsinline',''); silentEl.volume=.01; }
+    if(silentEl.paused){ const pr=silentEl.play(); if(pr&&pr.catch) pr.catch(()=>{}); } }catch(e){} }
+  if(actx&&actx.state!=='running'){ try{ const pr=actx.resume(); if(pr&&pr.catch) pr.catch(()=>{}); }catch(e){} }
+}
+['touchend','click','keydown'].forEach(t=>document.addEventListener(t,()=>{ if(actx&&actx.state!=='running') audioUnlock(); },{capture:true,passive:true}));
+document.addEventListener('visibilitychange',()=>{ if(document.hidden&&silentEl&&!silentEl.paused) silentEl.pause(); });
+function ac(){ audioUnlock(); if(!actx){ actx=new (window.AudioContext||window.webkitAudioContext)(); const comp=actx.createDynamicsCompressor(); master=actx.createGain(); master.gain.value=.7; master.connect(comp).connect(actx.destination); audioUnlock(); } return actx; }
 function newSession(){ const a=ac(); if(session){ try{ session.gain.setTargetAtTime(0,a.currentTime,.03); const s=session; setTimeout(()=>s.disconnect(),300);}catch(e){} } session=a.createGain(); session.connect(master); return session; }
 function tone(m,t,dur,vel,out){
   const a=actx, f=440*Math.pow(2,(m-69)/12);
