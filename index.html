@@ -313,6 +313,26 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .copybox textarea{width:100%;font-family:var(--f-mono);font-size:12.5px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
 .copybox button{align-self:flex-end}
 #printSheet{display:none}
+body{padding-bottom:calc(var(--dock-h,76px) + 24px)}
+html{scroll-padding-bottom:calc(var(--dock-h,76px) + 16px)}
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:40;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
+.dock-in{max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.dock .play-big{height:48px;min-width:132px;justify-content:center;border-radius:999px;font-size:16px;font-weight:700;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:0 6px 18px -8px var(--accent)}
+.dock .play-big:hover{filter:brightness(1.08);background:var(--accent)}
+.dock .now{display:flex;flex-direction:column;line-height:1.15;min-width:64px}
+.dock .now b{font-size:18px;letter-spacing:-.02em}
+.dock-opts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;flex:1 1 auto}
+.tempo-mini{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.tempo-mini .btn{width:30px;padding:0;justify-content:center}
+.export{position:relative;margin-left:auto}
+.export-btn{height:44px;padding:0 18px;font-size:15px;border-radius:999px}
+.menu{position:absolute;right:0;bottom:calc(100% + 10px);width:min(360px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px -18px rgb(0 0 0 / .45);padding:6px;display:flex;flex-direction:column}
+.menu button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:0;background:none;border-radius:10px;padding:9px 12px;cursor:pointer;color:var(--ink)}
+.menu button:hover,.menu button:focus-visible{background:var(--sunk)}
+.menu button b{font-weight:600;font-size:14px}
+.menu button small{font-size:12px;color:var(--muted)}
+.toast{bottom:calc(var(--dock-h,76px) + 14px)!important}
+@media (max-width:640px){ .dock-opts{order:3;flex:1 1 100%} .dock .play-big{min-width:110px} .dock .now{flex:1 1 auto} }
 .soundbox h3{font-size:16px;font-weight:600;margin:0}
 .soundbox .sb-btns{display:flex;flex-wrap:wrap;gap:6px}
 .soundbox dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 12px;margin:0;font-size:13px}
@@ -458,20 +478,13 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
       <div><h2>Chart</h2><div class="keytag" id="keytag"></div></div>
       <div class="transport">
         <span class="xpose" role="group" aria-label="Transpose"><span class="label">Transpose</span><button class="btn small" id="tdown" type="button" aria-label="Down a half step">−½</button><button class="btn small" id="tup" type="button" aria-label="Up a half step">+½</button><select id="tto" aria-label="Transpose to key"></select></span>
-        <button class="btn primary" id="play" type="button">▶ Play</button>
-        <label class="check"><input type="checkbox" id="loop" checked> Loop</label>
         <label class="check"><input type="checkbox" id="click"> Click</label>
-        <select id="instrument" class="btn" aria-label="Playback sound"><option value="piano">Piano sound</option><option value="guitar">Guitar sound</option></select>
         <select id="voicing" class="btn" aria-label="Playback voicing"><option value="smooth">Smooth voice leading</option><option value="fixed">Fixed root position</option></select>
         <button class="btn" id="undo" type="button">Undo</button>
         <button class="btn" id="recolor" type="button" title="Rewrite every chord at the chosen vocabulary">Apply vocabulary</button>
       </div>
     </div>
-    <div class="io-row" role="group" aria-label="Export and share">
-      <button class="btn small" id="copy" type="button">Copy chart</button>
-      <span class="io-pair"><button class="btn small" id="midiExport" type="button">Export MIDI</button><select id="midiTracks" aria-label="MIDI export tracks"><option value="chords">Chords only</option><option value="bass">Chords + bass line</option></select></span>
-      <button class="btn small" id="shareLink" type="button">Share link</button>
-      <button class="btn small" id="printBtn" type="button">Print</button>
+    <div class="io-row" role="group" aria-label="Playback extras">
       <button class="btn small" id="soundCheck" type="button" title="Test what your device can play">Sound check</button>
       <span class="io-pair" id="midiOutWrap" hidden><label class="label" for="midiOut">MIDI out</label><select id="midiOut"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select></span>
     </div>
@@ -511,6 +524,28 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
       <div class="sub-h"><h3 id="dia7Title">Sevenths</h3></div><div class="dia-row" id="dia7"></div></div>
     <div class="panel"><div class="sub-h"><h3>Modes on this tonic</h3><span class="hint">Fit = chords of your chart that belong</span></div><div class="modes" id="modes"></div></div>
   </section>
+</div>
+<div class="dock" id="dock" role="region" aria-label="Play and export">
+  <div class="dock-in">
+    <button class="btn play-big" id="play" type="button">▶ Play</button>
+    <div class="now" aria-live="polite"><span class="label">Now</span><b id="nowChord">–</b></div>
+    <div class="dock-opts">
+      <label class="check"><input type="checkbox" id="loop" checked> Loop</label>
+      <span class="tempo-mini" role="group" aria-label="Tempo"><button type="button" class="btn small" id="tempoDown" aria-label="Slower">−</button><span id="tempoShow">88</span><span class="hint">bpm</span><button type="button" class="btn small" id="tempoUp" aria-label="Faster">+</button></span>
+      <select id="instrument" class="btn" aria-label="Playback sound"><option value="piano">Piano sound</option><option value="guitar">Guitar sound</option></select>
+    </div>
+    <div class="export">
+      <button class="btn primary export-btn" id="exportBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="exportMenu">Export ▾</button>
+      <div class="menu" id="exportMenu" role="menu" hidden>
+        <button type="button" role="menuitem" id="copy"><b>Copy chart as text</b><small>Paste it into notes, a message or a chord site</small></button>
+        <button type="button" role="menuitem" id="midiExport"><b>Download MIDI: chords</b><small>For GarageBand, Logic, Ableton and other music apps</small></button>
+        <button type="button" role="menuitem" id="midiExportBass"><b>Download MIDI: chords + bass line</b><small>Bass on its own track</small></button>
+        <button type="button" role="menuitem" id="xmlExport"><b>Download notation (MusicXML)</b><small>Opens in Finale, Sibelius, MuseScore and Dorico</small></button>
+        <button type="button" role="menuitem" id="shareLink"><b>Copy share link</b><small>Anyone with the link sees this chart</small></button>
+        <button type="button" role="menuitem" id="printBtn"><b>Print lead sheet</b><small>Or save it as a PDF</small></button>
+      </div>
+    </div>
+  </div>
 </div>
 <div class="toast" id="toast" hidden></div>
 <div class="copybox" id="copybox" role="dialog" aria-label="Copy this text" hidden><p>Copying isn’t allowed here. The text is selected: press ⌘C or Ctrl+C.</p><textarea readonly rows="3" aria-label="Text to copy"></textarea><button class="btn small" type="button" id="copyboxDone">Done</button></div>
@@ -1412,7 +1447,7 @@ function playChart(){
   if(S.drone) droneTones(t,chords.reduce((s,c)=>s+c.beats,0)*unit,out);
   chords.forEach(c=>{
     const dur=c.beats*unit, v=real(c)?playedVoicing(c):null; strum(c,t,dur,out,v);
-    timers.push(setTimeout(()=>{ midiChord(v); document.querySelectorAll('.slot.playing').forEach(e=>e.classList.remove('playing')); document.querySelectorAll(`.slot[data-id="${c.id}"]`).forEach(e=>e.classList.add('playing')); },(t-a.currentTime)*1000));
+    timers.push(setTimeout(()=>{ midiChord(v); $('#nowChord').textContent=real(c)?chordName(c):'rest'; document.querySelectorAll('.slot.playing').forEach(e=>e.classList.remove('playing')); document.querySelectorAll(`.slot[data-id="${c.id}"]`).forEach(e=>e.classList.add('playing')); },(t-a.currentTime)*1000));
     if(S.click) for(let b=0;b<c.beats;b++){ const bb=(beat+b)%L; blip(t+b*unit,bb===0?2:acc.has(bb)?1:0,out); }
     beat+=c.beats; t+=dur;
   });
@@ -1487,6 +1522,7 @@ function renderControls(){
   document.querySelectorAll('#moods .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===S.mood));
   document.querySelectorAll('#genres .chip').forEach(b=>b.setAttribute('aria-pressed',S.genres.includes(b.dataset.g)));
   renderRecipe(); renderPhase3Controls();
+  $('#tempoShow').textContent=S.tempo; if(!playing){ const sc=chords.find(x=>x.id===sel); $('#nowChord').textContent=sc&&real(sc)?chordName(sc):'–'; }
   $('#voicing').disabled=S.instrument==='guitar'; $('#voicing').title=S.instrument==='guitar'?'Guitar sound follows the smoothest guitar path and any shapes you pin':'';
   $('#surprise').value=S.surprise??30; const sv=S.surprise??30;
   $('#surpriseOut').textContent=sv<15?'Stays inside the key and the genre’s own moves.':sv<40?'Now and then a secondary dominant or borrowed chord.':sv<65?'Regular outside chords, including tritone subs.':'Frequent chromatic turns, including chromatic mediants.';
@@ -2376,7 +2412,18 @@ function initIO(){
   ps.textContent=`@media print{@page{margin:16mm} html,body{background:#fff!important;color:#000!important;padding:0!important} body>*:not(#printSheet){display:none!important} #printSheet{display:block!important} ${PRINT_CSS}}`;
   document.head.appendChild(ps);
   window.addEventListener('beforeprint',()=>{ $('#printSheet').innerHTML=leadSheetHTML(); });
-  $('#midiExport').onclick=()=>{ const withBass=$('#midiTracks').value==='bass'; saveFile(fileBase()+'.mid',buildMidi(withBass)); };
+  $('#midiExport').onclick=()=>{ closeExport(); saveFile(fileBase()+'.mid',buildMidi(false)); };
+  $('#midiExportBass').onclick=()=>{ closeExport(); saveFile(fileBase()+'-with-bass.mid',buildMidi(true)); };
+  const exBtn=$('#exportBtn'), exMenu=$('#exportMenu');
+  window.closeExport=()=>{ exMenu.hidden=true; exBtn.setAttribute('aria-expanded','false'); };
+  exBtn.onclick=()=>{ const open=exMenu.hidden; exMenu.hidden=!open; exBtn.setAttribute('aria-expanded',String(open)); if(open) exMenu.querySelector('button').focus(); };
+  exMenu.addEventListener('click',e=>{ if(e.target.closest('button')) setTimeout(closeExport,0); });
+  exMenu.addEventListener('keydown',e=>{ const items=[...exMenu.querySelectorAll('button')], i=items.indexOf(document.activeElement);
+    if(e.key==='Escape'){ closeExport(); exBtn.focus(); } if(e.key==='ArrowDown'){ e.preventDefault(); items[(i+1)%items.length].focus(); } if(e.key==='ArrowUp'){ e.preventDefault(); items[(i-1+items.length)%items.length].focus(); } });
+  document.addEventListener('pointerdown',e=>{ if(!exMenu.hidden&&!e.target.closest('.export')) closeExport(); });
+  const dockRO=new ResizeObserver(()=>document.documentElement.style.setProperty('--dock-h',$('#dock').offsetHeight+'px')); dockRO.observe($('#dock'));
+  const setTempo=v=>{ S.tempo=Math.min(240,Math.max(40,v)); commit(); };
+  $('#tempoDown').onclick=()=>setTempo(S.tempo-4); $('#tempoUp').onclick=()=>setTempo(S.tempo+4);
   $('#shareLink').onclick=()=>copyText(shareLinkURL(),'Share link copied');
   $('#printBtn').onclick=printSheet;
   $('#copyboxDone').onclick=()=>{ $('#copybox').hidden=true; };
