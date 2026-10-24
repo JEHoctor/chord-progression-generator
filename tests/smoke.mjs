@@ -51,13 +51,13 @@ const check = (name, ok, detail = '') => { results.push(`${ok ? 'PASS' : 'FAIL'}
 // headless Chromium on a machine with no audio device can stall creating an AudioContext; this flag gives it a silent output
 const browser = await chromium.launch({ args: ['--disable-audio-output'] });
 async function openPage(opts = {}) {
-  const { simpleView, ...o } = opts;
+  const { simpleView, noReveal, ...o } = opts;
   const ctx = await browser.newContext({ acceptDownloads: true, ...o });
   // most checks drive the full tool set; first-time visitors would otherwise start in the Simple view
   if (!simpleView) await ctx.addInitScript(() => { try { if (!localStorage.getItem('changes-view-v1')) localStorage.setItem('changes-view-v1', 'full'); } catch (e) {} });
   const page = await ctx.newPage(); page.errors = []; page.setDefaultTimeout(5000);
   // controls now live in tabs, the Create drawer and popovers: reveal one the way a person would before using it
-  for (const m of ['click', 'fill', 'selectOption', 'check', 'uncheck', 'dblclick', 'setInputFiles', 'press']) {
+  if (!noReveal) for (const m of ['click', 'fill', 'selectOption', 'check', 'uncheck', 'dblclick', 'setInputFiles', 'press']) {
     const orig = page[m].bind(page);
     page[m] = async (sel, ...rest) => { if (typeof sel === 'string' && !/>>|:has|text=/.test(sel)) await page.evaluate(q => { try { const el = document.querySelector(q); if (el && window.revealEl) revealEl(el); } catch (e) {} }, sel).catch(() => {}); return orig(sel, ...rest); };
   }
@@ -597,6 +597,88 @@ async function layout() {
   await ctx.close();
 }
 
+// hardening: untrusted input, regressions from the code review, and real click paths (no auto-reveal)
+async function hardening() {
+  const { ctx, page } = await openPage({ noReveal: true, viewport: { width: 1440, height: 900 } });
+  await page.goto(URL_); await page.evaluate(() => localStorage.clear()); await page.reload();
+  const noToast = () => page.evaluate(() => { document.querySelector('#toast').hidden = true; });
+  // a poisoned library file: bad settings are dropped, a bad chord list rejects its item, names never become HTML
+  const bad = { version: 1, items: [
+    { name: '<img src=x onerror="window.__x1=1">Bad', snap: { S: { meter: '0/4', tempo: '<img src=x onerror="window.__x2=1">', mode: 'constructor', tonic: 1.5 }, chords: [{ root: 0, q: '', beats: 4 }, { root: 7, q: '', beats: 4 }] } },
+    { name: 'proto', snap: { S: {}, chords: [{ root: 0, q: 'constructor', beats: 4 }] } }] };
+  const badPath = path.join(OUT, 'bad-library.json'); fs.writeFileSync(badPath, JSON.stringify(bad));
+  await page.click('#library > summary'); await page.setInputFiles('#libImport', badPath); await page.waitForTimeout(200);
+  const imp = await page.evaluate(() => ({ n: LIB.items.length, img: !!document.querySelector('#libList img') }));
+  check('hardening: a poisoned library imports only the sound item, and names never become HTML', imp.n === 1 && !imp.img, JSON.stringify(imp));
+  await page.click('#libList .ln');
+  const opened = await page.evaluate(() => { document.querySelector('#printSheet').innerHTML = leadSheetHTML(); return { meter: S.meter, mode: S.mode, tempo: S.tempo, tonic: S.tonic, x: !!(window.__x1 || window.__x2), chords: chords.length, xml: /<per-minute>\d+<\/per-minute>/.test(buildMusicXML()) }; });
+  await page.waitForTimeout(100);
+  check('hardening: opening it keeps sane settings and runs no injected code', opened.meter === '4/4' && opened.mode === 'ionian' && Number.isInteger(opened.tempo) && Number.isInteger(opened.tonic) && !opened.x && opened.chords === 2 && opened.xml && !(await page.evaluate(() => !!(window.__x1 || window.__x2))), JSON.stringify(opened));
+  // prototype-key names in chord text and share codes
+  await page.click('#textEdit > summary'); await page.fill('#prog', 'Cconstructor | G | C__proto__ | CtoString'); await page.click('#load');
+  const pk = await page.evaluate(() => ({ err: document.querySelector('#err').textContent, names: chords.map(c => chordName(c)).join(' ') }));
+  check('hardening: chord names like Cconstructor are rejected with a message, not a crash', /constructor/.test(pk.err) && pk.names === 'G', JSON.stringify(pk));
+  const code = await page.evaluate(() => b64url(JSON.stringify({ v: 1, k: 3, m: 'constructor', t: '__proto__', b: 'x', c: 'C | G' })));
+  if (!(await page.evaluate(() => document.querySelector('#library').open))) await page.click('#library > summary');
+  await page.fill('#shareIn', code); await page.click('#shareOpen');
+  check('hardening: a share code with prototype keys keeps the mode and meter', await page.evaluate(() => S.mode === 'ionian' && S.meter === '4/4' && S.tonic === 3 && serialize() === 'C | G'));
+  await page.fill('#prog', '[<img src=x onerror="window.__x3=1">]\nC | G'); await page.click('#load'); await page.waitForTimeout(100);
+  check('hardening: HTML in a section name is shown as text', await page.evaluate(() => !window.__x3 && /<img/.test(document.querySelector('#rows .sec-label').textContent)));
+  // regressions from the review
+  for (const [inst, style] of [['piano', 'arp'], ['guitar', 'strum'], ['guitar', 'pick']]) {
+    await page.evaluate(([i, st]) => { S.instrument = i; if (i === 'guitar') S.gstyle = st; else S.pstyle = st; chords = parseProg('G | C | D | G').chords; renderAll(); }, [inst, style]);
+    const m = parseMidi(Buffer.from(await page.evaluate(() => [...buildMidi(false)])));
+    let overlaps = 0; const on = new Map();
+    for (const e of m.tracks[1]) { if (e.st === 0x90 && e.d[1] > 0) { if (on.get(e.d[0])) overlaps++; on.set(e.d[0], true); } else if (e.st === 0x80 || (e.st === 0x90 && e.d[1] === 0)) on.set(e.d[0], false); }
+    check(`hardening: MIDI ${inst} ${style} has no overlapping notes of the same pitch`, overlaps === 0, String(overlaps));
+  }
+  await page.evaluate(() => { S.instrument = 'piano'; S.pstyle = 'block'; S.gstyle = 'strum1'; setTuning('standard'); S.capo = 0; chords = parseProg('G | C | D | G').chords; sel = chords[0].id; renderAll(); save(); });
+  const ts = await page.evaluate(async () => { const tick = setInterval(() => commit(), 0); await findEasiestTuning(); clearInterval(tick); return { s: S.tuning, low: TUNING[0], stored: JSON.parse(localStorage.getItem('changes-v1')).S.tuning }; });
+  check('hardening: the easiest-tuning search never saves a temporary tuning', ts.s === 'standard' && ts.low === 40 && ts.stored === 'standard', JSON.stringify(ts));
+  await page.evaluate(() => { pushHist(); chords[0].beats = 8; commit(); });
+  await page.selectOption('#tuneSel', 'DADGAD');
+  await page.evaluate(() => undo());
+  check('hardening: Undo keeps the guitar strings in step with the tuning', await page.evaluate(() => S.tuning === 'standard' && TUNING.join() === '40,45,50,55,59,64'));
+  await page.evaluate(() => { sel = chords[0].id; renderAll(); });
+  await page.focus('#tab-chord'); await page.keyboard.press('ArrowRight');
+  check('hardening: arrow keys on a tab bar switch tabs without moving the chord selection', await page.evaluate(() => sel === chords[0].id && document.querySelector('#tab-swaps').getAttribute('aria-selected') === 'true'));
+  if (!(await page.evaluate(() => document.querySelector('#library').open))) await page.click('#library > summary');
+  await page.fill('#libName', 'Keep me'); await page.click('#libSaveBtn');
+  await page.click('[data-lib]:has-text("Keep me") [data-la="rename"]'); await page.fill('[data-lib] input', 'Changed'); await page.press('[data-lib] input', 'Escape');
+  check('hardening: Escape cancels a library rename', await page.evaluate(() => LIB.items.some(i => i.name === 'Keep me') && !LIB.items.some(i => i.name === 'Changed')));
+  await page.mouse.click(700, 600);
+  await noToast(); await page.click('#play'); await page.waitForTimeout(200);
+  const pv = await page.evaluate(() => { const s0 = session; playOne({ root: 0, q: 'maj7', bass: null }); return { same: session === s0, playing }; });
+  await page.click('#play');
+  check('hardening: hearing a chord during playback leaves the chart playing', pv.same && pv.playing, JSON.stringify(pv));
+  const before = await page.evaluate(() => serialize());
+  await page.click('#chartTools #clearChart').catch(async () => { await page.evaluate(() => document.querySelector('#clearChart').click()); });
+  await page.evaluate(() => { pushHist(); chords.push({ id: uid(), root: 0, q: '', bass: null, beats: 4 }); commit(); });
+  await page.click('#toast .toast-act');
+  check('hardening: the toast Undo reverts its own action even after another edit', await page.evaluate(b => serialize() === b, before), await page.evaluate(() => serialize()));
+  // real click paths: the Swap ideas tab, the tablet drawer, the phone screens
+  await page.evaluate(() => { sel = chords[1].id; renderAll(); });
+  await page.click('#tab-swaps'); await page.click('#subs [data-use] >> nth=0');
+  check('real clicks: Swap ideas tab, then Put in this slot', await page.evaluate(b => serialize() !== b, before));
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.click('#createToggle'); await page.waitForTimeout(300); await noToast(); await page.click('#gen');
+  check('real clicks: tablet Create drawer, then Generate', await page.evaluate(() => chords.length > 0));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.click('#phoneTabs [data-tab="p-chord"]'); await page.click('#tab-chord'); await noToast(); await page.click('#detail [data-act="lock"]');
+  check('real clicks: phone Chord screen, then Lock', await page.evaluate(() => chords.some(c => c.lock)));
+  check('no console errors (hardening)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+  // a corrupted saved session must not lock the app
+  const { ctx: c2, page: p2 } = await openPage({ noReveal: true });
+  await p2.goto(URL_);
+  await p2.evaluate(() => localStorage.setItem('changes-v1', JSON.stringify({ S: { meter: '0/4', mode: 'constructor', tempo: '<b>', tuning: '__proto__' }, chords: [{ root: 0, q: 'constructor', beats: 4 }], sel: null })));
+  await p2.reload({ timeout: 8000 });
+  const boot = await Promise.race([p2.evaluate(() => ({ meter: S.meter, mode: S.mode, tempo: S.tempo, tuning: S.tuning, n: chords.length })), new Promise(r => setTimeout(() => r('HANG'), 5000))]);
+  check('hardening: a corrupted saved session starts cleanly instead of hanging', boot !== 'HANG' && boot.meter === '4/4' && boot.mode === 'ionian' && boot.tempo === 88 && boot.tuning === 'standard' && boot.n > 0 && p2.errors.length === 0, JSON.stringify(boot));
+  await c2.close();
+}
+
 // phone width + dark mode for every panel
 async function phoneDark(tag) {
   const { ctx, page } = await openPage({ viewport: { width: 390, height: 844 }, colorScheme: 'dark' });
@@ -638,6 +720,7 @@ try {
   for (const n of PHASES) { if (phaseFns[n]) { await phaseFns[n](); await phoneDark('phase' + n); } }
   await simpleView();
   await layout();
+  await hardening();
   await iphone();
 } catch (e) { check('test run finished without throwing', false, e.stack); }
 await browser.close(); server.close();
