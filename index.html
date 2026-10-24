@@ -313,6 +313,11 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .copybox textarea{width:100%;font-family:var(--f-mono);font-size:12.5px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
 .copybox button{align-self:flex-end}
 #printSheet{display:none}
+/* swap ideas in the sidebar: text gets the full width, buttons sit underneath */
+#subs .item{grid-template-columns:minmax(0,1fr)}
+#subs .item .btns{grid-column:1;grid-row:auto;flex-wrap:wrap;margin-top:4px}
+#subs .item .why,#subs .item .vl{grid-column:1}
+#subs .item .vl{line-height:1.5}
 .helppop{width:min(340px,calc(100vw - 32px));padding:6px;display:flex;flex-direction:column}
 .helppop a,.helppop button{display:flex;flex-direction:column;gap:1px;padding:9px 12px;border-radius:10px;text-decoration:none;color:var(--ink);border:0;background:none;text-align:left;cursor:pointer;font:inherit}
 .helppop a:hover,.helppop button:hover{background:var(--sunk)}
@@ -416,7 +421,7 @@ header.top{justify-content:space-between}
 .quick .q-again{height:44px;padding:0 20px;font-size:15px;border-radius:999px}
 body:not(.simple) #quick,body:not(.simple) .simple-only,.simple .full-only{display:none}
 .simple #rows .slot .cr,.simple #midiOutWrap{display:none!important}
-/* Simple view: the quick card, the chart, Play/Export and plain swap ideas; the rest is one tap away under All tools */
+/* Simple view: the quick card, the chart, Play/Export and plain swap ideas; the rest is one tap away under Advanced */
 .simple .side.left,.simple .create-toggle,.simple .xpose,.simple label.check:has(#click),.simple #voicing,.simple #recolor,.simple .textedit,.simple .ctools-toggle,
 .simple .tension,.simple .legend,.simple .vlx-wrap,.simple .tools,.simple #detail .adv,.simple #detail .builder,
 .simple #detail .bassrow,.simple #detail .pv-grid,.simple #detail .tunefind,.simple #detail .filters,.simple #detail .pickbar:has([data-pctx]),.simple #detail .tones,
@@ -430,6 +435,7 @@ body:not(.simple) #quick,body:not(.simple) .simple-only,.simple .full-only{displ
 .genre-chords .chip small{font-weight:400;color:var(--muted);margin-left:4px;font-size:11px}
 .genre-chords .chip.off{opacity:.45;border-style:dashed}
 .genre-chords p{margin:0}
+.gc-restyle{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
 body{padding-bottom:calc(var(--dock-h,76px) + 24px)}
 html{scroll-padding-bottom:calc(var(--dock-h,76px) + 16px)}
 .dock{position:fixed;left:0;right:0;bottom:0;z-index:40;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
@@ -561,7 +567,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
         <summary class="btn">Help</summary>
         <div class="libpop helppop"><a href="guide.html"><b>How to use it</b><small>A tour of every part of the app</small></a><a href="how-it-works.html"><b>How it works under the hood</b><small>The music theory and code behind it</small></a><button type="button" data-help="sound"><b>Sound check</b><small>No sound? Test what this device can play</small></button></div>
       </details>
-      <div class="seg viewtoggle" role="group" aria-label="How much to show"><button type="button" data-view="simple">Simple</button><button type="button" data-view="full">All tools</button></div>
+      <div class="seg viewtoggle" role="group" aria-label="How much to show"><button type="button" data-view="simple">Simple</button><button type="button" data-view="full">Advanced</button></div>
     </nav>
   </header>
 
@@ -625,6 +631,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
         <label class="check"><input type="checkbox" id="click"> Click</label>
         <select id="voicing" class="btn" aria-label="Playback voicing"><option value="smooth">Smooth voice leading</option><option value="fixed">Fixed root position</option></select>
         <button class="btn" id="undo" type="button">Undo</button>
+        <button class="btn" id="clearChart" type="button" title="Remove every chord (you can undo it)">Clear chart</button>
         <button class="btn" id="recolor" type="button" title="Rewrite every chord using the chord types in Chords allowed">Apply chords allowed</button>
       </div>
     </div>
@@ -1612,6 +1619,7 @@ function blip(t,lv,out){ const a=actx,o=a.createOscillator(),g=a.createGain(); o
 function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
 function stopAll(){ abReset(); midiAllOff(); clearTimers(); if(actx&&session){ newSession(); } playing=false; document.querySelectorAll('.slot.playing').forEach(e=>e.classList.remove('playing')); $('#play').textContent='▶ Play'; }
 function playChart(){
+  if(!chords.some(real)){ stopAll(); toast('Add a chord to play: press + Add chord or Generate'); return; }
   abReset(); const a=ac(); clearTimers(); const out=newSession(); playing=true; $('#play').textContent='■ Stop';
   const unit=60/S.tempo*(4/den()), L=barLen(), acc=new Set(ACCENTS[S.meter]); let t=a.currentTime+.08, beat=0;
   if(S.drone) droneTones(t,chords.reduce((s,c)=>s+c.beats,0)*unit,out);
@@ -1769,6 +1777,27 @@ function renderRecipe(){
 /* what each picked genre typically plays, in the current key: the chords of its own progressions, coloured the way the
    genre colours them, and its colour families in plain words. Chips play when tapped. */
 const FAM_WORDS={power:'power chords',sus:'sus chords',add:'add9 and 6 chords',seventh:'7th chords',ext:'9ths, 11ths and 13ths',alt:'altered dominants',symm:'diminished and augmented chords',slash:'slash chords'};
+/* Restyle my chart: each unlocked chord is reduced to its basic triad and recoloured the way the picked genres colour
+   chords (dominant 7ths for blues and funk, extensions for jazz, power chords for rock and metal...). Roots, bass notes,
+   lengths, sections and locks stay; the chord types come from the genres when "Let the genre choose" is on, otherwise
+   from Chords allowed. One undo step. */
+function restyleChart(){
+  const gs=S.genres; if(!gs.length){ toast('Pick a genre first'); return; }
+  if(!chords.some(c=>real(c)&&!c.lock)){ toast('There are no unlocked chords to restyle'); return; }
+  const keep=S.vocab; if(S.genreVocab) S.vocab=genreFamilies();
+  let out;
+  try{
+    const st=blendStyle(gs[0],gs), Lv=Math.min(st.level,lvl()), free=c=>real(c)&&!c.lock;
+    let list=chords.map(c=>{ if(!free(c)) return {...c}; let q=toTriad(c.q); if(st.keep7&&famOn('seventh')) q=q===''?'7':q==='m'?'m7':q; return {...c,q}; });
+    list=colorize(list,Lv,!!st.keep7);
+    list=spice(list,'',st).map(fitC);
+    out=chords.map((c,i)=>{ if(!free(c)) return c; const n={...c,q:list[i].q,bass:list[i].bass??null}; if(n.root!==c.root) n.root=c.root; if(ckey(n)!==ckey(c)){ delete n.gpin; delete n.ppin; } return n; });
+  } finally { S.vocab=keep; }
+  const changed=out.filter((c,i)=>ckey(c)!==ckey(chords[i])).length;
+  pushHist(); chords=out; commit();
+  const nm=gs.map(id=>GENRES.find(g=>g.id===id).name).join(' + ');
+  toast(changed?`Restyled ${changed} chord${changed>1?'s':''} in the ${nm} style`:`Your chart already fits the ${nm} style`,changed?{label:'Undo',fn:undo}:undefined);
+}
 function genreChordList(g){
   const seen=new Set(), out=[];
   for(const [m,nums] of g.t) for(const n of nums.split(' ')){ let c=fromNumeral(n); if(!c) continue;
@@ -1785,7 +1814,8 @@ function renderGenreChords(gs){
     +gs.map(g=>{ const list=genreChordList(g);
       return `<div class="gc-row"><div><b>${esc(g.name)}</b> <span class="hint">leans on ${esc(names(g.wants.map(w=>FAM_WORDS[w])))}</span></div><div class="gc-chips">${list.map(c=>{ const ok=S.genreVocab||qOn(c.q);
         return `<button type="button" class="chip${ok?'':' off'}" data-gchord="${c.root}|${esc(c.q)}" title="${ok?'Tap to hear':'Not in Chords allowed: let the genre choose, or allow it in Chords allowed'}">${esc(chordName(c))}<small>${esc(numeral(c))}</small></button>`; }).join('')}</div></div>`; }).join('')
-    +`<p class="hint">${S.genreVocab?'Generate uses these genres’ own chord types.':'Greyed chords are outside Chords allowed, so Generate won’t use them unless you let the genre choose.'}</p>`;
+    +`<p class="hint">${S.genreVocab?'Generate uses these genres’ own chord types.':'Greyed chords are outside Chords allowed, so Generate won’t use them unless you let the genre choose.'}</p>`
+    +`<div class="gc-restyle"><button type="button" class="btn small primary" data-restyle>Restyle my chart in ${gs.length>1?'these styles':'this style'}</button><span class="hint">Recolours the chords already in your chart. Roots, lengths, sections and locked chords stay.</span></div>`;
 }
 function renderChart(){
   const L=barLen(), narrow=window.innerWidth<640, per=L>=10?(narrow?1:2):narrow?2:4, rows=$('#rows');
@@ -2210,7 +2240,7 @@ function initLayout(){
 }
 
 /* ============ simple view and quick start ============ */
-/* first-time visitors start in Simple; anyone with saved work starts with All tools. The choice is remembered. */
+/* first-time visitors start in Simple; anyone with saved work starts with Advanced. The choice is remembered. */
 const QUICK_STYLES=['pop','rock','folk','rnb','jazz','lofi','country','edm'];
 let quickStyle=null;
 function getView(){ try{ const v=localStorage.getItem('changes-view-v1'); if(v==='simple'||v==='full') return v; return localStorage.getItem('changes-v1')?'full':'simple'; }catch(e){ return 'full'; } }
@@ -2847,6 +2877,7 @@ function boot(){
   $('#recipe').onclick=e=>{ const b=e.target.closest('[data-addfams]'); if(!b) return; S.vocab=[...new Set([...S.vocab,...b.dataset.addfams.split(',')])]; commit(); toast(`Vocabulary updated: ${vocabName()}`); };
   $('#gen').onclick=generate;
   $('#regen').onclick=regenUnlocked;
+  $('#clearChart').onclick=()=>{ if(!chords.length) return; stopAll(); pushHist(); chords=[]; sel=null; commit(); toast('Chart cleared',{label:'Undo',fn:undo}); };
   initLayout(); setView(getView());
   document.querySelector('.viewtoggle').addEventListener('click',e=>{ const b=e.target.closest('[data-view]'); if(b){ setView(b.dataset.view); renderAll(); } });
   $('#qMoods').innerHTML=MOODS.map(m=>`<button type="button" class="chip" data-id="${m.id}" aria-pressed="false" title="${esc(m.blurb)}">${m.name}</button>`).join('');
@@ -2855,7 +2886,7 @@ function boot(){
   $('#qStyles').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; quickStyle=quickStyle===b.dataset.g?null:b.dataset.g; quickMake(); };
   $('#qAgain').onclick=quickMake;
   $('#genreChords').addEventListener('change',e=>{ if(e.target.id==='genreVocab'){ S.genreVocab=e.target.checked; save(); renderControls(); } });
-  $('#genreChords').addEventListener('click',e=>{ const b=e.target.closest('[data-gchord]'); if(!b) return; const [r,q]=b.dataset.gchord.split('|'); playOne({root:+r,q,bass:null}); });
+  $('#genreChords').addEventListener('click',e=>{ if(e.target.closest('[data-restyle]')){ restyleChart(); return; } const b=e.target.closest('[data-gchord]'); if(!b) return; const [r,q]=b.dataset.gchord.split('|'); playOne({root:+r,q,bass:null}); });
   $('#soundCheck').onclick=()=>{ const b=$('#soundbox'); b.hidden=false; renderSoundBox(); b.querySelector('button')?.focus(); };
   $('#soundbox').addEventListener('click',e=>{ const t=e.target.closest('[data-sb]'); if(!t) return; if(t.dataset.sb==='close'){ $('#soundbox').hidden=true; return; } soundBeep(t.dataset.sb); });
   $('#soundbox').addEventListener('keydown',e=>{ if(e.key==='Escape') $('#soundbox').hidden=true; });

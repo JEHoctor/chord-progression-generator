@@ -486,6 +486,31 @@ async function phase3() {
   await tap(page, '#play'); await page.waitForTimeout(500); await tap(page, '#play');
   check('styles: the chosen style is remembered', await page.evaluate(() => { save(); return JSON.parse(localStorage.getItem('changes-v1')).S.pstyle === 'arp' && S.gstyle === 'strum'; }));
   await page.evaluate(() => { S.pstyle = 'block'; S.gstyle = 'strum1'; S.instrument = 'piano'; renderAll(); });
+  // restyle an existing chart in a genre's style; clear the chart
+  await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; S.genres = ['blues']; S.genreVocab = true; S.vocab = [...PRESETS.Simple]; renderAll(); });
+  await page.fill('#prog', 'C | Am | F | G'); await tap(page, '#load');
+  await page.evaluate(() => { chords[1].lock = true; renderAll(); });
+  const before3 = await page.evaluate(() => chords.map(c => chordName(c)).join(' '));
+  await tap(page, '#genreChords [data-restyle]');
+  const rs = await page.evaluate(() => ({ names: chords.map(c => chordName(c)), roots: chords.map(c => c.root).join(), sevenths: chords.filter((c, i) => i !== 1 && Q[c.q].iv.length > 3).length, toast: document.querySelector('#toast').textContent }));
+  check('restyle: Blues turns the unlocked chords into 7th chords on the same roots and keeps the locked one', rs.roots === '0,9,5,7' && rs.sevenths === 3 && rs.names[1] === 'Am' && /Restyled 3 chords in the Blues style/.test(rs.toast), `${before3} → ${rs.names.join(' ')}`);
+  await page.evaluate(() => undo());
+  check('restyle: one undo step restores the chart', await page.evaluate(b => chords.map(c => chordName(c)).join(' ') === b, before3));
+  await page.evaluate(() => { S.genres = []; S.genreVocab = false; S.vocab = [...PRESETS.Color]; renderAll(); });
+  await tap(page, '#clearChart');
+  const cl = await page.evaluate(() => ({ n: chords.length, tile: !!document.querySelector('#rows .addtile'), text: serialize() }));
+  await page.evaluate(() => document.querySelector('#toast').hidden = true);
+  await page.click('#play'); await page.waitForTimeout(300);
+  const cp = await page.evaluate(() => ({ playing, toast: document.querySelector('#toast').textContent, xml: !new DOMParser().parseFromString(buildMusicXML(), 'application/xml').querySelector('parsererror') }));
+  check('clear: Clear chart empties it and leaves + Add chord', cl.n === 0 && cl.tile && cl.text === '', JSON.stringify(cl));
+  check('clear: Play on an empty chart explains instead of looping, and exports still work', !cp.playing && /Add a chord to play/.test(cp.toast) && cp.xml, JSON.stringify(cp));
+  await page.evaluate(() => undo());
+  check('clear: Undo brings the chart back', await page.evaluate(b => chords.map(c => chordName(c)).join(' ') === b, before3));
+  // swap ideas stack their buttons under the text in the sidebar
+  await page.evaluate(() => { sel = chords[0].id; renderAll(); revealEl(document.querySelector('#subs')); });
+  const sw2 = await page.evaluate(() => { const it = document.querySelector('#subs .item'), why = it.querySelector('.why').getBoundingClientRect(), btn = it.querySelector('.btns').getBoundingClientRect(), box = it.getBoundingClientRect(); return { whyWidth: Math.round(why.width / box.width * 100), below: btn.top >= why.bottom - 1 }; });
+  check('layout: swap ideas give the text the full width with buttons underneath', sw2.whyWidth > 85 && sw2.below, JSON.stringify(sw2));
+  check('layout: the view switch reads Simple / Advanced', await page.evaluate(() => [...document.querySelectorAll('.viewtoggle button')].map(b => b.textContent).join('/') === 'Simple/Advanced'));
   // easiest tuning for the chart: musically expected answers
   const expect = [['G | C | D | G', /^Standard tuning is the practical choice/], ['G | Am | C | D | Em', /^Standard tuning is the practical choice/],
     ['F | B♭ | E♭ | Cm', /^Standard tuning with a capo on \d/], ['Dsus4 | Gsus2 | Asus4 | Dsus4', /^DADGAD is the easiest/], ['D5 | C5 | G5 | A5 | F5', /^Drop [CD]/]];
@@ -527,7 +552,7 @@ async function simpleView() {
   const sw = await page.evaluate(() => ({ groups: [...document.querySelectorAll('#subs .group')].filter(g => getComputedStyle(g).display !== 'none').length, items: [...document.querySelectorAll('#subs .item')].filter(i => getComputedStyle(i).display !== 'none' && getComputedStyle(i.closest('.group')).display !== 'none').length, vl: [...document.querySelectorAll('#subs .vl')].some(e => getComputedStyle(e).display !== 'none') }));
   check('simple: swap ideas stay short and plain', sw.groups <= 2 && sw.items <= 6 && sw.items > 0 && !sw.vl, JSON.stringify(sw));
   await tap(page, '.viewtoggle [data-view="full"]');
-  check('simple: All tools brings everything back', await page.evaluate(() => { revealEl(document.querySelector('.rail')); return !document.body.classList.contains('simple') && document.querySelector('.rail').checkVisibility(); }));
+  check('simple: Advanced brings everything back', await page.evaluate(() => { revealEl(document.querySelector('.rail')); return !document.body.classList.contains('simple') && document.querySelector('.rail').checkVisibility(); }));
   await page.reload();
   check('simple: the chosen view is remembered', await page.evaluate(() => !document.body.classList.contains('simple')));
   await page.evaluate(() => { setView('simple'); renderAll(); });
