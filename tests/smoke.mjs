@@ -56,6 +56,11 @@ async function openPage(opts = {}) {
   // most checks drive the full tool set; first-time visitors would otherwise start in the Simple view
   if (!simpleView) await ctx.addInitScript(() => { try { if (!localStorage.getItem('changes-view-v1')) localStorage.setItem('changes-view-v1', 'full'); } catch (e) {} });
   const page = await ctx.newPage(); page.errors = []; page.setDefaultTimeout(5000);
+  // controls now live in tabs, the Create drawer and popovers: reveal one the way a person would before using it
+  for (const m of ['click', 'fill', 'selectOption', 'check', 'uncheck', 'dblclick', 'setInputFiles', 'press']) {
+    const orig = page[m].bind(page);
+    page[m] = async (sel, ...rest) => { if (typeof sel === 'string' && !/>>|:has|text=/.test(sel)) await page.evaluate(q => { try { const el = document.querySelector(q); if (el && window.revealEl) revealEl(el); } catch (e) {} }, sel).catch(() => {}); return orig(sel, ...rest); };
+  }
   page.on('console', m => { if (m.type() === 'error') page.errors.push(m.text()); });
   page.on('pageerror', e => page.errors.push(String(e)));
   return { ctx, page };
@@ -145,6 +150,7 @@ async function phase1() {
   await ctx2.close();
   await tap(page, '#shareLink'); await page.waitForTimeout(150);
   check('Share link button copies or shows the copy box', await page.evaluate(() => /copied/.test(document.querySelector('#toast').textContent) || !document.querySelector('#copybox').hidden));
+  if (await page.evaluate(() => !document.querySelector('#copybox').hidden)) await page.click('#copyboxDone');
 
   // library: save, save again (update), open, rename, duplicate, delete with undo, export and import
   await tap(page, '#library summary');
@@ -504,8 +510,8 @@ async function phase3() {
 async function simpleView() {
   const { ctx, page } = await openPage({ simpleView: true });
   await page.goto(URL_);
-  const v0 = await page.evaluate(() => ({ simple: document.body.classList.contains('simple'), quick: getComputedStyle(document.querySelector('#quick')).display, rail: getComputedStyle(document.querySelector('.rail')).display, gen: getComputedStyle(document.querySelector('.setup')).display, dock: getComputedStyle(document.querySelector('#play')).display }));
-  check('simple: a first visit opens the Simple view with the quick-start card', v0.simple && v0.quick !== 'none' && v0.rail === 'none' && v0.gen === 'none' && v0.dock !== 'none', JSON.stringify(v0));
+  const v0 = await page.evaluate(() => ({ simple: document.body.classList.contains('simple'), quick: document.querySelector('#quick').checkVisibility(), rail: document.querySelector('.rail').checkVisibility(), gen: document.querySelector('#gen').checkVisibility(), dock: document.querySelector('#play').checkVisibility() }));
+  check('simple: a first visit opens the Simple view with the quick-start card', v0.simple && v0.quick && !v0.rail && !v0.gen && v0.dock, JSON.stringify(v0));
   const before = await page.evaluate(() => serialize());
   await tap(page, '#qMoods [data-id="melan"]'); await page.waitForTimeout(300);
   const m = await page.evaluate(() => ({ text: serialize(), playing, mood: S.mood, pressed: document.querySelector('#qMoods [aria-pressed="true"]')?.dataset.id }));
@@ -520,7 +526,7 @@ async function simpleView() {
   const sw = await page.evaluate(() => ({ groups: [...document.querySelectorAll('#subs .group')].filter(g => getComputedStyle(g).display !== 'none').length, items: [...document.querySelectorAll('#subs .item')].filter(i => getComputedStyle(i).display !== 'none' && getComputedStyle(i.closest('.group')).display !== 'none').length, vl: [...document.querySelectorAll('#subs .vl')].some(e => getComputedStyle(e).display !== 'none') }));
   check('simple: swap ideas stay short and plain', sw.groups <= 2 && sw.items <= 6 && sw.items > 0 && !sw.vl, JSON.stringify(sw));
   await tap(page, '.viewtoggle [data-view="full"]');
-  check('simple: All tools brings everything back', await page.evaluate(() => !document.body.classList.contains('simple') && getComputedStyle(document.querySelector('.rail')).display !== 'none'));
+  check('simple: All tools brings everything back', await page.evaluate(() => { revealEl(document.querySelector('.rail')); return !document.body.classList.contains('simple') && document.querySelector('.rail').checkVisibility(); }));
   await page.reload();
   check('simple: the chosen view is remembered', await page.evaluate(() => !document.body.classList.contains('simple')));
   await page.evaluate(() => { setView('simple'); renderAll(); });

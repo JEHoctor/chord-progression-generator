@@ -313,6 +313,100 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .copybox textarea{width:100%;font-family:var(--f-mono);font-size:12.5px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
 .copybox button{align-self:flex-end}
 #printSheet{display:none}
+.helppop{width:min(340px,calc(100vw - 32px));padding:6px;display:flex;flex-direction:column}
+.helppop a,.helppop button{display:flex;flex-direction:column;gap:1px;padding:9px 12px;border-radius:10px;text-decoration:none;color:var(--ink);border:0;background:none;text-align:left;cursor:pointer;font:inherit}
+.helppop a:hover,.helppop button:hover{background:var(--sunk)}
+.helppop b{font-weight:600;font-size:14px} .helppop small{font-size:12px;color:var(--muted)}
+.textedit{border-top:1px solid var(--rule);padding-top:10px}
+.textedit>summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--muted);list-style:none;display:inline-flex;align-items:center;gap:6px}
+.textedit>summary::-webkit-details-marker{display:none}
+.textedit>summary::before{content:"▸";font-size:12px;transition:transform .15s}
+.textedit[open]>summary::before{transform:rotate(90deg)}
+.textedit[open]{display:flex;flex-direction:column;gap:10px}
+.ctools-toggle{display:none}
+@media (max-width:759px){
+  .chart-card .transport{display:none}
+  .chart-card.show-tools .transport{display:flex}
+  .ctools-toggle{display:inline-flex}
+  .chart-head{align-items:center}
+  .dock{padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))}
+  .dock-in{gap:6px 10px}
+  .dock .play-big{height:44px;min-width:96px;font-size:15px}
+  .dock .now b{font-size:16px}
+  .dock-opts{gap:6px;flex-wrap:nowrap}
+  .dock-opts label.check{display:none}
+  .dock-opts select{flex:1 1 0;min-width:0;height:34px;font-size:13px;padding:0 6px}
+  .tempo-mini .hint{display:none}
+  .tempo-mini .btn{width:28px}
+  .export-btn{height:40px;padding:0 14px}
+  .top-actions{gap:6px}
+  .top-actions .btn{height:34px;padding:0 10px;font-size:13px}
+  .topbar{position:static;padding:10px 0}
+  .phonetabs{top:0}
+  #libCount{display:none}
+  .top-actions{margin-left:0}
+  .viewtoggle button{padding:5px 9px;font-size:13px}
+}
+/* ---------- app layout: top bar, Create sidebar, chart in the centre, chord sidebar ---------- */
+.wrap{max-width:1680px}
+.topbar{position:sticky;top:0;z-index:45;display:flex;align-items:center;gap:10px 20px;flex-wrap:wrap;padding:12px 0;margin:0 -2px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.topbar .brand{display:flex;align-items:baseline;gap:4px 16px;flex-wrap:wrap;min-width:0;flex:1 1 380px}
+.topbar .brand h1{font-size:26px}
+.topbar .brand p{font-size:13px;max-width:70ch}
+.top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
+a.btn{text-decoration:none;color:var(--ink)}
+.libmenu{position:relative}
+.libmenu>summary{list-style:none;cursor:pointer;display:inline-flex;gap:8px;align-items:center;height:36px}
+.libmenu>summary::-webkit-details-marker{display:none}
+.libmenu>summary::after{content:"▾";font-size:11px;color:var(--muted)}
+.libmenu[open]>summary{border-color:var(--accent)}
+.libpop{position:absolute;right:0;top:calc(100% + 8px);width:min(460px,calc(100vw - 32px));max-height:min(70vh,640px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px -18px rgb(0 0 0 / .45);padding:14px;z-index:50}
+.libpop .lib-body{padding-top:0}
+.app{display:grid;grid-template-columns:320px minmax(0,1fr) 380px;gap:16px;align-items:start}
+.simple .app{grid-template-columns:minmax(0,1fr) 380px}
+.side{position:sticky;top:calc(var(--top-h,64px) + 8px);max-height:calc(100vh - var(--top-h,64px) - var(--dock-h,76px) - 24px);overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;padding-bottom:4px}
+.side-head{display:flex;align-items:center;justify-content:space-between}
+.side-head h2{font-size:16px;font-weight:600}
+.side .panel{padding:16px}
+.side .rail{padding:14px;gap:12px 14px}
+.center{display:flex;flex-direction:column;gap:16px;min-width:0}
+.tabs{display:flex;gap:2px;background:var(--sunk);border-radius:10px;padding:3px}
+.tabs [role=tab]{flex:1 1 auto;border:0;background:none;border-radius:8px;padding:7px 10px;font-weight:600;font-size:13.5px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tabs [role=tab]:hover{color:var(--ink)}
+.tabs [role=tab][aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .1),0 0 0 1px var(--line)}
+.tabpanel{display:flex;flex-direction:column;gap:12px}
+.tabpanel[hidden]{display:none}
+.tools{gap:14px}
+.tools .tabpanel>.panel{border:0;padding:0;background:none}
+.tools .palette{gap:12px}
+.drawer-close,.create-toggle,.phonetabs{display:none}
+/* medium screens: Create slides out as a drawer */
+@media (max-width:1199px){
+  .app,.simple .app{grid-template-columns:minmax(0,1fr) 340px}
+  .side.left{position:fixed;left:0;top:0;bottom:0;width:min(400px,92vw);max-height:none;z-index:48;background:var(--bg);padding:16px 16px calc(var(--dock-h,76px) + 16px);box-shadow:24px 0 60px -30px rgb(0 0 0 / .5);transform:translateX(-105%);transition:transform .2s ease;visibility:hidden}
+  body.drawer-open .side.left{transform:none;visibility:visible}
+  .create-toggle,.drawer-close{display:inline-flex}
+}
+/* phones: one screen at a time, picked from a tab bar under the top bar */
+@media (max-width:759px){
+  .app{display:block}
+  .topbar .brand p{display:none}
+  .topbar .brand h1{font-size:22px}
+  .create-toggle,.drawer-close{display:none}
+  .phonetabs{display:flex;position:sticky;top:var(--top-h,56px);z-index:44;margin:0 0 12px}
+  .side.left{position:static;transform:none;visibility:visible;width:auto;box-shadow:none;padding:0;max-height:none;overflow:visible;display:none;transition:none}
+  .side.right{position:static;max-height:none;overflow:visible;display:none}
+  .tools{display:none}
+  body[data-ptab=p-create] .side.left,body[data-ptab=p-chord] .side.right{display:flex}
+  body[data-ptab=p-create] .center,body[data-ptab=p-chord] .center{display:none}
+  body[data-ptab=p-tools] .center>*:not(.tools){display:none}
+  body[data-ptab=p-tools] .tools{display:flex}
+  .simple .phonetabs{display:none}
+  .simple .center{display:flex!important}
+  .simple .center>*:not(.tools){display:flex}
+  .simple .center>.chart-card{display:flex}
+  .simple .side.right{display:flex!important;margin-top:16px}
+}
 header.top{justify-content:space-between}
 .viewtoggle{align-self:center}
 .quick{gap:14px;border-color:color-mix(in srgb,var(--accent) 35%,var(--line));background:linear-gradient(180deg,var(--accent-soft),var(--surface) 70%)}
@@ -323,8 +417,8 @@ header.top{justify-content:space-between}
 body:not(.simple) #quick,body:not(.simple) .simple-only,.simple .full-only{display:none}
 .simple #rows .slot .cr,.simple #midiOutWrap{display:none!important}
 /* Simple view: the quick card, the chart, Play/Export and plain swap ideas; the rest is one tap away under All tools */
-.simple .rail,.simple .setup,.simple .xpose,.simple label.check:has(#click),.simple #voicing,.simple #recolor,.simple .prog-input,.simple .chart-card>.hint,
-.simple .tension,.simple .legend,.simple .vlx-wrap,.simple #finder,.simple #melody,.simple .palette,.simple #detail .adv,.simple #detail .builder,
+.simple .side.left,.simple .create-toggle,.simple .xpose,.simple label.check:has(#click),.simple #voicing,.simple #recolor,.simple .textedit,.simple .ctools-toggle,
+.simple .tension,.simple .legend,.simple .vlx-wrap,.simple .tools,.simple #detail .adv,.simple #detail .builder,
 .simple #detail .bassrow,.simple #detail .pv-grid,.simple #detail .tunefind,.simple #detail .filters,.simple #detail .pickbar:has([data-pctx]),.simple #detail .tones,
 .simple #subs .keep,.simple #subs .vl,.simple #subs .tn,.simple #subs [data-ab],.simple #subs .more,.simple #subs .rn,.simple #subs .group-h p,
 .simple #subs .group[data-gi]:not([data-gi="0"]):not([data-gi="1"]),.simple #subs .item[data-ii]:not([data-ii="0"]):not([data-ii="1"]):not([data-ii="2"]){display:none!important}
@@ -441,31 +535,43 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
 </style>
 
 <div class="wrap">
-  <header class="top">
+  <header class="topbar" id="topbar">
     <div class="brand">
       <h1>Chord Changes</h1>
       <p class="full-only">Write, generate or harmonize a progression, and every swap idea explains why it works, down to how each voice moves; then export MIDI or notation, share a link, or print a lead sheet.</p>
       <p class="simple-only">Chord progressions for songwriters: no music theory needed.</p>
     </div>
-    <div class="seg viewtoggle" role="group" aria-label="How much to show"><button type="button" data-view="simple">Simple</button><button type="button" data-view="full">All tools</button></div>
+    <nav class="top-actions" aria-label="App">
+      <button type="button" class="btn small create-toggle" id="createToggle" aria-expanded="false" aria-controls="sideLeft">Create</button>
+      <details class="libmenu" id="library">
+        <summary class="btn"><span>Library</span><span class="hint" id="libCount"></span></summary>
+        <div class="libpop">
+    <div class="lib-body">
+      <div class="lib-save"><input id="libName" type="text" maxlength="80" placeholder="Name this progression" aria-label="Progression name"><button class="btn primary small" id="libSaveBtn" type="button">Save</button></div>
+      <ul class="lib-list" id="libList"></ul>
+      <div class="lib-tools">
+        <button class="btn small" id="libExport" type="button">Export library (.json)</button>
+        <label class="btn small" for="libImport">Import library…</label><input id="libImport" type="file" accept=".json,application/json" hidden>
+        <span class="lib-open"><input id="shareIn" type="text" placeholder="Paste a share link or code" aria-label="Share link or code"><button class="btn small" id="shareOpen" type="button">Open</button></span>
+      </div>
+    </div>
+        </div>
+      </details>
+      <details class="libmenu helpmenu" id="helpMenu">
+        <summary class="btn">Help</summary>
+        <div class="libpop helppop"><a href="guide.html"><b>How to use it</b><small>A tour of every part of the app</small></a><a href="how-it-works.html"><b>How it works under the hood</b><small>The music theory and code behind it</small></a><button type="button" data-help="sound"><b>Sound check</b><small>No sound? Test what this device can play</small></button></div>
+      </details>
+      <div class="seg viewtoggle" role="group" aria-label="How much to show"><button type="button" data-view="simple">Simple</button><button type="button" data-view="full">All tools</button></div>
+    </nav>
   </header>
 
-  <section class="panel quick" id="quick" aria-label="Quick start">
-    <div><h2>Make a chord progression in one tap</h2><p class="hint">Pick a feeling and it plays straight away. Tap any chord below to hear it or swap it, then use Export to take it into your music app.</p></div>
-    <div class="field"><span class="label">Feeling</span><div class="moods" id="qMoods" role="group" aria-label="Feeling"></div></div>
-    <div class="field"><span class="label">Style <span class="opt">optional</span></span><div class="moods" id="qStyles" role="group" aria-label="Style"></div></div>
-    <div class="q-act"><button type="button" class="btn primary q-again" id="qAgain">Make another</button><span class="hint" id="qHint">Each tap makes a new one in the same feeling.</span></div>
-  </section>
+  <div class="tabs phonetabs" id="phoneTabs" role="tablist" aria-label="Screens" data-tabs="phone"><button type="button" role="tab" id="tab-p-create" aria-controls="panel-p-create" data-tab="p-create">Create</button><button type="button" role="tab" id="tab-p-chart" aria-controls="panel-p-chart" data-tab="p-chart">Chart</button><button type="button" role="tab" id="tab-p-chord" aria-controls="panel-p-chord" data-tab="p-chord">Chord</button><button type="button" role="tab" id="tab-p-tools" aria-controls="panel-p-tools" data-tab="p-tools">Tools</button></div>
 
-  <section class="rail" aria-label="Key, mode, meter and tempo">
-    <div class="field"><label class="label" for="key">Key</label><select id="key"></select></div>
-    <div class="field"><label class="label" for="mode">Mode</label><select id="mode"></select></div>
-    <div class="field"><label class="label" for="meter">Time</label><select id="meter"></select></div>
-    <div class="field"><label class="label" for="tempo">Tempo ♩</label><input id="tempo" type="number" min="40" max="240" step="1"></div>
-    <p class="hint cycle-note" id="cycleNote" hidden></p>
-  </section>
-
-  <div class="setup">
+  <div class="app">
+    <aside class="side left" id="sideLeft" aria-label="Create">
+      <div class="side-head"><h2>Create</h2><button type="button" class="btn small drawer-close" id="createClose" aria-label="Close">×</button></div>
+      <div class="tabs" role="tablist" aria-label="Create" data-tabs="left"><button type="button" role="tab" id="tab-gen" aria-controls="panel-gen" data-tab="gen">Generate</button><button type="button" role="tab" id="tab-setkey" aria-controls="panel-setkey" data-tab="setkey">Key and limits</button></div>
+      <div class="tabpanel" role="tabpanel" id="panel-gen" aria-labelledby="tab-gen" data-panel="gen">
     <section class="panel gen" aria-label="Generate a progression">
       <div class="sub-h"><h2>Generate a progression</h2><span class="hint">Mood sets the feeling, genre sets the style. Use either or both.</span></div>
       <div class="field"><span class="label">Mood <span class="opt">pick one, or none</span></span><div class="moods" id="moods" role="group" aria-label="Mood"></div></div>
@@ -485,31 +591,36 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
         <button class="btn" id="regen" type="button" title="Keep locked chords and refill the rest, keeping every chord's length">Regenerate unlocked</button>
       </div>
     </section>
+      </div>
+      <div class="tabpanel" role="tabpanel" id="panel-setkey" aria-labelledby="tab-setkey" data-panel="setkey" hidden>
+  <section class="rail" aria-label="Key, mode, meter and tempo">
+    <div class="field"><label class="label" for="key">Key</label><select id="key"></select></div>
+    <div class="field"><label class="label" for="mode">Mode</label><select id="mode"></select></div>
+    <div class="field"><label class="label" for="meter">Time</label><select id="meter"></select></div>
+    <div class="field"><label class="label" for="tempo">Tempo ♩</label><input id="tempo" type="number" min="40" max="240" step="1"></div>
+    <p class="hint cycle-note" id="cycleNote" hidden></p>
+  </section>
     <section class="panel vocabp" aria-label="Chords allowed">
       <div class="sub-h"><h2>Chords allowed</h2></div>
       <p class="hint vtext">Your limits: the most colourful chord types you want anywhere in the app. Generated progressions, swap ideas and “Apply chords allowed” stay within these, unless you let the genres choose. Plain major and minor chords are always allowed.</p>
       <div class="seg" id="presets" role="group" aria-label="Vocabulary presets"></div>
       <div class="fams" id="fams" role="group" aria-label="Chord families"></div>
     </section>
-  </div>
-
-  <details class="panel library" id="library">
-    <summary><h2>Library</h2><span class="hint" id="libCount"></span></summary>
-    <div class="lib-body">
-      <div class="lib-save"><input id="libName" type="text" maxlength="80" placeholder="Name this progression" aria-label="Progression name"><button class="btn primary small" id="libSaveBtn" type="button">Save</button></div>
-      <ul class="lib-list" id="libList"></ul>
-      <div class="lib-tools">
-        <button class="btn small" id="libExport" type="button">Export library (.json)</button>
-        <label class="btn small" for="libImport">Import library…</label><input id="libImport" type="file" accept=".json,application/json" hidden>
-        <span class="lib-open"><input id="shareIn" type="text" placeholder="Paste a share link or code" aria-label="Share link or code"><button class="btn small" id="shareOpen" type="button">Open</button></span>
       </div>
-    </div>
-  </details>
+    </aside>
 
+    <main class="center" id="center">
+  <section class="panel quick" id="quick" aria-label="Quick start">
+    <div><h2>Make a chord progression in one tap</h2><p class="hint">Pick a feeling and it plays straight away. Tap any chord below to hear it or swap it, then use Export to take it into your music app.</p></div>
+    <div class="field"><span class="label">Feeling</span><div class="moods" id="qMoods" role="group" aria-label="Feeling"></div></div>
+    <div class="field"><span class="label">Style <span class="opt">optional</span></span><div class="moods" id="qStyles" role="group" aria-label="Style"></div></div>
+    <div class="q-act"><button type="button" class="btn primary q-again" id="qAgain">Make another</button><span class="hint" id="qHint">Each tap makes a new one in the same feeling.</span></div>
+  </section>
   <section class="chart-card" aria-label="Progression chart">
     <div class="chart-head">
       <div><h2>Chart</h2><div class="keytag" id="keytag"></div></div>
-      <div class="transport">
+      <button type="button" class="btn small ctools-toggle" id="ctoolsToggle" aria-expanded="false" aria-controls="chartTools">Chart tools</button>
+      <div class="transport" id="chartTools">
         <span class="xpose" role="group" aria-label="Transpose"><span class="label">Transpose</span><button class="btn small" id="tdown" type="button" aria-label="Down a half step">−½</button><button class="btn small" id="tup" type="button" aria-label="Up a half step">+½</button><select id="tto" aria-label="Transpose to key"></select></span>
         <label class="check"><input type="checkbox" id="click"> Click</label>
         <select id="voicing" class="btn" aria-label="Playback voicing"><option value="smooth">Smooth voice leading</option><option value="fixed">Fixed root position</option></select>
@@ -517,16 +628,6 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
         <button class="btn" id="recolor" type="button" title="Rewrite every chord using the chord types in Chords allowed">Apply chords allowed</button>
       </div>
     </div>
-    <div class="io-row" role="group" aria-label="Playback extras">
-      <button class="btn small" id="soundCheck" type="button" title="Test what your device can play">Sound check</button>
-      <span class="io-pair" id="midiOutWrap" hidden><label class="label" for="midiOut">MIDI out</label><select id="midiOut"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select></span>
-    </div>
-    <div class="prog-input">
-      <textarea id="prog" rows="4" spellcheck="false" autocomplete="off" aria-label="Progression text"></textarea>
-      <div class="pbtns"><button class="btn" id="load" type="button" title="Ctrl/⌘ + Enter">Load</button>
-      <button class="btn" id="addslot" type="button">+ Empty bar</button></div>
-    </div>
-    <div class="hint">Write it like a chart: one line per phrase, <span class="mono">|</span> between bars, chords sharing a bar split it. Start a line with <span class="mono">[Verse]</span> or <span class="mono">Chorus:</span> to label a section. Add <span class="mono">:2</span> for an exact beat count, <span class="mono">?</span> for a slot you want ideas for. <span class="mono">Ctrl/⌘ + Enter</span> loads. Drag chords in the chart below to reorder them (hold Option/Alt as you drop to copy instead), or drag a chord’s right edge to change its length (hold Shift to trade beats with the next chord); the text updates to match.</div>
     <div class="err" id="err" hidden></div>
     <div class="tension" id="tension"></div>
     <div class="rows" id="rows"></div>
@@ -534,15 +635,27 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
       <span class="k-dia">In the key</span><span class="k-bor">Borrowed from a parallel mode</span><span class="k-sec">Secondary / tritone dominant</span><span class="k-chr">Chromatic</span>
     </div>
     <div class="vlx-wrap"><div class="toggles"><label class="check"><input type="checkbox" id="vlToggle"> Show voice leading</label><label class="check"><input type="checkbox" id="quizOn"> Quiz me</label><span class="hint" id="quizScore"></span></div><div id="vlx" hidden></div></div>
+    <details class="textedit" id="textEdit">
+      <summary>Edit as text</summary>
+    <div class="prog-input">
+      <textarea id="prog" rows="4" spellcheck="false" autocomplete="off" aria-label="Progression text"></textarea>
+      <div class="pbtns"><button class="btn" id="load" type="button" title="Ctrl/⌘ + Enter">Load</button>
+      <button class="btn" id="addslot" type="button">+ Empty bar</button></div>
+    </div>
+    <div class="hint">Write it like a chart: one line per phrase, <span class="mono">|</span> between bars, chords sharing a bar split it. Start a line with <span class="mono">[Verse]</span> or <span class="mono">Chorus:</span> to label a section. Add <span class="mono">:2</span> for an exact beat count, <span class="mono">?</span> for a slot you want ideas for. <span class="mono">Ctrl/⌘ + Enter</span> loads. Drag chords in the chart below to reorder them (hold Option/Alt as you drop to copy instead), or drag a chord’s right edge to change its length (hold Shift to trade beats with the next chord); the text updates to match.</div>
+    </details>
+    <div class="io-row" role="group" aria-label="Playback extras">
+      <button class="btn small" id="soundCheck" type="button" title="Test what your device can play">Sound check</button>
+      <span class="io-pair" id="midiOutWrap" hidden><label class="label" for="midiOut">MIDI out</label><select id="midiOut"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select></span>
+    </div>
   </section>
 
-  <div class="work">
-    <section class="panel" id="detail" aria-label="Selected chord"></section>
-    <section class="panel" id="subs" aria-label="Substitution ideas"></section>
-  </div>
-
+      <section class="panel tools" id="tools" aria-label="More tools">
+        <div class="tabs" role="tablist" aria-label="More tools" data-tabs="tools"><button type="button" role="tab" id="tab-finder" aria-controls="panel-finder" data-tab="finder">Chord finder</button><button type="button" role="tab" id="tab-melody" aria-controls="panel-melody" data-tab="melody">Harmonize a melody</button><button type="button" role="tab" id="tab-modes" aria-controls="panel-modes" data-tab="modes">Keys and modes</button></div>
+        <div class="tabpanel" role="tabpanel" id="panel-finder" aria-labelledby="tab-finder" data-panel="finder">
   <section class="panel finder" id="finder" aria-label="Chord finder"></section>
-
+        </div>
+        <div class="tabpanel" role="tabpanel" id="panel-melody" aria-labelledby="tab-melody" data-panel="melody" hidden>
   <section class="panel melody" id="melody" aria-label="Harmonize a melody">
     <div class="sub-h"><h2>Harmonize a melody</h2><span class="hint">One note per beat, in the chart’s key and meter</span></div>
     <div class="mel-in"><input id="melIn" type="text" spellcheck="false" autocomplete="off" placeholder="e.g. E D C D | E E E - | D D D - | E G G -" aria-label="Melody, one note per beat">
@@ -551,12 +664,27 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
     <p class="hint">Note names like C, F♯ or F#, B♭ or Bb. A dash (-) holds the last note, a dot (.) is a rest, and | between bars is optional. Octaves are ignored; notes are matched by pitch.</p>
     <div id="melOut" aria-live="polite"></div>
   </section>
-
+        </div>
+        <div class="tabpanel" role="tabpanel" id="panel-modes" aria-labelledby="tab-modes" data-panel="modes" hidden>
   <section class="palette">
     <div class="panel"><div class="sub-h"><h3 id="diaTitle">Chords in the key</h3><span class="hint">Click to drop into the selected slot</span></div><div class="dia-row" id="dia"></div>
       <div class="sub-h"><h3 id="dia7Title">Sevenths</h3></div><div class="dia-row" id="dia7"></div></div>
     <div class="panel"><div class="sub-h"><h3>Modes on this tonic</h3><span class="hint">Fit = chords of your chart that belong</span></div><div class="modes" id="modes"></div></div>
   </section>
+        </div>
+      </section>
+    </main>
+
+    <aside class="side right" id="sideRight" aria-label="Selected chord">
+      <div class="tabs" role="tablist" aria-label="Selected chord" data-tabs="right"><button type="button" role="tab" id="tab-chord" aria-controls="panel-chord" data-tab="chord">Chord</button><button type="button" role="tab" id="tab-swaps" aria-controls="panel-swaps" data-tab="swaps">Swap ideas</button></div>
+      <div class="tabpanel" role="tabpanel" id="panel-chord" aria-labelledby="tab-chord" data-panel="chord">
+        <section class="panel" id="detail" aria-label="Selected chord"></section>
+      </div>
+      <div class="tabpanel" role="tabpanel" id="panel-swaps" aria-labelledby="tab-swaps" data-panel="swaps" hidden>
+        <section class="panel" id="subs" aria-label="Substitution ideas"></section>
+      </div>
+    </aside>
+  </div>
 </div>
 <div class="dock" id="dock" role="region" aria-label="Play and export">
   <div class="dock-in">
@@ -2038,6 +2166,46 @@ function soundBeep(kind){
   setTimeout(renderSoundBox,400);
 }
 
+/* ============ layout: tabs, Create drawer, library popover, phone screens ============ */
+const TAB_KEY='changes-tabs-v1';
+function selectTab(group,name){
+  const bar=document.querySelector(`.tabs[data-tabs="${group}"]`); if(!bar) return;
+  bar.querySelectorAll('[role=tab]').forEach(b=>{ const on=b.dataset.tab===name; b.setAttribute('aria-selected',String(on)); b.tabIndex=on?0:-1; const pn=document.getElementById('panel-'+b.dataset.tab); if(pn) pn.hidden=!on; });
+  if(group==='phone') document.body.dataset.ptab=name;
+  try{ const t=JSON.parse(localStorage.getItem(TAB_KEY)||'{}'); t[group]=name; localStorage.setItem(TAB_KEY,JSON.stringify(t)); }catch(e){}
+}
+function setDrawer(open){ document.body.classList.toggle('drawer-open',open); $('#createToggle').setAttribute('aria-expanded',String(open)); if(open) $('#sideLeft').querySelector('[role=tab][aria-selected=true]')?.focus(); }
+/* makes a control visible wherever it lives: its tab, the Create drawer, the Library popover or the phone screen */
+function revealEl(el){
+  if(!el) return;
+  for(let d=el.closest('details');d;d=d.parentElement&&d.parentElement.closest('details')) if(!d.open) d.open=true;
+  if(el.closest('#chartTools')) $('.chart-card').classList.add('show-tools');
+  const pn=el.closest('[data-panel]'); if(pn){ const t=document.querySelector(`[role=tab][data-tab="${pn.dataset.panel}"]`); if(t) selectTab(t.closest('.tabs').dataset.tabs,pn.dataset.panel); }
+  if(el.closest('#sideLeft')&&matchMedia('(min-width:760px) and (max-width:1199px)').matches) setDrawer(true);
+  if(matchMedia('(max-width:759px)').matches&&!document.body.classList.contains('simple')){
+    const area=el.closest('#sideLeft')?'p-create':el.closest('#sideRight')?'p-chord':el.closest('#tools')?'p-tools':el.closest('#center')?'p-chart':null; if(area) selectTab('phone',area); }
+}
+function initLayout(){
+  let saved={}; try{ saved=JSON.parse(localStorage.getItem(TAB_KEY)||'{}'); }catch(e){}
+  document.querySelectorAll('.tabs[data-tabs]').forEach(bar=>{
+    const g=bar.dataset.tabs, first=bar.querySelector('[role=tab]').dataset.tab, want=g==='phone'?'p-chart':(saved[g]&&bar.querySelector(`[data-tab="${saved[g]}"]`)?saved[g]:first);
+    selectTab(g,want);
+    bar.addEventListener('click',e=>{ const b=e.target.closest('[role=tab]'); if(b) selectTab(g,b.dataset.tab); });
+    bar.addEventListener('keydown',e=>{ if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft') return; const ts=[...bar.querySelectorAll('[role=tab]')], i=ts.findIndex(t=>t.getAttribute('aria-selected')==='true'), n=ts[(i+(e.key==='ArrowRight'?1:-1)+ts.length)%ts.length]; selectTab(g,n.dataset.tab); n.focus(); e.preventDefault(); });
+  });
+  $('#createToggle').onclick=()=>setDrawer(!document.body.classList.contains('drawer-open'));
+  $('#ctoolsToggle').onclick=()=>{ const on=$('.chart-card').classList.toggle('show-tools'); $('#ctoolsToggle').setAttribute('aria-expanded',String(on)); };
+  document.querySelector('#helpMenu [data-help="sound"]').onclick=()=>{ $('#helpMenu').open=false; $('#soundCheck').click(); };
+  try{ if(localStorage.getItem('changes-textedit-v1')==='open') $('#textEdit').open=true; }catch(e){}
+  $('#textEdit').addEventListener('toggle',()=>{ try{ localStorage.setItem('changes-textedit-v1',$('#textEdit').open?'open':'closed'); }catch(e){} });
+  $('#createClose').onclick=()=>setDrawer(false);
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.body.classList.contains('drawer-open')) setDrawer(false); const l=$('#library'); if(l.open){ l.open=false; l.querySelector('summary').focus(); } } });
+  document.addEventListener('pointerdown',e=>{ const l=$('#library'); if(l.open&&!l.contains(e.target)) l.open=false; const hm=$('#helpMenu'); if(hm.open&&!hm.contains(e.target)) hm.open=false;
+    if(document.body.classList.contains('drawer-open')&&!e.target.closest('#sideLeft')&&!e.target.closest('#createToggle')&&!e.target.closest('#dock')) setDrawer(false); });
+  const topRO=new ResizeObserver(()=>document.documentElement.style.setProperty('--top-h',$('#topbar').offsetHeight+'px')); topRO.observe($('#topbar'));
+  /* selecting a chord brings the Chord tab forward, unless the person is reading Swap ideas */
+}
+
 /* ============ simple view and quick start ============ */
 /* first-time visitors start in Simple; anyone with saved work starts with All tools. The choice is remembered. */
 const QUICK_STYLES=['pop','rock','folk','rnb','jazz','lofi','country','edm'];
@@ -2608,6 +2776,7 @@ function initIO(){
   $('#printBtn').onclick=printSheet;
   $('#copyboxDone').onclick=()=>{ $('#copybox').hidden=true; };
   $('#copybox').addEventListener('keydown',e=>{ if(e.key==='Escape') $('#copybox').hidden=true; });
+  document.addEventListener('pointerdown',e=>{ const cb=$('#copybox'); if(!cb.hidden&&!cb.contains(e.target)&&!e.target.closest('#shareLink,#copy,#exportMenu')) cb.hidden=true; });
   if('requestMIDIAccess' in navigator){ $('#midiOutWrap').hidden=false;
     $('#midiOut').onchange=async e=>{ const v=e.target.value; midiAllOff();
       if(v==='__connect'){ e.target.value=''; MIDIOUT.out=null; await midiConnect(); return; }
@@ -2675,7 +2844,7 @@ function boot(){
   $('#recipe').onclick=e=>{ const b=e.target.closest('[data-addfams]'); if(!b) return; S.vocab=[...new Set([...S.vocab,...b.dataset.addfams.split(',')])]; commit(); toast(`Vocabulary updated: ${vocabName()}`); };
   $('#gen').onclick=generate;
   $('#regen').onclick=regenUnlocked;
-  setView(getView());
+  initLayout(); setView(getView());
   document.querySelector('.viewtoggle').addEventListener('click',e=>{ const b=e.target.closest('[data-view]'); if(b){ setView(b.dataset.view); renderAll(); } });
   $('#qMoods').innerHTML=MOODS.map(m=>`<button type="button" class="chip" data-id="${m.id}" aria-pressed="false" title="${esc(m.blurb)}">${m.name}</button>`).join('');
   $('#qStyles').innerHTML=QUICK_STYLES.map(id=>{ const g=GENRES.find(x=>x.id===id); return `<button type="button" class="chip" data-g="${id}" aria-pressed="false" title="${esc(g.blurb)}">${esc(g.name)}</button>`; }).join('');
