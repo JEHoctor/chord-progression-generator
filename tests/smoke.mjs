@@ -84,6 +84,7 @@ async function phase1() {
   check('old Bluesy mood becomes the Blues genre', old.g.includes('blues') && old.mood === '');
   check('old save migrated into library as "Untitled"', old.lib && old.lib.version === 1 && old.lib.items[0]?.name === 'Untitled');
 
+  check('all eight moods are offered', await page.evaluate(() => MOODS.map(m => m.name).join() === 'Uplifting,Melancholy,Dreamy,Dark,Tense,Nostalgic,Epic,Mysterious'));
   // generate, edit, play
   await tap(page, '#gen');
   check('generate makes a progression', await page.evaluate(() => chords.length > 0 && chords.every(c => c.beats > 0)));
@@ -536,6 +537,41 @@ async function simpleView() {
   await ctx.close();
 }
 
+// layout: desktop columns, tablet drawer, phone screens, top bar, help pages
+async function layout() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(URL_);
+  const d = await page.evaluate(() => ({ left: document.querySelector('#sideLeft').checkVisibility(), center: document.querySelector('#rows').checkVisibility(), right: document.querySelector('#sideRight').checkVisibility(), xL: document.querySelector('#sideLeft').getBoundingClientRect().right, xC: document.querySelector('.chart-card').getBoundingClientRect().left, xR: document.querySelector('#sideRight').getBoundingClientRect().left }));
+  check('layout: desktop shows Create, the chart in the centre and the chord sidebar side by side', d.left && d.center && d.right && d.xL <= d.xC && d.xC < d.xR, JSON.stringify(d));
+  await page.click('#library > summary');
+  check('layout: Library opens from the top bar with save, list and import/export', await page.evaluate(() => document.querySelector('#libSaveBtn').checkVisibility() && document.querySelector('#libExport').checkVisibility() && document.querySelector('#library').getBoundingClientRect().top < 80));
+  await page.mouse.click(700, 500);
+  check('layout: clicking elsewhere closes the Library', await page.evaluate(() => !document.querySelector('#library').open));
+  await page.click('#helpMenu > summary');
+  const help = await page.evaluate(() => [...document.querySelectorAll('#helpMenu a')].map(a => a.getAttribute('href')).join());
+  check('layout: Help links to How to use and Under the hood', help === 'guide.html,how-it-works.html', help);
+  for (const [f, h1] of [['guide.html', 'How to use Chord Changes'], ['how-it-works.html', 'How Chord Changes works']]) {
+    const p2 = await ctx.newPage(); const errs = []; p2.on('pageerror', e => errs.push(String(e)));
+    const r = await p2.goto(URL_.replace('index.html', f));
+    const info = await p2.evaluate(() => ({ h1: document.querySelector('h1').textContent, back: !!document.querySelector('a[href="./"]'), toc: document.querySelectorAll('.toc a').length, missing: [...document.querySelectorAll('.toc a')].filter(a => !document.querySelector(a.getAttribute('href'))).length }));
+    check(`help page ${f} loads with its contents list and a link back to the app`, r.ok() && info.h1 === h1 && info.back && info.toc >= 10 && info.missing === 0 && errs.length === 0, JSON.stringify(info));
+    await p2.close();
+  }
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const t0 = await page.evaluate(() => ({ left: document.querySelector('#sideLeft').checkVisibility({ visibilityProperty: true }), toggle: document.querySelector('#createToggle').checkVisibility(), right: document.querySelector('#sideRight').checkVisibility() }));
+  await page.click('#createToggle'); await page.waitForTimeout(300);
+  const t1 = await page.evaluate(() => document.querySelector('#gen').checkVisibility({ visibilityProperty: true }) && document.body.classList.contains('drawer-open'));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  check('layout: tablet keeps chart and chord side by side; Create opens and closes as a drawer', !t0.left && t0.toggle && t0.right && t1 && await page.evaluate(() => !document.body.classList.contains('drawer-open')), JSON.stringify(t0));
+  await page.setViewportSize({ width: 390, height: 844 });
+  const seen = {};
+  for (const tab of ['p-create', 'p-chord', 'p-tools', 'p-chart']) { await page.click(`#phoneTabs [data-tab="${tab}"]`); seen[tab] = await page.evaluate(() => ({ gen: document.querySelector('#gen').checkVisibility(), detail: document.querySelector('#detail').checkVisibility(), finder: document.querySelector('#finder').checkVisibility(), chart: document.querySelector('#rows').checkVisibility() })); }
+  const one = Object.values(seen).every(v => Object.values(v).filter(Boolean).length === 1);
+  check('layout: phone shows one screen at a time from the tab bar', one && seen['p-create'].gen && seen['p-chord'].detail && seen['p-tools'].finder && seen['p-chart'].chart && await noHScroll(page), JSON.stringify(seen));
+  check('no console errors (layout)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
+
 // phone width + dark mode for every panel
 async function phoneDark(tag) {
   const { ctx, page } = await openPage({ viewport: { width: 390, height: 844 }, colorScheme: 'dark' });
@@ -576,6 +612,7 @@ const phaseFns = { 1: phase1, 2: phase2, 3: phase3 };
 try {
   for (const n of PHASES) { if (phaseFns[n]) { await phaseFns[n](); await phoneDark('phase' + n); } }
   await simpleView();
+  await layout();
   await iphone();
 } catch (e) { check('test run finished without throwing', false, e.stack); }
 await browser.close(); server.close();

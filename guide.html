@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How to use Chord Changes</title><meta name="description" content="A tour of Chord Changes: making, editing, hearing, exporting and saving chord progressions.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#5F6676;--line:#E2E4E9;--accent:#3355FF;--accent-soft:#E9EDFF;
+  --t-dia:#8A93A6;--t-bor:#8B5CF6;--t-sec:#EA6A2A;--t-chr:#E0457B;--t-jazz:#10A38C;
+  --f-ui:'Geist',ui-sans-serif,system-ui,-apple-system,sans-serif;--f-mono:'Geist Mono',ui-monospace,'SF Mono',Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0C0D10;--surface:#15171B;--sunk:#1C1E23;--ink:#EDEEF0;--muted:#9AA0AC;--line:#262931;--accent:#7088FF;--accent-soft:#1D2440;
+  --t-dia:#7D8597;--t-bor:#A78BFA;--t-sec:#FF8A4C;--t-chr:#FF6B9D;--t-jazz:#2DD4B4;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0C0D10;--surface:#15171B;--sunk:#1C1E23;--ink:#EDEEF0;--muted:#9AA0AC;--line:#262931;--accent:#7088FF;--accent-soft:#1D2440;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;padding:0 16px 64px}
+a{color:var(--accent)}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px 20px;flex-wrap:wrap;max-width:1180px;margin:0 auto;padding:12px 0;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.top .name{font-weight:600;font-size:18px;letter-spacing:-.02em;text-decoration:none;color:var(--ink)}
+.top nav{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;height:36px;padding:0 14px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font-weight:500;font-size:14px;text-decoration:none}
+.btn:hover{background:var(--sunk)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn[aria-current=page]{border-color:var(--accent);color:var(--accent)}
+.page{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:240px minmax(0,1fr);gap:40px;align-items:start}
+.toc{position:sticky;top:72px;max-height:calc(100vh - 90px);overflow:auto;font-size:14px;padding-top:28px}
+.toc b{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px}
+.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.toc a{display:block;padding:4px 10px;border-radius:7px;color:var(--muted);text-decoration:none}
+.toc a:hover{background:var(--sunk);color:var(--ink)}
+main{min-width:0;max-width:74ch}
+h1{font-size:clamp(30px,4.6vw,42px);line-height:1.1;letter-spacing:-.035em;margin:28px 0 10px}
+.lede{font-size:18px;color:var(--muted);margin:0 0 28px;max-width:62ch}
+h2{scroll-margin-top:84px;font-size:24px;letter-spacing:-.025em;margin:44px 0 10px;padding-top:4px;border-top:1px solid var(--line);padding-top:28px}
+h3{font-size:17px;margin:24px 0 6px}
+p,li{max-width:70ch}
+ul,ol{padding-left:22px}
+li{margin:4px 0}
+code,kbd,.mono{font-family:var(--f-mono);font-size:.88em}
+code{background:var(--sunk);border-radius:5px;padding:1px 5px}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;background:var(--surface)}
+pre{background:var(--sunk);border-radius:12px;padding:14px 16px;overflow:auto;font-family:var(--f-mono);font-size:14px;line-height:1.55}
+table{border-collapse:collapse;width:100%;font-size:15px;margin:10px 0 18px;display:block;overflow-x:auto}
+th,td{text-align:left;padding:8px 12px 8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--muted);font-weight:500}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:16px 0}
+.note b{display:block;margin-bottom:2px}
+.steps{counter-reset:s;list-style:none;padding:0;display:grid;gap:10px}
+.steps li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px 14px 56px;position:relative;max-width:none}
+.steps li::before{content:counter(s);position:absolute;left:16px;top:13px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:600;display:grid;place-items:center;font-size:14px}
+.map{display:grid;grid-template-columns:1fr 2fr 1.4fr;grid-template-rows:auto auto auto;gap:6px;margin:14px 0 18px;font-size:13px}
+.map div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.map b{display:block;font-size:14px}
+.map .tb{grid-column:1 / -1}
+.map .ct{border-color:var(--accent);background:var(--accent-soft)}
+.map .dk{grid-column:1 / -1}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0 18px;font-size:14px}
+.flow span{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.flow i{color:var(--muted);font-style:normal}
+.k{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:0}
+footer{max-width:1180px;margin:56px auto 0;color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:16px}
+@media (max-width:860px){ .page{display:block} .toc{position:static;max-height:none;padding-top:8px} .toc ol{flex-direction:row;flex-wrap:wrap;gap:4px} .toc a{background:var(--surface);border:1px solid var(--line)} .map{grid-template-columns:1fr} }
+</style></head><body>
+<header class="top"><a class="name" href="./">Chord Changes</a><nav aria-label="Pages"><a class="btn" href="guide.html" aria-current=page>How to use</a><a class="btn" href="how-it-works.html">Under the hood</a><a class="btn primary" href="./">Open the app</a></nav></header>
+<div class="page"><nav class="toc" aria-label="On this page"><b>On this page</b><ol><li><a href="#quick">Quick start</a></li><li><a href="#screen">Finding your way around</a></li><li><a href="#make">Making a progression</a></li><li><a href="#edit">Editing the chart</a></li><li><a href="#swaps">Swap ideas</a></li><li><a href="#play">Playing and hearing</a></li><li><a href="#export">Export, share and save</a></li><li><a href="#tools">More tools</a></li><li><a href="#keys">Keyboard shortcuts</a></li><li><a href="#sound">If you hear nothing</a></li><li><a href="#privacy">Your data</a></li></ol></nav>
+<main><h1>How to use Chord Changes</h1>
+<p class="lede">Chord Changes helps you find chord progressions, hear them, understand why they work and take them into your music app. You don’t need to know music theory to start; the theory is there when you want it.</p>
+
+<h2 id="quick">Quick start</h2>
+<ol class="steps">
+  <li><b>Pick a feeling.</b> In the Simple view, tap Uplifting, Melancholy, Dreamy or another feeling. A progression appears in the chart and starts playing.</li>
+  <li><b>Optionally pick a style.</b> Pop, Rock, Jazz, Lo-fi and the rest each have their own typical chords. Tap “Make another” as often as you like.</li>
+  <li><b>Change anything you don’t like.</b> Tap a chord to hear it, then try one of the swap ideas, or tap the small ▾ next to its name to pick a different chord.</li>
+  <li><b>Take it with you.</b> Press Export to download MIDI or notation, copy the chord chart, or print a lead sheet.</li>
+</ol>
+<div class="note"><b>Simple and All tools</b>The switch at the top right changes how much you see. Simple keeps to the essentials; All tools shows everything described below. Your choice is remembered.</div>
+
+<h2 id="screen">Finding your way around</h2>
+<p>On a computer the screen has five parts, with your chord chart in the middle:</p>
+<div class="map" aria-label="Screen layout">
+  <div class="tb"><b>Top bar</b>Library (save and open), Help, and the Simple / All tools switch</div>
+  <div><b>Create</b>Generate a progression; key, meter, tempo and Chords allowed</div>
+  <div class="ct"><b>Chart</b>Your progression. Below it: Edit as text, and More tools (chord finder, harmonize a melody, keys and modes)</div>
+  <div><b>Chord / Swap ideas</b>Everything about the chord you selected, and what could replace it</div>
+  <div class="dk"><b>Play bar</b>Play, the chord now playing, loop, tempo, sound and playing style, and Export</div>
+</div>
+<p>On a smaller laptop or tablet, Create slides out from the left when you press <b>Create</b>. On a phone, a tab bar under the title switches between <b>Create</b>, <b>Chart</b>, <b>Chord</b> and <b>Tools</b>, one screen at a time.</p>
+
+<h2 id="make">Making a progression</h2>
+<p>Open <b>Create → Generate</b>.</p>
+<ul>
+  <li><b>Mood</b> sets the feeling: Uplifting, Melancholy, Dreamy, Dark, Tense, Nostalgic, Epic or Mysterious. Pick one, or none.</li>
+  <li><b>Genre</b> sets the style: Pop, Rock, Blues, Jazz, R&amp;B / Neo-soul, Gospel, Funk, Country, Folk, EDM, Metal, Bossa nova, Lo-fi and Film score. Pick several to blend them.</li>
+  <li><b>What this genre plays</b> shows each picked genre’s typical chords in your key; tap one to hear it. Chords shown faded are outside <b>Chords allowed</b>. Turn on <b>Let the genre choose its chords</b> to use them anyway.</li>
+  <li><b>Predictable ↔ Surprising</b> controls how often a chord from outside the key sneaks in.</li>
+  <li><b>Length</b> and <b>Chord changes</b> set how many bars and how often the chord changes. <b>Keep my mode</b> stops Generate from switching to another mode.</li>
+  <li>Press <b>Generate</b>. The box above the button explains in plain words what Generate is about to do.</li>
+</ul>
+<h3>Keeping the chords you like</h3>
+<p>Select a chord and press <b>Lock</b> in the Chord panel (a small padlock appears on it in the chart). <b>Regenerate unlocked</b> then refills only the other chords and keeps every chord’s length. Empty slots (shown as <code>?</code>) are always refilled.</p>
+<h3>Key, meter and limits</h3>
+<p><b>Create → Key and limits</b> holds the key, mode, time signature and tempo, and <b>Chords allowed</b>: the most colourful chord types you want anywhere in the app. The presets Simple, Color, Jazz and Everything are starting points; tap the families (Power, Sus, Add &amp; 6, 7ths, 9 · 11 · 13, Altered, Dim &amp; aug, Slash) to fine-tune. Plain major and minor chords are always allowed.</p>
+
+<h2 id="edit">Editing the chart</h2>
+<table>
+  <tr><th>To…</th><th>Do this</th></tr>
+  <tr><td>Hear a chord</td><td>Tap or click it.</td></tr>
+  <tr><td>Change a chord</td><td>Tap the ▾ next to its name (or double-click the chord, or select it and press <kbd>E</kbd>). Pick from the chords in your key, or choose root, type and bass, then Apply.</td></tr>
+  <tr><td>Add a chord</td><td>Press <b>+ Add chord</b> at the end of the chart. It adds a blank bar and opens the picker.</td></tr>
+  <tr><td>Move a chord</td><td>Drag it to a new place. Hold <kbd>Option</kbd>/<kbd>Alt</kbd> as you drop to copy it instead. On a phone, press and hold briefly before dragging.</td></tr>
+  <tr><td>Make it longer or shorter</td><td>Drag its right edge. Lengths snap to whole beats. Hold <kbd>Shift</kbd> to trade beats with the next chord so everything after stays put.</td></tr>
+  <tr><td>Split, delete, insert</td><td>Use the buttons in the Chord panel.</td></tr>
+  <tr><td>Change key</td><td>Chart tools → Transpose (half steps, or straight to a key).</td></tr>
+  <tr><td>Undo</td><td>Chart tools → Undo, or <kbd>⌘Z</kbd> / <kbd>Ctrl+Z</kbd>.</td></tr>
+</table>
+<h3>Writing a chart as text</h3>
+<p>Open <b>Edit as text</b> under the chart to type or paste a progression, then press Load (or <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd>). Every change you make in the chart is written back here too.</p>
+<pre>[Verse]
+C | Am | F | G:2 G7:2
+[Chorus]
+F | G | Em | ? </pre>
+<ul>
+  <li>One line per phrase; <code>|</code> between bars. Chords sharing a bar split it evenly.</li>
+  <li><code>[Verse]</code> or <code>Chorus:</code> at the start of a line labels a section.</li>
+  <li><code>:2</code> after a chord gives it an exact number of beats.</li>
+  <li><code>?</code> is an empty slot you want ideas for; <code>%</code> repeats the previous chord; an empty bar <code>| |</code> holds the chord for another bar.</li>
+  <li>Chord names are read flexibly: <code>Cmaj7</code>, <code>CΔ7</code>, <code>C-7</code>, <code>Cø</code>, <code>F#m7b5</code>, <code>Bbsus4</code>, <code>Gmaj7(9)</code>, <code>D/F#</code> and many more.</li>
+</ul>
+
+<h2 id="swaps">Swap ideas</h2>
+<p>Select a chord and open the <b>Swap ideas</b> tab. Ideas are grouped (chords that do the same job, recolourings, borrowed chords, chords that lead into the next one, and more). Each idea shows:</p>
+<ul>
+  <li>its <b>theory name</b>, such as “Secondary dominant (V7/vi)” or “Modal interchange”;</li>
+  <li>a <b>sentence about this exact swap</b>: which notes it keeps, whether it sounds brighter or darker, and where it goes next;</li>
+  <li>a <b>voice-leading line</b>: which notes are held and how far each voice moves from the chord before;</li>
+  <li><b>▶</b> to hear it between its neighbours, <b>A/B</b> to loop the original and the idea bar by bar, and <b>Put in this slot</b> to use it.</li>
+</ul>
+<p><b>Keep note</b> filters the ideas to those containing a note you choose, for example your melody note.</p>
+
+<h2 id="play">Playing and hearing</h2>
+<ul>
+  <li><b>Play</b> in the bottom bar plays the chart; <b>Loop</b> repeats it. <kbd>Space</kbd> also starts and stops playback.</li>
+  <li><b>Sound</b>: Piano or Guitar. Guitar plays the actual guitar shapes in your tuning and capo.</li>
+  <li><b>Style</b>: piano can play block chords, a ballad (bass, then chords), a pop pulse or an arpeggio; guitar can strum once, play a strum pattern (down, down-up, up-down-up) or fingerpick.</li>
+  <li><b>Smooth voice leading</b> (in Chart tools) keeps the piano’s notes close from chord to chord; <b>Fixed root position</b> plays every chord the plain way.</li>
+  <li><b>Click</b> adds a metronome.</li>
+</ul>
+<h3>Guitar and piano shapes</h3>
+<p>The <b>Chord</b> tab shows the chord’s notes, guitar shapes and piano voicings. The shape marked <b>Smoothest path</b> is the one playback uses, chosen so your hand moves as little as possible. Tap any shape or voicing to hear it, then <b>▶ In context</b> to hear it between its neighbours or <b>Use for this chord</b> to make playback use it.</p>
+<p>Pick a <b>Tuning</b> (standard, half or whole step down, Drop D, Drop C, double drop D, DADGAD, open G, D, E or C) and a <b>Capo</b>. <b>Find the easiest tuning for this chart</b> compares every tuning and capo position for your chords and recommends one, keeping standard tuning unless another is clearly easier.</p>
+
+<h2 id="export">Export, share and save</h2>
+<table>
+  <tr><th>Export menu item</th><th>What you get</th></tr>
+  <tr><td>Copy chart as text</td><td>The chord chart, ready to paste anywhere.</td></tr>
+  <tr><td>Download MIDI: chords</td><td>A MIDI file for GarageBand, Logic, Ableton, FL Studio and others, with tempo, time signature and section markers, played in your chosen style.</td></tr>
+  <tr><td>Download MIDI: chords + bass line</td><td>The same with the bass on its own track.</td></tr>
+  <tr><td>Download notation (MusicXML)</td><td>A piano score with chord symbols that opens in Finale, Sibelius, MuseScore and Dorico.</td></tr>
+  <tr><td>Copy share link</td><td>A link that opens this chart (key, meter, tempo and sections included) for anyone.</td></tr>
+  <tr><td>Print lead sheet</td><td>A clean black-and-white chart; choose “Save as PDF” in the print dialog for a PDF.</td></tr>
+</table>
+<p>The <b>Library</b> at the top right saves progressions by name in this browser. You can open, rename, duplicate and delete them (with undo), export the whole library as a file for backup, import it on another computer, and paste a share link or code to open it.</p>
+
+<h2 id="tools">More tools</h2>
+<ul>
+  <li><b>Chord finder</b> (under the chart): place fingers on a fretboard or press piano keys, and it names the chord and shows it on the other instrument.</li>
+  <li><b>Harmonize a melody</b>: type one note per beat (for example <code>E D C D | E E E -</code>, with <code>-</code> to hold and <code>.</code> for a rest) and get three to five progressions, ranked by how many strong-beat melody notes are chord tones.</li>
+  <li><b>Keys and modes</b>: the chords in your key, and how well your chart fits each mode on the same tonic.</li>
+  <li><b>Tension curve</b> above the chart shows how much each chord pulls away from home.</li>
+  <li><b>Show voice leading</b> draws each voice’s path through the chart, marking held notes and big leaps.</li>
+  <li><b>Quiz me</b> hides the colours and labels and asks what each chord does; your score is kept.</li>
+</ul>
+<h3>Rhythmic cycles and drones</h3>
+<p>The time signature menu also offers Carnatic and Hindustani cycles (Adi talam, Rupaka, Misra and Khanda chapu, Teental, Jhaptal, Rupak taal, Ektal) as grids for placing chord changes, and Create offers a Sa–Pa drone under a mode. These are sketching aids, not authoritative accounts of those traditions.</p>
+
+<h2 id="keys">Keyboard shortcuts</h2>
+<table>
+  <tr><th>Keys</th><th>Action</th></tr>
+  <tr><td><kbd>Space</kbd></td><td>Play or stop</td></tr>
+  <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Select the previous or next chord</td></tr>
+  <tr><td><kbd>Option</kbd>/<kbd>Alt</kbd> + <kbd>←</kbd> <kbd>→</kbd></td><td>Move the selected chord</td></tr>
+  <tr><td><kbd>E</kbd></td><td>Pick a chord for the selected slot</td></tr>
+  <tr><td><kbd>⌘Z</kbd> / <kbd>Ctrl+Z</kbd></td><td>Undo</td></tr>
+  <tr><td><kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd></td><td>Load the text chart</td></tr>
+  <tr><td><kbd>Esc</kbd></td><td>Close a picker, menu or drawer</td></tr>
+</table>
+
+<h2 id="sound">If you hear nothing</h2>
+<ul>
+  <li>Phones and browsers only allow sound after you tap the page, so the first tap on Play is what starts it.</li>
+  <li>Check the volume and where the sound is going (Bluetooth, headphones).</li>
+  <li>Open <b>Help → Sound check</b>. It plays two test beeps by different routes and shows what your device reports, which narrows down where the sound stops.</li>
+</ul>
+
+<h2 id="privacy">Your data</h2>
+<p>Everything stays in your browser: your current chart, library, settings and quiz score are saved in this browser’s local storage on this device. There are no accounts and no tracking. Clearing your browser data clears them, so export the library now and then if it matters to you.</p>
+</main></div>
+<footer>Chord Changes runs entirely in your browser. Nothing you make is sent anywhere unless you share or export it.</footer>
+</body></html>

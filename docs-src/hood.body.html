@@ -1,0 +1,94 @@
+<h1>How Chord Changes works</h1>
+<p class="lede">What happens behind the buttons: how chords are represented and analysed, how progressions are generated, how voicings and guitar shapes are chosen, how the sound is made, and how the files are written. Everything described here runs in your browser.</p>
+
+<h2 id="overview">The big picture</h2>
+<p>The whole app is one HTML file with no build step and no libraries. The page, the music theory engine, the synthesizer and the file writers are plain JavaScript, so it works offline once loaded and can be hosted anywhere, including GitHub Pages.</p>
+<div class="flow"><span>Chart (chords + beats)</span><i>→</i><span>Analysis</span><i>→</i><span>Swap ideas &amp; explanations</span><i>→</i><span>Voicing planners</span><i>→</i><span>Sound, MIDI, MusicXML</span></div>
+<p>State lives in the browser’s local storage under a few keys: <code>changes-v1</code> (the current chart and settings), <code>changes-library-v1</code> (saved progressions), <code>changes-quiz-v1</code> (quiz score), and small layout preferences such as the view, open tabs and whether the text editor is open. Nothing is sent to a server.</p>
+
+<h2 id="model">How a chord is represented</h2>
+<p>Pitches are pitch classes 0–11 (C = 0). A chord in the chart is a <b>root</b>, a <b>quality</b>, an optional <b>bass</b> note (for slash chords) and a length in <b>beats</b>; a blank slot has no root. Sections, line breaks, locks and pinned shapes are extra fields on the same object.</p>
+<p>There are 55 qualities, each a list of intervals above the root (for example <code>maj7</code> is 0, 4, 7, 11 and <code>13</code> is 0, 4, 7, 10, 14, 21), plus which notes may be left out when voicing (usually the 5th, and the 9th for 11ths and 13ths). They are grouped into the families you see in Chords allowed. About 190 spellings map onto them when reading text: <code>Δ</code>, <code>-7</code>, <code>ø</code>, <code>7(9)</code>, <code>add2</code> and so on.</p>
+<p>Note names follow the scale degree rather than a fixed sharp or flat table, so the ♭VI of G is written E♭, not D♯, and chord tones in explanations are named by their degree in that chord (the major 7th of E is D♯).</p>
+
+<h2 id="analysis">How a chord’s job is decided</h2>
+<p>Every chord is classified against the current key and mode. The first rule that matches wins:</p>
+<ol>
+  <li><span class="k" style="background:var(--t-dia)"></span><b>In the key</b>: all its core tones (not counting upper extensions) are in the scale.</li>
+  <li><span class="k" style="background:var(--t-sec)"></span><b>Secondary dominant</b>: a dominant-type chord whose resolution, a 5th below, is in the key (written V7/ii and so on), or a major triad doing the same.</li>
+  <li><span class="k" style="background:var(--t-bor)"></span><b>Borrowed</b>: all core tones fit a parallel mode on the same tonic, tried in the order Aeolian, Dorian, Mixolydian, Phrygian, Lydian, Ionian, harmonic minor, melodic minor, Locrian.</li>
+  <li><span class="k" style="background:var(--t-sec)"></span><b>Tritone substitute</b>: a dominant that slides down a half step into a chord of the key; <b>leading-tone diminished</b>: a diminished chord that climbs a half step into one.</li>
+  <li><span class="k" style="background:var(--t-chr)"></span><b>Chromatic</b>: anything else, with special notes for augmented and diminished 7th chords.</li>
+</ol>
+<p>Roman numerals use upper case for major and lower case for minor chords, with ♭ and ♯ for chords off the scale. The tension curve scores each chord from its category, its distance from the tonic (dominant chords score highest) and its quality (dominant, diminished, augmented and altered tones add tension).</p>
+
+<h2 id="generate">How progressions are generated</h2>
+<p>Moods and genres each hold short progression <b>templates</b> written as Roman numerals, each tagged with the mode it lives in (for example Blues has <code>I7 IV7 I7 V7</code> in Mixolydian). Generate then works in stages:</p>
+<ol>
+  <li><b>Choose a template.</b> With only a mood, from the mood’s templates. With genres, from the genres’ templates that sit in one of the mood’s modes and in its main major or minor family; if none fit, the mood’s templates are used and coloured in the genre’s style.</li>
+  <li><b>Fill the slots</b> with chords in the key, repeating the template to the chosen length and rhythm.</li>
+  <li><b>Surprise.</b> The Predictable ↔ Surprising dial sets how often a chord gives way to a secondary dominant or a borrowed chord, and at higher settings a tritone substitute or a chromatic mediant. The first chord and locked chords never change.</li>
+  <li><b>Colour.</b> Each genre has a style: how far it climbs the colour ladder (triads, 7ths, extended chords) and how readily it uses sus, add, extended, altered, power and slash chords. When several genres are picked, the one that supplied the template leads and the others add their colours at half strength. Jazz-like styles may also insert ii–V approaches and tritone substitutes.</li>
+  <li><b>Respect the limits.</b> Every chord is stepped down a fixed ladder until its type is in Chords allowed (13 → 9 → 7 → triad, add9 → triad, and so on). “Let the genre choose” swaps in the genre’s own families for this step only.</li>
+</ol>
+<p><b>Regenerate unlocked</b> builds 40 candidates with the chart’s slot lengths, pastes the locked chords back in, and keeps the candidate whose chords best fit the locked chords’ key and lead into and out of them (falling 5ths and half steps score highest; repeating the same chord twice scores lower).</p>
+<p>The melody harmonizer scores chords against each segment of the melody (triad tones count most, a 7th half as much, other notes against the chord count against it, and downbeats count double), then finds the best path through the segments with dynamic programming, rewarding a tonic start, a tonic ending and V→I. It repeats the search with penalties on chords already used, to find three to five different answers, and ranks them by how many strong-beat notes are chord tones.</p>
+
+<h2 id="explain">How swap ideas explain themselves</h2>
+<p>Swap ideas come from several generators: chords in the key that share notes with the original, other qualities on the same root, chords borrowed from parallel modes, chords that point at the next chord (dominants, ii–V pairs, backdoor and diminished approaches), symmetrical diminished and augmented chords, chromatic mediants, and jazz reharmonizations. Each idea then gets:</p>
+<ul>
+  <li><b>a theory name</b> from a set of rules over the pair (same root, secondary dominant, tritone substitute, modal interchange, chromatic mediant, deceptive resolution, functional substitute and so on);</li>
+  <li><b>a sentence</b> built from the actual notes: what it keeps from the original, what it adds, whether it is brighter or darker (by a major-to-diminished brightness scale), whether it adds or removes dominant pull, and how its root moves into the next chord;</li>
+  <li><b>a voice-leading line</b> computed by voicing the previous chord and the idea with the same planner playback uses, then pairing the voices and listing held notes and semitone moves, compared with the original chord.</li>
+</ul>
+
+<h2 id="voicing">How piano voicings are chosen</h2>
+<p>For each chord the planner lists candidate right-hand voicings: every rotation of the chord tones (dropping optional tones on big chords) starting from several octaves, plus drop-2 versions. Each candidate has a cost for sitting too high or too low, and each move between chords costs the total distance the voices travel. A <b>Viterbi</b> search (dynamic programming over the whole chart) picks the cheapest sequence; because the chart loops, it also accounts for the move from the last chord back to the first. The bass line takes the octave of each bass note closest to the previous one, near the middle of the bass range. A pinned voicing becomes the only candidate for its chord, and the planner works around it.</p>
+
+<h2 id="guitar">How guitar shapes are found</h2>
+<p>Shapes are searched, not looked up. For each four-fret window up the neck (frets 1 to 15) and each string, the search tries muting it, playing it open, or fretting a chord tone, then keeps shapes that:</p>
+<ul>
+  <li>sound at least three strings, with the chord’s bass as the lowest pitch (which isn’t always on the lowest string);</li>
+  <li>contain every required chord tone;</li>
+  <li>span at most four frets and need at most four fingers, counting a barre at any fret as one finger;</li>
+  <li>have at most one muted string in the middle.</li>
+</ul>
+<p>Shapes are scored for position, missing strings, fingers, barres, stretch and open strings ringing against a high hand. Standard grips (open chords and their barre forms, plus each tuning’s own common shapes, 43 for standard tuning) get a bonus and always make the list, which then keeps the easiest shape for each bass string and region of the neck, up to 16.</p>
+<p>The <b>smoothest path</b> runs the same Viterbi search over the chart’s shapes, with the hand’s movement along the neck as the cost between chords. Every tuning (11 of them) uses the same search, so a chord always has shapes in it.</p>
+<h3>Finding the easiest tuning</h3>
+<p>For each tuning at each capo position from 0 to 7, the smoothest path is found again and scored for playing effort: fingers, barres (a one-finger barre across neighbouring strings counts as one), stretch, high positions, muted strings and hand movement. Retuning and using a capo add small fixed costs. Standard tuning is recommended unless another tuning is at least 12% easier; a capo is suggested only if it saves at least 10%.</p>
+
+<h2 id="sound">How the sound is made</h2>
+<p>Sound is synthesized live with the Web Audio API; there are no recordings. The piano is a triangle wave with a quiet sine an octave up, through a filter that darkens as the note decays. The guitar is a sawtooth and a slightly detuned triangle through a filter that closes quickly, so each string starts bright and mellows, with low strings ringing longer. Chords are strummed by staggering the notes by a few milliseconds.</p>
+<p>A playing style turns each chord into timed events: for example, the guitar strum pattern hits down on the beats and up on the off-beats (down, down-up, up-down-up in 4/4), and fingerpicking alternates the thumb between the two lowest notes under the treble strings. Playback adds a little random variation in timing and loudness; MIDI export writes the same events exactly on the grid.</p>
+<p>Notes are scheduled slightly ahead on the audio clock for steady timing. On iPhone and iPad, Safari normally treats web audio as “ambient” sound that the silent switch mutes, so the app marks its sound as media playback (through the audio session setting where Safari supports it, and a silent looping audio clip otherwise), and starts the audio engine inside your first tap.</p>
+
+<h2 id="files">How the files are written</h2>
+<ul>
+  <li><b>MIDI</b>: written byte by byte as a format-1 file at 480 ticks per quarter note. Track 1 holds the tempo, time signature and section markers; the chords follow (piano, or acoustic guitar when that sound is chosen), with the bass on its own track on request.</li>
+  <li><b>MusicXML</b>: a piano grand staff in MusicXML 4.0 with the played voicings (notes from middle C up on the treble staff), chord symbols, key and time signatures, tempo, rehearsal marks for sections, and ties where a chord crosses a bar line.</li>
+  <li><b>Share links</b>: the key, mode, meter, tempo and chart text as JSON, base64url-encoded after <code>#s=</code> in the address.</li>
+  <li><b>Library backups</b>: a versioned JSON file; imports are checked chord by chord before they are accepted.</li>
+  <li><b>Lead sheet</b>: a print stylesheet that hides the app and lays the bars out four to a line.</li>
+</ul>
+<p>Inside the claude.ai viewer, files go through the platform’s save dialog, which accepts only some file types, so MIDI and MusicXML are delivered inside a .zip there.</p>
+
+<h2 id="tests">How it’s tested</h2>
+<p>An automated smoke test drives the app in headless Chromium and WebKit, including an emulated iPhone. It checks, among other things:</p>
+<ul>
+  <li>that older saves still load;</li>
+  <li>the MIDI bytes themselves (note counts, tempo, timing, patterns);</li>
+  <li>share-link round trips and every explanation on every swap idea;</li>
+  <li>locks, resizing and the in-chart picker;</li>
+  <li>guitar shapes in every tuning, and the easiest-tuning picks on charts with clear musical answers;</li>
+  <li>the Simple view, phone widths and dark mode.</li>
+</ul>
+<p>The MusicXML output was also read back with the music21 library to confirm bar lengths, chord symbols, keys, meters and pitches.</p>
+
+<h2 id="limits">Honest limits</h2>
+<ul>
+  <li>The sounds are simple synthesis meant for hearing harmony, not finished production; export MIDI for real instruments.</li>
+  <li>Generation and swap ideas are rule-based heuristics. They know common practice well but don’t know your melody unless you use the harmonizer.</li>
+  <li>The talam, taal and drone options are sketching aids built on Western chord thinking, not representations of Carnatic or Hindustani music.</li>
+  <li>Guitar shapes assume six strings and at most four fingers; very wide stretches are left out.</li>
+</ul>

@@ -819,6 +819,7 @@ const MOODS=[
   {id:'dark',name:'Dark',blurb:'Phrygian half-steps and harmonic-minor weight.',t:[['phrygian','i bII i bII'],['aeolian','i bVI iv V'],['phrygian','i bII bVII i'],['harmonic','i bVI V i'],['locrian','i° bII bvii bII']]},
   {id:'tense',name:'Tense',blurb:'Dominants and diminished chords that refuse to settle.',t:[['harmonic','i V7 i V7'],['harmonic','i iv V7 bVI'],['harmonic','i bVI vii°7 V7'],['ionian','I #iv° V vi']]},
   {id:'nostal',name:'Nostalgic',blurb:'Borrowed minor iv and doo-wop turns.',t:[['ionian','I iii IV iv'],['ionian','I vi ii V'],['ionian','IV iv I I'],['ionian','I III7 IV iv']]},
+  {id:'epic',name:'Epic',blurb:'Big minor-key rises built on bVI and bVII.',t:[['aeolian','i bVI bIII bVII'],['aeolian','i bVII bVI V'],['aeolian','bVI bVII i i'],['ionian','vi IV I V'],['dorian','i bVII IV i']]},
   {id:'myst',name:'Mysterious',blurb:'Modal vamps that never quite land.',t:[['phrygian','i bII bIII bII'],['lydian','I II iii II'],['dorian','i ii bIII ii'],['harmonic','i bII V i']]},
 ];
 
@@ -2178,7 +2179,9 @@ function setDrawer(open){ document.body.classList.toggle('drawer-open',open); $(
 /* makes a control visible wherever it lives: its tab, the Create drawer, the Library popover or the phone screen */
 function revealEl(el){
   if(!el) return;
-  for(let d=el.closest('details');d;d=d.parentElement&&d.parentElement.closest('details')) if(!d.open) d.open=true;
+  /* open enclosing <details>, except the one whose own summary is being clicked (that click toggles it) */
+  const own=el.closest('summary')?.parentElement;
+  for(let d=el.closest('details');d;d=d.parentElement&&d.parentElement.closest('details')) if(!d.open&&d!==own) d.open=true;
   if(el.closest('#chartTools')) $('.chart-card').classList.add('show-tools');
   const pn=el.closest('[data-panel]'); if(pn){ const t=document.querySelector(`[role=tab][data-tab="${pn.dataset.panel}"]`); if(t) selectTab(t.closest('.tabs').dataset.tabs,pn.dataset.panel); }
   if(el.closest('#sideLeft')&&matchMedia('(min-width:760px) and (max-width:1199px)').matches) setDrawer(true);
