@@ -462,6 +462,23 @@ async function phase3() {
   const on = await gen();
   check('genre chords: off keeps Blues within Chords allowed; on lets Blues use its 7ths', off === 0 && on > 0.5 && /genre chooses the chords/.test(await page.textContent('#recipe')), `7th-or-richer share: off ${off.toFixed(2)}, on ${on.toFixed(2)}`);
   await page.evaluate(() => { S.genreVocab = false; S.genres = []; S.vocab = [...PRESETS.Color]; S.tonic = 0; renderAll(); });
+  // playing styles: the picker follows the instrument; MIDI export writes the pattern on the grid
+  await page.fill('#prog', 'G | C | D | G'); await tap(page, '#load');
+  await page.evaluate(() => { S.meter = '4/4'; S.instrument = 'piano'; S.pstyle = 'block'; S.gstyle = 'strum1'; S.capo = 0; setTuning('standard'); renderAll(); });
+  const pOpts = await page.evaluate(() => [...document.querySelectorAll('#pstyle option')].map(o => o.value).join());
+  await page.selectOption('#instrument', 'guitar');
+  const gOpts = await page.evaluate(() => [...document.querySelectorAll('#pstyle option')].map(o => o.value).join());
+  check('styles: the style picker offers piano and guitar styles to match the sound', pOpts === 'block,ballad,pulse,arp' && gOpts === 'strum1,strum,pick', `${pOpts} / ${gOpts}`);
+  await page.selectOption('#pstyle', 'strum');
+  const sm = parseMidi(Buffer.from(await page.evaluate(() => [...buildMidi(false)]))), onsTicks = [...new Set(sm.tracks[1].filter(e => e.st === 0x90).map(e => e.tick % (480 * 4)))].sort((a, b) => a - b);
+  check('styles: guitar strum pattern exports D DU UDU on the eighth-note grid', JSON.stringify(onsTicks) === JSON.stringify([0, 480, 720, 1200, 1440, 1680]), onsTicks.join(','));
+  await page.selectOption('#instrument', 'piano'); await page.selectOption('#pstyle', 'arp');
+  const am = parseMidi(Buffer.from(await page.evaluate(() => [...buildMidi(true)])));
+  const arpOK = am.tracks[2].filter(e => e.st === 0x90).length === 4 && am.tracks[1].filter(e => e.st === 0x90).length === 4 * 8;
+  check('styles: piano arpeggio exports one bass note per chord and eight broken-chord notes per bar', arpOK, `${am.tracks[2].filter(e => e.st === 0x90).length} bass, ${am.tracks[1].filter(e => e.st === 0x90).length} treble`);
+  await tap(page, '#play'); await page.waitForTimeout(500); await tap(page, '#play');
+  check('styles: the chosen style is remembered', await page.evaluate(() => { save(); return JSON.parse(localStorage.getItem('changes-v1')).S.pstyle === 'arp' && S.gstyle === 'strum'; }));
+  await page.evaluate(() => { S.pstyle = 'block'; S.gstyle = 'strum1'; S.instrument = 'piano'; renderAll(); });
   // easiest tuning for the chart: musically expected answers
   const expect = [['G | C | D | G', /^Standard tuning is the practical choice/], ['G | Am | C | D | Em', /^Standard tuning is the practical choice/],
     ['F | B♭ | E♭ | Cm', /^Standard tuning with a capo on \d/], ['Dsus4 | Gsus2 | Asus4 | Dsus4', /^DADGAD is the easiest/], ['D5 | C5 | G5 | A5 | F5', /^Drop [CD]/]];

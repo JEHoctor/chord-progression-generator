@@ -444,7 +444,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
   <header class="top">
     <div class="brand">
       <h1>Chord Changes</h1>
-      <p class="full-only">Write, generate or harmonize a progression, and every swap idea explains why it works, down to how each voice moves; then export MIDI, share a link, or print a lead sheet.</p>
+      <p class="full-only">Write, generate or harmonize a progression, and every swap idea explains why it works, down to how each voice moves; then export MIDI or notation, share a link, or print a lead sheet.</p>
       <p class="simple-only">Chord progressions for songwriters: no music theory needed.</p>
     </div>
     <div class="seg viewtoggle" role="group" aria-label="How much to show"><button type="button" data-view="simple">Simple</button><button type="button" data-view="full">All tools</button></div>
@@ -566,6 +566,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
       <label class="check"><input type="checkbox" id="loop" checked> Loop</label>
       <span class="tempo-mini" role="group" aria-label="Tempo"><button type="button" class="btn small" id="tempoDown" aria-label="Slower">−</button><span id="tempoShow">88</span><span class="hint">bpm</span><button type="button" class="btn small" id="tempoUp" aria-label="Faster">+</button></span>
       <select id="instrument" class="btn" aria-label="Playback sound"><option value="piano">Piano sound</option><option value="guitar">Guitar sound</option></select>
+      <select id="pstyle" class="btn" aria-label="Playing style"></select>
     </div>
     <div class="export">
       <button class="btn primary export-btn" id="exportBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="exportMenu">Export ▾</button>
@@ -777,7 +778,7 @@ const KEYLABEL=['C','C♯/D♭','D','E♭','E','F','F♯','G','A♭','A','B♭',
 const DEG=[0,1,1,2,2,3,3,4,5,5,6,6];
 const NUMS={I:0,II:2,III:4,IV:5,V:7,VI:9,VII:11};
 
-const S={genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
+const S={pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
 let chords=[], sel=null, hist=[];
 let _id=1; const uid=()=>'c'+(_id++);
 
@@ -1486,7 +1487,7 @@ function playChart(){
   const unit=60/S.tempo*(4/den()), L=barLen(), acc=new Set(ACCENTS[S.meter]); let t=a.currentTime+.08, beat=0;
   if(S.drone) droneTones(t,chords.reduce((s,c)=>s+c.beats,0)*unit,out);
   chords.forEach(c=>{
-    const dur=c.beats*unit, v=real(c)?playedVoicing(c):null; strum(c,t,dur,out,v);
+    const dur=c.beats*unit, v=real(c)?playedVoicing(c):null; playStyled(c,t,c.beats,unit,out,v,beat);
     timers.push(setTimeout(()=>{ midiChord(v); $('#nowChord').textContent=real(c)?chordName(c):'rest'; document.querySelectorAll('.slot.playing').forEach(e=>e.classList.remove('playing')); document.querySelectorAll(`.slot[data-id="${c.id}"]`).forEach(e=>e.classList.add('playing')); },(t-a.currentTime)*1000));
     if(S.click) for(let b=0;b<c.beats;b++){ const bb=(beat+b)%L; blip(t+b*unit,bb===0?2:acc.has(bb)?1:0,out); }
     beat+=c.beats; t+=dur;
@@ -1501,6 +1502,50 @@ function audition(seq){
   seq.forEach(([c,d])=>{ strum(c,t,d,out,plan.get(c)); t+=d; });
 }
 function playOne(c){ const a=ac(); const out=newSession(); strum(c,a.currentTime+.03,1.4,out,c.id&&chords.includes(c)?playedVoicing(c):seqVoicings([c]).get(c)); }
+
+/* ============ playing styles ============ */
+/* How a chord is played over its beats, as events in beats from the chord's start: piano block, ballad, pulse or
+   arpeggio; guitar single strum, strum pattern or fingerpicking. Playback adds a little human looseness; MIDI export
+   writes the same events exactly on the grid. `abs` is the chord's start beat in the chart, so patterns line up with the bar. */
+const PIANO_STYLES={block:'Block chords',ballad:'Ballad: bass, then chords',pulse:'Pop pulse: every beat',arp:'Arpeggio: broken chord'};
+const GUITAR_STYLES={strum1:'Strum once',strum:'Strum pattern: D DU UDU',pick:'Fingerpicking'};
+const styleOf=v=>v&&v.gtr?(GUITAR_STYLES[S.gstyle]?S.gstyle:'strum1'):(PIANO_STYLES[S.pstyle]?S.pstyle:'block');
+function styleEvents(v,beats,abs=0){
+  const L=barLen(), acc=new Set(ACCENTS[S.meter]||[0]), eighth=den()===8, st=styleOf(v), ev=[], near=x=>Math.abs(x-Math.round(x))<1e-6;
+  const all=[...v.all].sort((a,b)=>a-b), bass=v.bass, rh=v.gtr?all:[...v.rh].sort((a,b)=>a-b), pos=x=>((abs+x)%L+L)%L;
+  const ringTo=list=>{ list.sort((a,b)=>a.at-b.at); list.forEach((e,i)=>{ if(e.dur==null){ const nx=list.slice(i+1).find(x=>x.at>e.at+1e-6); e.dur=(nx?nx.at:beats)-e.at+(nx?.05:0); } }); return list; };
+  if(st==='block'||st==='strum1') return [{at:0,notes:all,dur:beats,gap:v.gtr?.022:.016,vel:1}];
+  if(st==='ballad'){ ev.push({at:0,notes:[bass],dur:beats,vel:1}); const hits=[0]; for(let k=1;k<beats;k++) if(acc.has(pos(k))) hits.push(k);
+    hits.forEach((h,i)=>ev.push({at:h,notes:rh,dur:(hits[i+1]??beats)-h,vel:i?.75:.95,gap:.016})); return ev; }
+  if(st==='pulse'){ for(let k=0;k<beats;k++){ const p=pos(k); if(k===0||acc.has(p)) ev.push({at:k,notes:[bass],dur:Math.min(2,beats-k),vel:p===0?1:.85}); ev.push({at:k,notes:rh,dur:.8,vel:p===0?.95:.7,gap:.01}); } return ev; }
+  if(st==='arp'){ ev.push({at:0,notes:[bass],dur:beats,vel:1}); const step=eighth?1:.5, seq=rh.length>2?rh.concat(rh.slice(1,-1).reverse()):rh; let i=0;
+    for(let x=0;x<beats-1e-6;x+=step){ ev.push({at:x,notes:[seq[i%seq.length]],dur:Math.min(step*2.5,beats-x),vel:i%seq.length===0?.85:.7}); i++; } return ev; }
+  if(st==='strum'){ const step=eighth?1:.5, top=all.slice(-4);
+    for(let x=0;x<beats-1e-6;x+=step){ const p=pos(x);
+      const down=eighth?acc.has(Math.round(p)):near(p)&&!(L===4&&Math.round(p)===2);
+      const up=eighth?(!acc.has(Math.round(p))&&[...acc].some(a=>Math.round(p)-a===2)):(!near(p)&&p>1);
+      if(down) ev.push({at:x,notes:all,gap:.016,vel:near(p)&&Math.round(p)===0?1:.85});
+      else if(up) ev.push({at:x,notes:top,gap:.012,vel:.6,up:true}); }
+    if(!ev.length||ev[0].at>0) ev.unshift({at:0,notes:all,gap:.016,vel:1}); return ringTo(ev); }
+  if(st==='pick'){ const step=eighth?1:.5, thumbs=[all[0],all[1]??all[0]], treble=all.slice(-3); let th=0, tr=0;
+    for(let x=0;x<beats-1e-6;x+=step){ const p=pos(x), onBeat=eighth?acc.has(Math.round(p)):near(p);
+      if(onBeat){ ev.push({at:x,notes:[thumbs[th++%2]],dur:Math.min(eighth?2:1.5,beats-x),vel:.9}); if(x===0) ev.push({at:x,notes:[treble[treble.length-1]],dur:Math.min(1,beats),vel:.7}); }
+      else ev.push({at:x,notes:[treble[tr++%treble.length]],dur:Math.min(step*2,beats-x),vel:.65}); }
+    return ev; }
+  return [{at:0,notes:all,dur:beats,gap:.016,vel:1}];
+}
+/* plays a chord in the current style; bass and treble get the same balance as block chords */
+function playStyled(c,t,beats,unit,out,v,abs){
+  if(!real(c)||!v) return;
+  const human=styleOf(v)!=='block'&&styleOf(v)!=='strum1';
+  for(const e of styleEvents(v,beats,abs)){
+    const t0=t+e.at*unit+(human?(Math.random()-.5)*.016:0), ns=e.up?[...e.notes].reverse():e.notes, g=e.gap||0;
+    ns.forEach((m,i)=>{ const base=v.gtr?(i===0&&!e.up?.16:.12):(m===v.bass&&e.notes.length>1?.2:m===v.bass?.19:.13);
+      const vel=base*(e.vel??1)*(human?1+(Math.random()-.5)*.12:1), d=Math.max(.08,e.dur*unit-g*i);
+      (v.gtr?pluck:tone)(m,t0+g*i,d,vel,out); }); }
+}
+function renderStyleSelect(){ const sel=$('#pstyle'), gtr=S.instrument==='guitar', opts=gtr?GUITAR_STYLES:PIANO_STYLES, cur=gtr?(GUITAR_STYLES[S.gstyle]?S.gstyle:'strum1'):(PIANO_STYLES[S.pstyle]?S.pstyle:'block');
+  sel.innerHTML=Object.entries(opts).map(([k,l])=>`<option value="${k}" ${k===cur?'selected':''}>${l}</option>`).join(''); }
 
 /* ============ what you hear: instrument, pinned shapes, in-context preview ============ */
 /* A chord can pin a guitar shape (for one tuning and capo) or a piano voicing; the smoothest-path planners keep pins fixed
@@ -1562,7 +1607,7 @@ function renderControls(){
   document.querySelectorAll('#moods .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===S.mood));
   document.querySelectorAll('#genres .chip').forEach(b=>b.setAttribute('aria-pressed',S.genres.includes(b.dataset.g)));
   renderRecipe(); renderPhase3Controls();
-  $('#tempoShow').textContent=S.tempo; if(!playing){ const sc=chords.find(x=>x.id===sel); $('#nowChord').textContent=sc&&real(sc)?chordName(sc):'–'; }
+  $('#tempoShow').textContent=S.tempo; renderStyleSelect(); if(!playing){ const sc=chords.find(x=>x.id===sel); $('#nowChord').textContent=sc&&real(sc)?chordName(sc):'–'; }
   $('#voicing').disabled=S.instrument==='guitar'; $('#voicing').title=S.instrument==='guitar'?'Guitar sound follows the smoothest guitar path and any shapes you pin':'';
   $('#surprise').value=S.surprise??30; const sv=S.surprise??30;
   $('#surpriseOut').textContent=sv<15?'Stays inside the key and the genre’s own moves.':sv<40?'Now and then a secondary dominant or borrowed chord.':sv<65?'Regular outside chords, including tritone subs.':'Frequent chromatic turns, including chromatic mediants.';
@@ -2420,8 +2465,8 @@ function buildMidi(withBass){
   chords.forEach(c=>{ const dur=Math.round(c.beats*tpb);
     if(c.sec){ const tx=enc.encode(c.sec); cond.push({t,o:1,d:[0xFF,0x06,...vlq(tx.length),...tx]}); }
     const v=real(c)?playedVoicing(c):null;
-    if(v){ (withBass?v.rh:v.all).forEach(m=>ch.push({t,o:1,d:[0x90,m,88]},{t:t+dur,o:0,d:[0x80,m,0]}));
-      if(withBass) bs.push({t,o:1,d:[0x91,v.bass,100]},{t:t+dur,o:0,d:[0x81,v.bass,0]}); }
+    if(v) for(const e of styleEvents(v,c.beats,t/tpb)){ const at=t+Math.round(e.at*tpb), end=Math.min(t+dur,at+Math.max(1,Math.round(e.dur*tpb))), vel=Math.max(1,Math.min(127,Math.round(88*(e.vel??1))));
+      e.notes.forEach(m=>{ if(withBass&&m===v.bass){ bs.push({t:at,o:1,d:[0x91,m,Math.min(127,vel+12)]},{t:end,o:0,d:[0x81,m,0]}); } else ch.push({t:at,o:1,d:[0x90,m,vel]},{t:end,o:0,d:[0x80,m,0]}); }); }
     t+=dur; });
   const tracks=[midiTrack('Chord Changes',cond),midiTrack('Chords',ch)]; if(withBass) tracks.push(midiTrack('Bass',bs));
   return concatBytes([Uint8Array.from([0x4D,0x54,0x68,0x64,0,0,0,6,0,1,0,tracks.length,(PPQ>>8)&255,PPQ&255]),...tracks]);
@@ -2616,6 +2661,7 @@ function boot(){
   $('#lockmode').onchange=e=>{ S.lock=e.target.checked; save(); };
   $('#loop').onchange=e=>{ S.loop=e.target.checked; save(); };
   $('#instrument').value=S.instrument==='guitar'?'guitar':'piano';
+  $('#pstyle').onchange=e=>{ if(S.instrument==='guitar') S.gstyle=e.target.value; else S.pstyle=e.target.value; save(); if(playing){ stopAll(); playChart(); } };
   $('#instrument').onchange=e=>{ S.instrument=e.target.value; commit(); if(playing){ stopAll(); playChart(); }
     toast(S.instrument==='guitar'?`Playback strums the smoothest guitar shapes in ${TUNINGS[S.tuning].name}${S.capo?`, capo ${S.capo}`:''}`:'Playback uses piano voicings'); };
   $('#voicing').value=S.voicing; $('#voicing').onchange=e=>{ S.voicing=e.target.value; commit(); toast(S.voicing==='smooth'?'Playback moves each voice as little as possible':'Playback uses root position for every chord'); };
