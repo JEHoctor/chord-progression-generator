@@ -51,7 +51,10 @@ const check = (name, ok, detail = '') => { results.push(`${ok ? 'PASS' : 'FAIL'}
 // headless Chromium on a machine with no audio device can stall creating an AudioContext; this flag gives it a silent output
 const browser = await chromium.launch({ args: ['--disable-audio-output'] });
 async function openPage(opts = {}) {
-  const ctx = await browser.newContext({ acceptDownloads: true, ...opts });
+  const { simpleView, ...o } = opts;
+  const ctx = await browser.newContext({ acceptDownloads: true, ...o });
+  // most checks drive the full tool set; first-time visitors would otherwise start in the Simple view
+  if (!simpleView) await ctx.addInitScript(() => { try { if (!localStorage.getItem('changes-view-v1')) localStorage.setItem('changes-view-v1', 'full'); } catch (e) {} });
   const page = await ctx.newPage(); page.errors = []; page.setDefaultTimeout(5000);
   page.on('console', m => { if (m.type() === 'error') page.errors.push(m.text()); });
   page.on('pageerror', e => page.errors.push(String(e)));
@@ -480,6 +483,36 @@ async function phase3() {
   await ctx.close();
 }
 
+// Simple view: a first-time visitor gets a quick win
+async function simpleView() {
+  const { ctx, page } = await openPage({ simpleView: true });
+  await page.goto(URL_);
+  const v0 = await page.evaluate(() => ({ simple: document.body.classList.contains('simple'), quick: getComputedStyle(document.querySelector('#quick')).display, rail: getComputedStyle(document.querySelector('.rail')).display, gen: getComputedStyle(document.querySelector('.setup')).display, dock: getComputedStyle(document.querySelector('#play')).display }));
+  check('simple: a first visit opens the Simple view with the quick-start card', v0.simple && v0.quick !== 'none' && v0.rail === 'none' && v0.gen === 'none' && v0.dock !== 'none', JSON.stringify(v0));
+  const before = await page.evaluate(() => serialize());
+  await tap(page, '#qMoods [data-id="melan"]'); await page.waitForTimeout(300);
+  const m = await page.evaluate(() => ({ text: serialize(), playing, mood: S.mood, pressed: document.querySelector('#qMoods [aria-pressed="true"]')?.dataset.id }));
+  check('simple: one tap on a feeling makes a progression and plays it', m.text !== before && m.playing && m.mood === 'melan' && m.pressed === 'melan', m.text.replace(/\n/g, ' / '));
+  await tap(page, '#qStyles [data-g="jazz"]'); await page.waitForTimeout(200);
+  const j = await page.evaluate(() => ({ g: S.genres, rich: chords.filter(real).some(c => Q[c.q].iv.length > 3) }));
+  check('simple: picking a style uses that style and its own chords', j.g.join() === 'jazz' && j.rich, JSON.stringify(j));
+  const t1 = await page.evaluate(() => chords.map(c => c.id).join());
+  await tap(page, '#qAgain');
+  check('simple: Make another makes a new progression', await page.evaluate(t => chords.map(c => c.id).join() !== t, t1));
+  await page.evaluate(() => { stopAll(); sel = chords[0].id; renderAll(); });
+  const sw = await page.evaluate(() => ({ groups: [...document.querySelectorAll('#subs .group')].filter(g => getComputedStyle(g).display !== 'none').length, items: [...document.querySelectorAll('#subs .item')].filter(i => getComputedStyle(i).display !== 'none' && getComputedStyle(i.closest('.group')).display !== 'none').length, vl: [...document.querySelectorAll('#subs .vl')].some(e => getComputedStyle(e).display !== 'none') }));
+  check('simple: swap ideas stay short and plain', sw.groups <= 2 && sw.items <= 6 && sw.items > 0 && !sw.vl, JSON.stringify(sw));
+  await tap(page, '.viewtoggle [data-view="full"]');
+  check('simple: All tools brings everything back', await page.evaluate(() => !document.body.classList.contains('simple') && getComputedStyle(document.querySelector('.rail')).display !== 'none'));
+  await page.reload();
+  check('simple: the chosen view is remembered', await page.evaluate(() => !document.body.classList.contains('simple')));
+  await page.evaluate(() => { setView('simple'); renderAll(); });
+  await page.setViewportSize({ width: 390, height: 844 });
+  check('simple: fits a phone without sideways scrolling', await noHScroll(page));
+  check('no console errors (simple view)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
+
 // phone width + dark mode for every panel
 async function phoneDark(tag) {
   const { ctx, page } = await openPage({ viewport: { width: 390, height: 844 }, colorScheme: 'dark' });
@@ -519,6 +552,7 @@ async function iphone() {
 const phaseFns = { 1: phase1, 2: phase2, 3: phase3 };
 try {
   for (const n of PHASES) { if (phaseFns[n]) { await phaseFns[n](); await phoneDark('phase' + n); } }
+  await simpleView();
   await iphone();
 } catch (e) { check('test run finished without throwing', false, e.stack); }
 await browser.close(); server.close();

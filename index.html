@@ -313,6 +313,21 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .copybox textarea{width:100%;font-family:var(--f-mono);font-size:12.5px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
 .copybox button{align-self:flex-end}
 #printSheet{display:none}
+header.top{justify-content:space-between}
+.viewtoggle{align-self:center}
+.quick{gap:14px;border-color:color-mix(in srgb,var(--accent) 35%,var(--line));background:linear-gradient(180deg,var(--accent-soft),var(--surface) 70%)}
+.quick h2{font-size:22px;font-weight:600;letter-spacing:-.02em}
+.quick .moods .chip{font-size:15px;padding:8px 16px}
+.quick .q-act{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.quick .q-again{height:44px;padding:0 20px;font-size:15px;border-radius:999px}
+body:not(.simple) #quick,body:not(.simple) .simple-only,.simple .full-only{display:none}
+.simple #rows .slot .cr,.simple #midiOutWrap{display:none!important}
+/* Simple view: the quick card, the chart, Play/Export and plain swap ideas; the rest is one tap away under All tools */
+.simple .rail,.simple .setup,.simple .xpose,.simple label.check:has(#click),.simple #voicing,.simple #recolor,.simple .prog-input,.simple .chart-card>.hint,
+.simple .tension,.simple .legend,.simple .vlx-wrap,.simple #finder,.simple #melody,.simple .palette,.simple #detail .adv,.simple #detail .builder,
+.simple #detail .bassrow,.simple #detail .pv-grid,.simple #detail .tunefind,.simple #detail .filters,.simple #detail .pickbar:has([data-pctx]),.simple #detail .tones,
+.simple #subs .keep,.simple #subs .vl,.simple #subs .tn,.simple #subs [data-ab],.simple #subs .more,.simple #subs .rn,.simple #subs .group-h p,
+.simple #subs .group[data-gi]:not([data-gi="0"]):not([data-gi="1"]),.simple #subs .item[data-ii]:not([data-ii="0"]):not([data-ii="1"]):not([data-ii="2"]){display:none!important}
 .genre-chords{background:var(--sunk);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
 .genre-chords .gc-head{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;justify-content:space-between}
 .genre-chords .gc-row{display:flex;flex-direction:column;gap:6px}
@@ -429,9 +444,18 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
   <header class="top">
     <div class="brand">
       <h1>Chord Changes</h1>
-      <p>Write, generate or harmonize a progression, and every swap idea explains why it works, down to how each voice moves; then export MIDI, share a link, or print a lead sheet.</p>
+      <p class="full-only">Write, generate or harmonize a progression, and every swap idea explains why it works, down to how each voice moves; then export MIDI, share a link, or print a lead sheet.</p>
+      <p class="simple-only">Chord progressions for songwriters: no music theory needed.</p>
     </div>
+    <div class="seg viewtoggle" role="group" aria-label="How much to show"><button type="button" data-view="simple">Simple</button><button type="button" data-view="full">All tools</button></div>
   </header>
+
+  <section class="panel quick" id="quick" aria-label="Quick start">
+    <div><h2>Make a chord progression in one tap</h2><p class="hint">Pick a feeling and it plays straight away. Tap any chord below to hear it or swap it, then use Export to take it into your music app.</p></div>
+    <div class="field"><span class="label">Feeling</span><div class="moods" id="qMoods" role="group" aria-label="Feeling"></div></div>
+    <div class="field"><span class="label">Style <span class="opt">optional</span></span><div class="moods" id="qStyles" role="group" aria-label="Style"></div></div>
+    <div class="q-act"><button type="button" class="btn primary q-again" id="qAgain">Make another</button><span class="hint" id="qHint">Each tap makes a new one in the same feeling.</span></div>
+  </section>
 
   <section class="rail" aria-label="Key, mode, meter and tempo">
     <div class="field"><label class="label" for="key">Key</label><select id="key"></select></div>
@@ -1674,7 +1698,7 @@ function renderDetail(){
     const rootOpts=Array.from({length:12},(_,i)=>mod(S.tonic+i)).map(pc=>`<option value="${pc}" ${pc===br?'selected':''}>${esc(prettyNote(spell(pc)))}</option>`).join('');
     const qOpts=FAMS.filter(f=>f.qs.length).map(f=>`<optgroup label="${f.name}${famOn(f.id)?'':' (off in vocabulary)'}">${f.qs.map(q=>`<option value="${esc(q)}" ${q===bq?'selected':''}>${esc(prettySfx(Q[q].d)||'major')}</option>`).join('')}</optgroup>`).join('');
     const bassOpts='<option value="">root</option>'+Array.from({length:12},(_,i)=>mod(S.tonic+i)).map(pc=>`<option value="${pc}" ${pc===bb?'selected':''}>/${esc(prettyNote(spell(pc)))}</option>`).join('');
-    h+=`<div class="sub-h"><h3>Build any chord</h3><span class="hint">Every chord type, whatever the vocabulary</span></div>
+    h+=`<div class="sub-h adv"><h3>Build any chord</h3><span class="hint">Every chord type, whatever the vocabulary</span></div>
       <div class="builder"><div class="field"><label class="label" for="bRoot">Root</label><select id="bRoot">${rootOpts}</select></div>
       <div class="field"><label class="label" for="bQual">Type</label><select id="bQual">${qOpts}</select></div>
       <div class="field"><label class="label" for="bBass">Bass</label><select id="bBass">${bassOpts}</select></div>
@@ -1685,7 +1709,7 @@ function renderDetail(){
     const opts=[...new Set(Q[c.q].iv.filter(i=>i<12).map(i=>mod(c.root+i)))];
     if(!opts.includes(cur)) opts.unshift(cur);
     const vc={root:c.root,q:c.q,bass:vb===c.root?null:vb};
-    h+=`<div class="sub-h"><h3>Bass note</h3><span class="hint">Pick an inversion for guitar and piano</span></div><div class="bassrow"><div class="seg tones-seg" role="group" aria-label="Bass note">${opts.map(pc=>{ const i=mod(pc-c.root); return `<button type="button" data-vb="${pc}" aria-pressed="${pc===vb}">${esc(prettyNote(spell(pc)))}<small>${pc===c.root?'root':Q[c.q].iv.some(x=>mod(x)===i)?ivLabel(c,Q[c.q].iv.find(x=>mod(x)===i)):'bass'}</small></button>`; }).join('')}</div>
+    h+=`<div class="sub-h adv"><h3>Bass note</h3><span class="hint">Pick an inversion for guitar and piano</span></div><div class="bassrow"><div class="seg tones-seg" role="group" aria-label="Bass note">${opts.map(pc=>{ const i=mod(pc-c.root); return `<button type="button" data-vb="${pc}" aria-pressed="${pc===vb}">${esc(prettyNote(spell(pc)))}<small>${pc===c.root?'root':Q[c.q].iv.some(x=>mod(x)===i)?ivLabel(c,Q[c.q].iv.find(x=>mod(x)===i)):'bass'}</small></button>`; }).join('')}</div>
       ${vb!==cur?`<button class="btn small primary" data-act="slash">Use ${esc(chordName(vc))} in the chart</button>`:''}</div>`;
     const capo=S.capo||0, gc={root:mod(vc.root-capo),q:vc.q,bass:vc.bass==null?null:mod(vc.bass-capo)};
     const shapes=guitarShapes(gc), types=['All',...new Set(shapes.map(v=>v.type))];
@@ -1716,7 +1740,7 @@ function renderDetail(){
       const tones=pv0.rh.map(m=>ivLabel(c,Q[c.q].iv.find(i=>mod(c.root+i)===mod(m))??0)).join('·');
       pvs.unshift({label:ppinOk(c)?'Your pick (playback)':S.voicing==='smooth'?'In context (playback)':'Playback (fixed)',tones,bass:pv0.bass,rh:pv0.rh,all:pv0.all,ctx:1,mv});
     }
-    h+=`<div class="sub-h"><h3>Piano · ${pvs.length} voicings</h3><span class="hint">Gold = left-hand bass · blue = right hand</span></div><div class="pv-grid">${pvs.map((v,i)=>`<button type="button" class="pv${v.ctx?' ctx':''}${pickP===i?' picked':''}" data-pv="${i}"><span class="ty">${esc(v.label)}</span><span class="tn">RH ${esc(v.tones)}</span>${v.mv?`<span class="mv">${esc(v.mv)}</span>`:''}${pianoSVG(v,vc)}</button>`).join('')}</div>`;
+    h+=`<div class="sub-h adv"><h3>Piano · ${pvs.length} voicings</h3><span class="hint">Gold = left-hand bass · blue = right hand</span></div><div class="pv-grid">${pvs.map((v,i)=>`<button type="button" class="pv${v.ctx?' ctx':''}${pickP===i?' picked':''}" data-pv="${i}"><span class="ty">${esc(v.label)}</span><span class="tn">RH ${esc(v.tones)}</span>${v.mv?`<span class="mv">${esc(v.mv)}</span>`:''}${pianoSVG(v,vc)}</button>`).join('')}</div>`;
     { const pk=pickP!=null&&pvs[pickP]?pvs[pickP]:null, pinned=ppinOk(c)&&vb===cur;
       const show=pk||(pinned?pvs[0]:null);
       if(show&&vb===cur){ const isPin=pinned&&show.bass===c.ppin.bass&&show.rh.join()===c.ppin.rh.join();
@@ -1829,13 +1853,13 @@ function renderSubs(){
       <select id="keepOther" aria-label="Keep another note"><option value="">+ other note</option>${Array.from({length:12},(_,i)=>mod(S.tonic+i)).filter(pc=>!own.includes(pc)&&!keepNotes.includes(pc)).map(pc=>`<option value="${pc}">${esc(prettyNote(spell(pc)))}</option>`).join('')}</select>
       <span class="hint">${keepNotes.length?`Only ideas containing ${keepNotes.map(pc=>esc(prettyNote(spell(pc)))).join(' and ')}. ▶ plays it as the top note.`:'Pick a note (e.g. your melody note) that every idea must contain.'}</span></div>`; }
   groups.forEach((g,gi)=>{
-    h+=`<div class="group"><div class="group-h"><h3>${esc(g.title)}</h3><p>${esc(g.blurb)}</p></div>`;
+    h+=`<div class="group" data-gi="${gi}"><div class="group-h"><h3>${esc(g.title)}</h3><p>${esc(g.blurb)}</p></div>`;
     const lim=g.id==='keep'?8:4, shownItems=openGroups.has(g.id)?g.items:g.items.slice(0,lim);
     shownItems.forEach((it,ii)=>{
       const names=it.chords.map(x=>`<span class="nm">${esc(chordName(x))}</span>`).join('<span class="arrow">→</span>');
       const rns=it.chords.map(x=>analyze(x).num).join(' → ');
       const vl=vlSummary(c,it,P,N);
-      h+=`<div class="item k-${it.tag==='jazz'?'jazz':it.tag}"><div class="names">${names}<span class="rn">${esc(rns)}</span>${keepNotes.length?`<span class="role">${keepNotes.map(pc=>esc(prettyNote(spell(pc)))+' = '+esc(it.chords.map(x=>roleOf(x,pc)).join('/'))).join(', ')}</span>`:''}${it.split?'<span class="split">split</span>':''}${it.outside?'<span class="outside">outside note</span>':''}</div>
+      h+=`<div class="item k-${it.tag==='jazz'?'jazz':it.tag}" data-ii="${ii}"><div class="names">${names}<span class="rn">${esc(rns)}</span>${keepNotes.length?`<span class="role">${keepNotes.map(pc=>esc(prettyNote(spell(pc)))+' = '+esc(it.chords.map(x=>roleOf(x,pc)).join('/'))).join(', ')}</span>`:''}${it.split?'<span class="split">split</span>':''}${it.outside?'<span class="outside">outside note</span>':''}</div>
         <div class="why"><span class="tn">${esc(theoryName(c,it,P,N))}.</span> ${esc(explainIdea(c,it,P,N))}</div><div class="vl">${vl.html}</div>
         <div class="btns"><button class="btn small" data-aud="${gi}.${ii}" aria-label="Hear in context">▶</button><button class="btn small ab" data-ab="${gi}.${ii}" aria-pressed="false" title="Loop the original and this idea, bar by bar">A/B</button><button class="btn small primary" data-use="${gi}.${ii}">Put in this slot</button></div></div>`;
     });
@@ -1967,6 +1991,20 @@ function soundBeep(kind){
   if(kind==='web'){ const a=ac(), out=newSession(); tone(69,a.currentTime+.05,.6,.25,out); tone(76,a.currentTime+.35,.6,.2,out); }
   else{ try{ if(!beepEl){ beepEl=new Audio(wavURI(.7,660,.5)); beepEl.setAttribute('playsinline',''); } beepEl.currentTime=0; const pr=beepEl.play(); if(pr&&pr.catch) pr.catch(e=>{ beepEl.lastError=String(e&&e.name||e); }); }catch(e){} audioUnlock(); }
   setTimeout(renderSoundBox,400);
+}
+
+/* ============ simple view and quick start ============ */
+/* first-time visitors start in Simple; anyone with saved work starts with All tools. The choice is remembered. */
+const QUICK_STYLES=['pop','rock','folk','rnb','jazz','lofi','country','edm'];
+let quickStyle=null;
+function getView(){ try{ const v=localStorage.getItem('changes-view-v1'); if(v==='simple'||v==='full') return v; return localStorage.getItem('changes-v1')?'full':'simple'; }catch(e){ return 'full'; } }
+function setView(v){ try{ localStorage.setItem('changes-view-v1',v); }catch(e){} document.body.classList.toggle('simple',v==='simple'); document.querySelectorAll('.viewtoggle [data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===v))); }
+function quickMake(){
+  S.genres=quickStyle?[quickStyle]:[]; S.genreVocab=!!quickStyle; S.drone=false; S.lock=false;
+  if(!S.mood) S.mood=MOODS[0].id;
+  generate(); stopAll(); playChart();
+  document.querySelectorAll('#qMoods .chip').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===S.mood)));
+  document.querySelectorAll('#qStyles .chip').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===quickStyle)));
 }
 
 /* ============ in-chart chord picker ============ */
@@ -2591,6 +2629,13 @@ function boot(){
   $('#recipe').onclick=e=>{ const b=e.target.closest('[data-addfams]'); if(!b) return; S.vocab=[...new Set([...S.vocab,...b.dataset.addfams.split(',')])]; commit(); toast(`Vocabulary updated: ${vocabName()}`); };
   $('#gen').onclick=generate;
   $('#regen').onclick=regenUnlocked;
+  setView(getView());
+  document.querySelector('.viewtoggle').addEventListener('click',e=>{ const b=e.target.closest('[data-view]'); if(b){ setView(b.dataset.view); renderAll(); } });
+  $('#qMoods').innerHTML=MOODS.map(m=>`<button type="button" class="chip" data-id="${m.id}" aria-pressed="false" title="${esc(m.blurb)}">${m.name}</button>`).join('');
+  $('#qStyles').innerHTML=QUICK_STYLES.map(id=>{ const g=GENRES.find(x=>x.id===id); return `<button type="button" class="chip" data-g="${id}" aria-pressed="false" title="${esc(g.blurb)}">${esc(g.name)}</button>`; }).join('');
+  $('#qMoods').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; S.mood=b.dataset.id; quickMake(); };
+  $('#qStyles').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; quickStyle=quickStyle===b.dataset.g?null:b.dataset.g; quickMake(); };
+  $('#qAgain').onclick=quickMake;
   $('#genreChords').addEventListener('change',e=>{ if(e.target.id==='genreVocab'){ S.genreVocab=e.target.checked; save(); renderControls(); } });
   $('#genreChords').addEventListener('click',e=>{ const b=e.target.closest('[data-gchord]'); if(!b) return; const [r,q]=b.dataset.gchord.split('|'); playOne({root:+r,q,bass:null}); });
   $('#soundCheck').onclick=()=>{ const b=$('#soundbox'); b.hidden=false; renderSoundBox(); b.querySelector('button')?.focus(); };
