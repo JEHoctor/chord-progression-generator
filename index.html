@@ -2235,6 +2235,63 @@ function melodySuggest(){
   MEL={beats:r.beats,results:harmonize(r.beats,S.melRate)}; renderMelody();
 }
 
+/* ============ notation export (MusicXML) ============ */
+/* A piano grand staff in MusicXML 4.0, which Finale, Sibelius, MuseScore and Dorico all open: chord symbols over the
+   voicings the piano plays (pins included), key and time signatures, tempo, section rehearsal marks with a new line for
+   each section, and ties where a chord runs across a bar line. Notes from middle C up go on the treble staff. */
+const MXL_KIND={'':'major',m:'minor',dim:'diminished',aug:'augmented',sus2:'suspended-second',sus4:'suspended-fourth','5':'power',
+  '6':'major-sixth',m6:'minor-sixth','6/9':'major-sixth','m6/9':'minor-sixth',add9:'major',madd9:'minor',add11:'major',madd11:'minor',
+  maj7:'major-seventh','7':'dominant',m7:'minor-seventh',m7b5:'half-diminished',dim7:'diminished-seventh',mMaj7:'major-minor',mMaj9:'major-minor',
+  '7#5':'augmented-seventh','9#5':'augmented-seventh','maj7#5':'major-seventh',maj9:'major-ninth','9':'dominant-ninth',m9:'minor-ninth',
+  '11':'dominant-11th',m11:'minor-11th',m7add11:'minor-seventh',maj13:'major-13th','13':'dominant-13th',m13:'minor-13th','maj7#11':'major-seventh',
+  '7b9':'dominant','7#9':'dominant','7alt':'dominant','7b5':'dominant','7#11':'dominant','9#11':'dominant-ninth','7b13':'dominant','13b9':'dominant-13th','13#11':'dominant-13th',
+  dimMaj7:'diminished','7sus4':'dominant','7sus2':'dominant','9sus4':'dominant-ninth','13sus4':'dominant-13th','sus6/9':'suspended-second','6/9sus4':'suspended-fourth',
+  '6sus4':'suspended-fourth',sus4add9:'suspended-fourth',maj7sus2:'major-seventh',maj7sus4:'major-seventh'};
+function stepAlter(pc){ const n=spell(pc); return {step:n[0],alter:n.length>1?(n[1]==='#'?1:-1):0}; }
+function pitchXML(m){ const {step,alter}=stepAlter(mod(m)), oct=Math.floor((m-alter)/12)-1; return `<pitch><step>${step}</step>${alter?`<alter>${alter}</alter>`:''}<octave>${oct}</octave></pitch>`; }
+function keyFifths(){ const parent=mod(S.tonic-MODES[S.mode].off), flats=[5,10,3,8,1].includes(parent);
+  const sharp={0:0,7:1,2:2,9:3,4:4,11:5,6:6}, flat={0:0,5:-1,10:-2,3:-3,8:-4,1:-5,6:-6}; return flats?flat[parent]:(sharp[parent]??flat[parent]); }
+const NOTE_VALUES=[[16,'whole',0],[12,'half',1],[8,'half',0],[6,'quarter',1],[4,'quarter',0],[3,'eighth',1],[2,'eighth',0],[1,'16th',0]];
+function splitDur(d){ const out=[]; while(d>0){ const v=NOTE_VALUES.find(x=>x[0]<=d); out.push(v); d-=v[0]; } return out; }
+function buildMusicXML(){
+  const DIV=4, bd=16/den(), L=barLen(), barDiv=L*bd, plan=chartPlan(), total=chords.reduce((a,c)=>a+c.beats,0), nBars=Math.max(1,Math.ceil(total/L));
+  const starts=[]; let p=0; chords.forEach(c=>{ starts.push(p); p+=c.beats; });
+  const mode={ionian:'major',aeolian:'minor',dorian:'dorian',phrygian:'phrygian',lydian:'lydian',mixolydian:'mixolydian',locrian:'locrian',harmonic:'minor',melodic:'minor'}[S.mode]||'none';
+  const harmony=c=>{ const r=stepAlter(c.root), b=c.bass!=null?stepAlter(c.bass):null, txt=prettySfx(Q[c.q].d);
+    return `<harmony placement="above"><root><root-step>${r.step}</root-step>${r.alter?`<root-alter>${r.alter}</root-alter>`:''}</root><kind text="${esc(txt)}">${MXL_KIND[c.q]||'other'}</kind>${b?`<bass><bass-step>${b.step}</bass-step>${b.alter?`<bass-alter>${b.alter}</bass-alter>`:''}</bass>`:''}</harmony>`; };
+  const noteXML=(notes,staff,val,tieStop,tieStart)=>{ const [d,type,dot]=val, voice=staff===1?1:5, tail=`<voice>${voice}</voice><type>${type}</type>${dot?'<dot/>':''}<staff>${staff}</staff>`;
+    if(!notes.length) return `<note><rest/><duration>${d}</duration>${tail}</note>`;
+    const ties=(tieStop?'<tie type="stop"/>':'')+(tieStart?'<tie type="start"/>':''), tied=(tieStop?'<tied type="stop"/>':'')+(tieStart?'<tied type="start"/>':'');
+    return notes.map((m,k)=>`<note>${k?'<chord/>':''}${pitchXML(m)}<duration>${d}</duration>${ties}${tail}${tied?`<notations>${tied}</notations>`:''}</note>`).join(''); };
+  let measures='';
+  for(let m=0;m<nBars;m++){
+    const b0=m*L, b1=b0+L; let head='', st1='', st2='', filled=b0;
+    if(m===0) head+=`<attributes><divisions>${DIV}</divisions><key><fifths>${keyFifths()}</fifths><mode>${mode}</mode></key><time><beats>${L}</beats><beat-type>${den()}</beat-type></time><staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>`
+      +`<direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${S.tempo}</per-minute></metronome></direction-type><sound tempo="${S.tempo}"/></direction>`;
+    chords.forEach((c,i)=>{
+      const s0=Math.max(starts[i],b0), s1=Math.min(starts[i]+c.beats,b1); if(s1<=s0) return;
+      const first=s0===starts[i], last=s1===starts[i]+c.beats, v=real(c)?plan.get(c.id):null;
+      const all=v?[...new Set(v.all)].sort((a,b)=>a-b):[], hi=all.filter(x=>x>=60), lo=all.filter(x=>x<60);
+      if(first&&c.sec){ if(m>0&&s0===b0) head=`<print new-system="yes"/>`+head; st1+=`<direction placement="above"><direction-type><rehearsal>${esc(c.sec)}</rehearsal></direction-type></direction>`; }
+      if(first&&v) st1+=harmony(c);
+      const pieces=splitDur((s1-s0)*bd);
+      pieces.forEach((val,k)=>{ const stop=k>0||!first, start=k<pieces.length-1||!last;
+        st1+=noteXML(v?hi:[],1,val,v&&hi.length?stop:false,v&&hi.length?start:false); st2+=noteXML(v?lo:[],2,val,v&&lo.length?stop:false,v&&lo.length?start:false); });
+      filled=s1;
+    });
+    if(filled<b1){ splitDur((b1-filled)*bd).forEach(val=>{ st1+=noteXML([],1,val); st2+=noteXML([],2,val); }); }
+    const bar=m===nBars-1?'<barline location="right"><bar-style>light-heavy</bar-style></barline>':'';
+    measures+=`<measure number="${m+1}">${head}${st1}<backup><duration>${barDiv}</duration></backup>${st2}${bar}</measure>`;
+  }
+  const title=esc(sheetTitle()), date=new Date().toISOString().slice(0,10);
+  return `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="4.0"><work><work-title>${title}</work-title></work><identification><encoding><software>Chord Changes Workbench</software><encoding-date>${date}</encoding-date></encoding></identification>
+<part-list><score-part id="P1"><part-name>Piano</part-name><score-instrument id="P1-I1"><instrument-name>Piano</instrument-name></score-instrument><midi-instrument id="P1-I1"><midi-channel>1</midi-channel><midi-program>1</midi-program></midi-instrument></score-part></part-list>
+<part id="P1">${measures}</part></score-partwise>
+`;
+}
+
 /* ============ export, sharing & library ============ */
 /* files: a published artifact saves through the platform's downloads capability, which accepts only some file types, so a
    .mid is wrapped in a .zip there. A standalone copy of the page (a saved file, a local server) downloads the file itself. */
@@ -2413,6 +2470,7 @@ function initIO(){
   document.head.appendChild(ps);
   window.addEventListener('beforeprint',()=>{ $('#printSheet').innerHTML=leadSheetHTML(); });
   $('#midiExport').onclick=()=>{ closeExport(); saveFile(fileBase()+'.mid',buildMidi(false)); };
+  $('#xmlExport').onclick=()=>{ closeExport(); saveFile(fileBase()+'.musicxml',buildMusicXML()); };
   $('#midiExportBass').onclick=()=>{ closeExport(); saveFile(fileBase()+'-with-bass.mid',buildMidi(true)); };
   const exBtn=$('#exportBtn'), exMenu=$('#exportMenu');
   window.closeExport=()=>{ exMenu.hidden=true; exBtn.setAttribute('aria-expanded','false'); };

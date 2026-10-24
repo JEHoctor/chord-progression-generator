@@ -116,6 +116,13 @@ async function phase1() {
   check('Export MIDI button downloads <key>-<mode>-<tempo>bpm.mid', /^[A-G](sharp|flat)?-[a-z]+-\d+bpm\.mid$/.test(dl.suggestedFilename()), dl.suggestedFilename());
   let parsedOk = true; try { parseMidi(fs.readFileSync(dlPath)); } catch (e) { parsedOk = false; }
   check('downloaded .mid parses', parsedOk);
+  // notation export: the Export menu downloads MusicXML that parses, with one bar per chart bar and a symbol per chord
+  const xdlP = page.waitForEvent('download'); await tap(page, '#xmlExport'); const xdl = await xdlP, xpath = path.join(OUT, xdl.suggestedFilename()); await xdl.saveAs(xpath);
+  const xml = fs.readFileSync(xpath, 'utf8');
+  const xr = await page.evaluate(x => { const d = new DOMParser().parseFromString(x, 'application/xml'); const L = barLen(), total = chords.reduce((a, c) => a + c.beats, 0);
+    return { err: !!d.querySelector('parsererror'), measures: d.querySelectorAll('measure').length, bars: Math.ceil(total / L), harm: d.querySelectorAll('harmony').length, real: chords.filter(real).length, reh: [...d.querySelectorAll('rehearsal')].map(r => r.textContent).join(',') }; }, xml);
+  check('Export notation downloads MusicXML (.musicxml)', /\.musicxml$/.test(xdl.suggestedFilename()) && xml.startsWith('<?xml') && /score-partwise/.test(xml), xdl.suggestedFilename());
+  check('MusicXML parses with a bar per chart bar, a chord symbol per chord and section marks', !xr.err && xr.measures === xr.bars && xr.harm === xr.real && xr.reh === 'Verse,Chorus', JSON.stringify(xr));
   // the zip wrapper used inside the artifact viewer
   const zip = Buffer.from(await page.evaluate(() => [...zipStore([{ name: 'a.mid', data: buildMidi(false) }])]));
   check('zip wrapper has a valid end record and CRC', zip.readUInt32LE(zip.length - 22) === 0x06054b50 && zip.readUInt32LE(14) === await page.evaluate(() => crc32(buildMidi(false))));
