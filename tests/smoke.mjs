@@ -447,6 +447,18 @@ async function phase3() {
   check('picker: clicking elsewhere closes it', await page.evaluate(() => document.querySelector('#cpick').hidden));
   await page.evaluate(() => { undo(); undo(); undo(); undo(); });
   check('picker: every pick is one undo step', await page.evaluate(() => document.querySelector('#prog').value === '[Verse]\nC | Am | F | G'), await page.evaluate(() => document.querySelector('#prog').value.replace(/\n/g, ' / ')));
+  // genre chords, separate from Chords allowed
+  await page.evaluate(() => { S.tonic = 7; S.mode = 'ionian'; S.mood = ''; S.genres = ['blues']; S.genreVocab = false; S.vocab = [...PRESETS.Simple]; S.lock = false; renderAll(); });
+  const gc = await page.evaluate(() => ({ shown: !document.querySelector('#genreChords').hidden, row: document.querySelector('#genreChords .gc-row b')?.textContent, chips: [...document.querySelectorAll('#genreChords [data-gchord]')].map(b => b.firstChild.textContent + (b.classList.contains('off') ? '(off)' : '')), title: document.querySelector('.vocabp h2').textContent }));
+  check('genre chords: Blues shows its own chords in the key, greyed where Chords allowed excludes them', gc.shown && gc.row === 'Blues' && gc.chips.some(c => /^G7.*\(off\)$/.test(c)), gc.chips.join(' '));
+  check('genre chords: the limits panel is now called Chords allowed', gc.title === 'Chords allowed');
+  await page.evaluate(() => document.querySelector('#genreChords [data-gchord]').click());
+  const gen = async () => page.evaluate(() => { let sev = 0, n = 0; for (let k = 0; k < 20; k++) { generate(); chords.forEach(c => { if (real(c)) { n++; if (Q[c.q].iv.length > 3) sev++; } }); } return sev / n; });
+  const off = await gen();
+  await page.check('#genreVocab');
+  const on = await gen();
+  check('genre chords: off keeps Blues within Chords allowed; on lets Blues use its 7ths', off === 0 && on > 0.5 && /genre chooses the chords/.test(await page.textContent('#recipe')), `7th-or-richer share: off ${off.toFixed(2)}, on ${on.toFixed(2)}`);
+  await page.evaluate(() => { S.genreVocab = false; S.genres = []; S.vocab = [...PRESETS.Color]; S.tonic = 0; renderAll(); });
   // easiest tuning for the chart: musically expected answers
   const expect = [['G | C | D | G', /^Standard tuning is the practical choice/], ['G | Am | C | D | Em', /^Standard tuning is the practical choice/],
     ['F | B♭ | E♭ | Cm', /^Standard tuning with a capo on \d/], ['Dsus4 | Gsus2 | Asus4 | Dsus4', /^DADGAD is the easiest/], ['D5 | C5 | G5 | A5 | F5', /^Drop [CD]/]];

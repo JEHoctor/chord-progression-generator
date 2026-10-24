@@ -313,6 +313,14 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .copybox textarea{width:100%;font-family:var(--f-mono);font-size:12.5px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
 .copybox button{align-self:flex-end}
 #printSheet{display:none}
+.genre-chords{background:var(--sunk);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.genre-chords .gc-head{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;justify-content:space-between}
+.genre-chords .gc-row{display:flex;flex-direction:column;gap:6px}
+.genre-chords .gc-chips{display:flex;flex-wrap:wrap;gap:5px}
+.genre-chords .chip{padding:3px 10px;font-weight:600;font-size:13px}
+.genre-chords .chip small{font-weight:400;color:var(--muted);margin-left:4px;font-size:11px}
+.genre-chords .chip.off{opacity:.45;border-style:dashed}
+.genre-chords p{margin:0}
 body{padding-bottom:calc(var(--dock-h,76px) + 24px)}
 html{scroll-padding-bottom:calc(var(--dock-h,76px) + 16px)}
 .dock{position:fixed;left:0;right:0;bottom:0;z-index:40;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
@@ -438,6 +446,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
       <div class="sub-h"><h2>Generate a progression</h2><span class="hint">Mood sets the feeling, genre sets the style. Use either or both.</span></div>
       <div class="field"><span class="label">Mood <span class="opt">pick one, or none</span></span><div class="moods" id="moods" role="group" aria-label="Mood"></div></div>
       <div class="field"><span class="label">Genre <span class="opt">pick any number to blend</span></span><div class="moods" id="genres" role="group" aria-label="Genres"></div></div>
+      <div class="genre-chords" id="genreChords" hidden></div>
       <div class="field dial"><label class="label" for="surprise">Predictable ↔ Surprising</label>
         <div class="dialrow"><span class="hint">Predictable</span><input type="range" id="surprise" min="0" max="100" step="5" aria-describedby="surpriseOut"><span class="hint">Surprising</span></div>
         <span class="hint" id="surpriseOut"></span></div>
@@ -452,9 +461,9 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
         <button class="btn" id="regen" type="button" title="Keep locked chords and refill the rest, keeping every chord's length">Regenerate unlocked</button>
       </div>
     </section>
-    <section class="panel vocabp" aria-label="Chord vocabulary">
-      <div class="sub-h"><h2>Chord vocabulary</h2></div>
-      <p class="hint vtext">The chord types you allow. Generate, swap ideas and Apply vocabulary never go past these, whatever the genre. Triads are always on.</p>
+    <section class="panel vocabp" aria-label="Chords allowed">
+      <div class="sub-h"><h2>Chords allowed</h2></div>
+      <p class="hint vtext">Your limits: the most colourful chord types you want anywhere in the app. Generated progressions, swap ideas and “Apply chords allowed” stay within these, unless you let the genres choose. Plain major and minor chords are always allowed.</p>
       <div class="seg" id="presets" role="group" aria-label="Vocabulary presets"></div>
       <div class="fams" id="fams" role="group" aria-label="Chord families"></div>
     </section>
@@ -481,7 +490,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
         <label class="check"><input type="checkbox" id="click"> Click</label>
         <select id="voicing" class="btn" aria-label="Playback voicing"><option value="smooth">Smooth voice leading</option><option value="fixed">Fixed root position</option></select>
         <button class="btn" id="undo" type="button">Undo</button>
-        <button class="btn" id="recolor" type="button" title="Rewrite every chord at the chosen vocabulary">Apply vocabulary</button>
+        <button class="btn" id="recolor" type="button" title="Rewrite every chord using the chord types in Chords allowed">Apply chords allowed</button>
       </div>
     </div>
     <div class="io-row" role="group" aria-label="Playback extras">
@@ -744,7 +753,7 @@ const KEYLABEL=['C','C♯/D♭','D','E♭','E','F','F♯','G','A♭','A','B♭',
 const DEG=[0,1,1,2,2,3,3,4,5,5,6,6];
 const NUMS={I:0,II:2,III:4,IV:5,V:7,VI:9,VII:11};
 
-const S={instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
+const S={genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
 let chords=[], sel=null, hist=[];
 let _id=1; const uid=()=>'c'+(_id++);
 
@@ -963,7 +972,14 @@ function randomWalk(n){
 }
 /* builds a progression without touching the chart. With `durs` given (Regenerate unlocked) the slot lengths are fixed,
    so nothing may split a slot. Leaves S.mode set to the progression's mode. */
+/* "Let the genres choose their chords": while generating, the chord types come from the picked genres instead of
+   Chords allowed; everything else in the app keeps using Chords allowed. */
 function buildProgression(durs){
+  if(!(S.genreVocab&&S.genres.length)) return buildProgressionCore(durs);
+  const keep=S.vocab; S.vocab=genreFamilies(); try{ return buildProgressionCore(durs); } finally{ S.vocab=keep; }
+}
+const genreFamilies=()=>[...new Set(GENRES.filter(g=>S.genres.includes(g.id)).flatMap(g=>g.wants))];
+function buildProgressionCore(durs){
   const mood=MOODS.find(m=>m.id===S.mood)||null, fixed=!!durs;
   let {pool}=templatePool(); if(S.lock) pool=pool.filter(t=>t[0]===S.mode);
   const L=barLen();
@@ -1547,8 +1563,31 @@ function renderRecipe(){
   }
   const want=[...new Set(gs.flatMap(g=>g.wants))].filter(f=>!famOn(f)), fn=f=>FAMS.find(x=>x.id===f).name;
   let need='';
-  if(want.length) need=`<div class="need"><span>${gs.length>1?'These genres sound':'This genre sounds'} best with ${names(want.map(fn))}, which ${want.length>1?'are':'is'} off in your vocabulary, so ${want.length>1?'they':'it'} won’t be used.</span><button type="button" class="btn small" data-addfams="${want.join(',')}">Turn on ${names(want.map(fn))}</button></div>`;
+  if(gs.length&&S.genreVocab) need=`<div class="need"><span>The ${gs.length>1?'genres choose':'genre chooses'} the chords: ${esc(names(['triads',...genreFamilies().map(fn)]))}.</span></div>`;
+  else if(want.length) need=`<div class="need"><span>${gs.length>1?'These genres sound':'This genre sounds'} best with ${names(want.map(fn))}, which ${want.length>1?'are':'is'} off in your vocabulary, so ${want.length>1?'they':'it'} won’t be used.</span><button type="button" class="btn small" data-addfams="${want.join(',')}">Turn on ${names(want.map(fn))}</button></div>`;
   $('#recipe').innerHTML=`<div>${t}</div>${need}`;
+  renderGenreChords(gs);
+}
+/* what each picked genre typically plays, in the current key: the chords of its own progressions, coloured the way the
+   genre colours them, and its colour families in plain words. Chips play when tapped. */
+const FAM_WORDS={power:'power chords',sus:'sus chords',add:'add9 and 6 chords',seventh:'7th chords',ext:'9ths, 11ths and 13ths',alt:'altered dominants',symm:'diminished and augmented chords',slash:'slash chords'};
+function genreChordList(g){
+  const seen=new Set(), out=[];
+  for(const [m,nums] of g.t) for(const n of nums.split(' ')){ let c=fromNumeral(n); if(!c) continue;
+    if(g.st.level===0&&!(g.st.keep7&&Q[c.q].dom)) c={...c,q:toTriad(c.q)};
+    if(g.st.power>=.6&&Q[c.q].tri!=='dim'&&!Q[c.q].dom) c={...c,q:'5'};
+    const k=ckey(c); if(!seen.has(k)){ seen.add(k); out.push(c); } }
+  return out.slice(0,9);
+}
+function renderGenreChords(gs){
+  const el=$('#genreChords'); el.hidden=!gs.length; if(!gs.length){ el.innerHTML=''; return; }
+  const names=a=>a.length<3?a.join(' and '):a.slice(0,-1).join(', ')+' and '+a[a.length-1];
+  el.innerHTML=`<div class="gc-head"><span class="label">What ${gs.length>1?'these genres play':'this genre plays'} in ${esc(keyName())}</span>
+    <label class="check"><input type="checkbox" id="genreVocab" ${S.genreVocab?'checked':''}> Let the ${gs.length>1?'genres':'genre'} choose ${gs.length>1?'their':'its'} chords</label></div>`
+    +gs.map(g=>{ const list=genreChordList(g);
+      return `<div class="gc-row"><div><b>${esc(g.name)}</b> <span class="hint">leans on ${esc(names(g.wants.map(w=>FAM_WORDS[w])))}</span></div><div class="gc-chips">${list.map(c=>{ const ok=S.genreVocab||qOn(c.q);
+        return `<button type="button" class="chip${ok?'':' off'}" data-gchord="${c.root}|${esc(c.q)}" title="${ok?'Tap to hear':'Not in Chords allowed: let the genre choose, or allow it in Chords allowed'}">${esc(chordName(c))}<small>${esc(numeral(c))}</small></button>`; }).join('')}</div></div>`; }).join('')
+    +`<p class="hint">${S.genreVocab?'Generate uses these genres’ own chord types.':'Greyed chords are outside Chords allowed, so Generate won’t use them unless you let the genre choose.'}</p>`;
 }
 function renderChart(){
   const L=barLen(), narrow=window.innerWidth<640, per=L>=10?(narrow?1:2):narrow?2:4, rows=$('#rows');
@@ -2552,6 +2591,8 @@ function boot(){
   $('#recipe').onclick=e=>{ const b=e.target.closest('[data-addfams]'); if(!b) return; S.vocab=[...new Set([...S.vocab,...b.dataset.addfams.split(',')])]; commit(); toast(`Vocabulary updated: ${vocabName()}`); };
   $('#gen').onclick=generate;
   $('#regen').onclick=regenUnlocked;
+  $('#genreChords').addEventListener('change',e=>{ if(e.target.id==='genreVocab'){ S.genreVocab=e.target.checked; save(); renderControls(); } });
+  $('#genreChords').addEventListener('click',e=>{ const b=e.target.closest('[data-gchord]'); if(!b) return; const [r,q]=b.dataset.gchord.split('|'); playOne({root:+r,q,bass:null}); });
   $('#soundCheck').onclick=()=>{ const b=$('#soundbox'); b.hidden=false; renderSoundBox(); b.querySelector('button')?.focus(); };
   $('#soundbox').addEventListener('click',e=>{ const t=e.target.closest('[data-sb]'); if(!t) return; if(t.dataset.sb==='close'){ $('#soundbox').hidden=true; return; } soundBeep(t.dataset.sb); });
   $('#soundbox').addEventListener('keydown',e=>{ if(e.key==='Escape') $('#soundbox').hidden=true; });
@@ -2760,7 +2801,7 @@ function transpose(n){
   chords=chords.map(c=>real(c)?{...c,root:mod(c.root+n),bass:c.bass==null?null:mod(c.bass+n)}:c);
   commit(); toast(`Transposed ${n>0?'up':'down'} ${Math.abs(n)} half step${Math.abs(n)>1?'s':''} to ${keyName()}`);
 }
-function vocabName(){ const vk=[...S.vocab].sort().join(); const p=Object.keys(PRESETS).find(k=>[...PRESETS[k]].sort().join()===vk); return p?p+' vocabulary':'Custom vocabulary: '+['triads',...FAMS.filter(f=>!f.fixed&&famOn(f.id)).map(f=>f.name)].join(', '); }
+function vocabName(){ const vk=[...S.vocab].sort().join(); const p=Object.keys(PRESETS).find(k=>[...PRESETS[k]].sort().join()===vk); return p?'Chords allowed: '+p:'Chords allowed: '+['triads',...FAMS.filter(f=>!f.fixed&&famOn(f.id)).map(f=>f.name)].join(', '); }
 function undo(){ const s=hist.pop(); if(!s) return; const d=JSON.parse(s); Object.assign(S,d.S); chords=d.chords; sel=d.sel; commit(); }
 if(typeof document!=='undefined'&&document.getElementById('rows')) boot();
 </script>
