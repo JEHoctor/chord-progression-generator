@@ -72,7 +72,7 @@ def page(fname, title, desc, current, body):
 <header class="top"><a class="name" href="./">Chord Changes</a><nav aria-label="Pages">{nav}<a class="btn primary" href="./">Open the app</a></nav></header>
 <div class="page"><nav class="toc" aria-label="On this page"><b>On this page</b><ol>{toc}</ol></nav>
 <main>{body}</main></div>
-<footer>Chord Changes runs entirely in your browser. Nothing you make is sent anywhere unless you share or export it.</footer>
+<footer>Chord Changes runs entirely in your browser. Nothing you make is sent anywhere unless you share or export it. Made by <a href="https://github.com/ssk0011">ssk0011</a>; the source code is <a href="https://github.com/ssk0011/chord-progression-generator">on GitHub</a>.</footer>
 </body></html>
 """
     (OUT / fname).write_text(html)

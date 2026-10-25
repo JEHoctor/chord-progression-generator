@@ -633,6 +633,33 @@ async function keyChanges() {
   await ctx.close();
 }
 
+// notation: chord symbol styles and what the chart shows, on screen and in exports; Help → About
+async function notation() {
+  const { ctx, page } = await openPage();
+  await page.goto(URL_);
+  await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; chords = parseProg('Cmaj7 | Dm7 | Bm7b5 | Bdim | Caug | G7#5 | Am(maj7)').chords; renderAll(); });
+  const names = await page.evaluate(() => { const o = {}; for (const st of ['classic', 'written', 'jazz']) { S.sym = st; o[st] = chords.map(c => chordName(c)).join(' '); } S.sym = 'classic'; return o; });
+  check('notation: three chord symbol styles', names.classic === 'Cmaj7 Dm7 Bm7♭5 B° C+ G7♯5 Am(maj7)' && names.written === 'Cmaj7 Dm7 Bm7♭5 Bdim Caug G7♯5 Am(maj7)' && names.jazz === 'CΔ7 D−7 Bø7 B° C+ G+7 A−Δ7', JSON.stringify(names));
+  check('notation: every chord type in every style reads back from text', await page.evaluate(() => { const bad = []; for (const st of ['classic', 'written', 'jazz']) { S.sym = st; for (const q of Object.keys(Q)) { const n = chordName({ root: 0, q, bass: null }, 'sym'); const r = parseChord(n); if (!r || r.q !== q) bad.push(st + ':' + n); } } S.sym = 'classic'; return bad.length === 0 || bad.join(' '); }) === true);
+  await page.selectOption('#symStyle', 'jazz');
+  const j = await page.evaluate(() => ({ chart: document.querySelector('#rows .slot .cn').textContent, text: serialize(), xml: /<kind text="Δ7" use-symbols="yes">major-seventh<\/kind>/.test(buildMusicXML()), sheet: /CΔ7/.test(leadSheetHTML()) }));
+  check('notation: Jazz symbols show in the chart, lead sheet and MusicXML; the text editor keeps the standard spelling', j.chart.startsWith('CΔ7') && j.text.startsWith('Cmaj7 |') && j.xml && j.sheet, JSON.stringify(j));
+  await page.evaluate(() => { navigator.clipboard.writeText = async t => { window.__copied = t; }; });
+  await tap(page, '#copy');
+  check('notation: Copy chart uses the chosen symbols', await page.evaluate(() => /\| CΔ7 \| D−7 \| Bø7/.test(window.__copied || '')), await page.evaluate(() => window.__copied));
+  await page.selectOption('#labelMode', 'numerals');
+  const n = await page.evaluate(() => { const s = document.querySelector('#rows .slot'); return { big: s.querySelector('.cn').textContent, small: s.querySelector('.cr')?.textContent, xml: (buildMusicXML().match(/<words>[^<]*<\/words>/g) || []).slice(0, 2).join(), sheet: /Imaj7/.test(leadSheetHTML()) }; });
+  check('notation: Roman numerals only puts numerals first in the chart, the lead sheet and under the MusicXML staff', n.big.startsWith('Imaj7') && n.small === 'CΔ7' && n.xml === '<words>Imaj7</words>,<words>ii7</words>' && n.sheet, JSON.stringify(n));
+  await page.selectOption('#labelMode', 'names');
+  check('notation: Chord names only hides the numerals', await page.evaluate(() => !document.querySelector('#rows .slot .cr') && !/<words>/.test(buildMusicXML())));
+  await page.reload();
+  check('notation: the choices are remembered', await page.evaluate(() => S.sym === 'jazz' && S.labels === 'names' && document.querySelector('#symStyle').value === 'jazz' && document.querySelector('#labelMode').value === 'names'));
+  const about = await page.evaluate(() => [...document.querySelectorAll('#helpMenu .help-about a')].map(a => a.href + (a.target === '_blank' ? ' new tab' : '')));
+  check('help: About links to the project and its author on GitHub', about.join() === 'https://github.com/ssk0011/chord-progression-generator new tab,https://github.com/ssk0011 new tab', about.join());
+  check('no console errors (notation)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
+
 // the top-bar menus must be visible and on top at every width, not just "open"
 async function menus() {
   for (const [w, h, tag] of [[1440, 900, 'desktop'], [1280, 720, 'small laptop'], [900, 900, 'tablet'], [390, 844, 'phone']]) {
@@ -669,7 +696,7 @@ async function layout() {
   await page.mouse.click(700, 500);
   check('layout: clicking elsewhere closes the Library', await page.evaluate(() => !document.querySelector('#library').open));
   await page.click('#helpMenu > summary');
-  const help = await page.evaluate(() => [...document.querySelectorAll('#helpMenu a')].map(a => a.getAttribute('href')).join());
+  const help = await page.evaluate(() => [...document.querySelectorAll('#helpMenu a:not(.help-about a)')].map(a => a.getAttribute('href')).join());
   check('layout: Help links to How to use and Under the hood', help === 'guide.html,how-it-works.html', help);
   for (const [f, h1] of [['guide.html', 'How to use Chord Changes'], ['how-it-works.html', 'How Chord Changes works']]) {
     const p2 = await ctx.newPage(); const errs = []; p2.on('pageerror', e => errs.push(String(e)));
@@ -819,6 +846,7 @@ try {
   for (const n of PHASES) { if (phaseFns[n]) { await phaseFns[n](); await phoneDark('phase' + n); } }
   await editing();
   await keyChanges();
+  await notation();
   await menus();
   await layout();
   await hardening();

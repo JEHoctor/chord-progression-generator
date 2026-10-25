@@ -76,7 +76,7 @@ footer{max-width:1180px;margin:56px auto 0;color:var(--muted);font-size:14px;bor
 <h2 id="screen">Finding your way around</h2>
 <p>On a computer the screen has five parts, with your chord chart in the middle:</p>
 <div class="map" aria-label="Screen layout">
-  <div class="tb"><b>Top bar</b>Library (save and open) and Help</div>
+  <div class="tb"><b>Top bar</b>Library (save and open) and Help (these guides, Sound check, and About, with a link to the project on GitHub)</div>
   <div><b>Create</b>Generate a progression or harmonize a melody, and Chords allowed</div>
   <div class="ct"><b>Chart</b>Your progression. The line under the title (for example “G major · 4/4 · 4 bars”) opens key, mode and time. Below it: Edit as text, and Tools (chord finder, keys and modes)</div>
   <div><b>Chord / Swap ideas</b>Everything about the chord you selected, and what could replace it</div>
@@ -168,6 +168,15 @@ D | E | F#m | E</pre>
   <tr><td>Copy share link</td><td>A link that opens this chart (key, meter, tempo and sections included) for anyone.</td></tr>
   <tr><td>Print lead sheet</td><td>A clean black-and-white chart; choose “Save as PDF” in the print dialog for a PDF.</td></tr>
 </table>
+<h3>Chord symbols and Roman numerals</h3>
+<p>Two menus in <b>Chart tools</b> change how chords are written, on screen and in what you take away:</p>
+<table>
+  <tr><th>Chord symbols</th><th>Looks like</th></tr>
+  <tr><td>Classic (the default)</td><td>C°, C°7, C+, Cmaj7, Cm7, Cm7♭5, C6/9</td></tr>
+  <tr><td>Written out</td><td>Cdim, Cdim7, Caug, Cmaj7, Cm7, Cm7♭5, C6/9</td></tr>
+  <tr><td>Jazz</td><td>C°, C°7, C+, CΔ7, C−7, Cø7, C−Δ7, C+7</td></tr>
+</table>
+<p>The second menu chooses what the chart shows: <b>chord names and numerals</b> (the default), <b>chord names only</b>, or <b>Roman numerals only</b>, which puts the numerals in large type with the chord names underneath. The printed lead sheet and Copy chart follow both choices. MusicXML uses your symbol style (with “use symbols” set for Jazz, so notation apps can draw their own triangle and circle), and with Roman numerals only it also writes the numerals under the staff. The Edit as text box always uses Classic spelling, but it reads all three styles, so you can paste a chart copied in any of them.</p>
 <p>The <b>Library</b> at the top right saves progressions by name in this browser. You can open, rename, duplicate and delete them (with undo), export the whole library as a file for backup, import it on another computer, and paste a share link or code to open it.</p>
 
 <h2 id="tools">More tools</h2>
@@ -204,5 +213,5 @@ D | E | F#m | E</pre>
 <h2 id="privacy">Your data</h2>
 <p>Everything stays in your browser: your current chart, library, settings and quiz score are saved in this browser’s local storage on this device. There are no accounts and no tracking. Clearing your browser data clears them, so export the library now and then if it matters to you.</p>
 </main></div>
-<footer>Chord Changes runs entirely in your browser. Nothing you make is sent anywhere unless you share or export it.</footer>
+<footer>Chord Changes runs entirely in your browser. Nothing you make is sent anywhere unless you share or export it. Made by <a href="https://github.com/ssk0011">ssk0011</a>; the source code is <a href="https://github.com/ssk0011/chord-progression-generator">on GitHub</a>.</footer>
 </body></html>

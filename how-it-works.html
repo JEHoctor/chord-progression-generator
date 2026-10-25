@@ -131,7 +131,7 @@ footer{max-width:1180px;margin:56px auto 0;color:var(--muted);font-size:14px;bor
 <h2 id="files">How the files are written</h2>
 <ul>
   <li><b>MIDI</b>: written byte by byte as a format-1 file at 480 ticks per quarter note. Track 1 holds the tempo, time signature and section markers; the chords follow (piano, or acoustic guitar when that sound is chosen), with the bass on its own track on request.</li>
-  <li><b>MusicXML</b>: a piano grand staff in MusicXML 4.0 with the played voicings (notes from middle C up on the treble staff), chord symbols, key and time signatures, tempo, rehearsal marks for sections, and ties where a chord crosses a bar line.</li>
+  <li><b>MusicXML</b> (chord symbols in the chosen style, plus Roman numerals as text under the staff when the chart shows numerals only): a piano grand staff in MusicXML 4.0 with the played voicings (notes from middle C up on the treble staff), chord symbols, key and time signatures, tempo, rehearsal marks for sections, and ties where a chord crosses a bar line.</li>
   <li><b>Share links</b>: the key, mode, meter, tempo and chart text as JSON, base64url-encoded after <code>#s=</code> in the address.</li>
   <li><b>Library backups</b>: a versioned JSON file; imports are checked chord by chord before they are accepted.</li>
   <li><b>Lead sheet</b>: a print stylesheet that hides the app and lays the bars out four to a line.</li>
@@ -158,5 +158,5 @@ footer{max-width:1180px;margin:56px auto 0;color:var(--muted);font-size:14px;bor
   <li>Guitar shapes assume six strings and at most four fingers; very wide stretches are left out.</li>
 </ul>
 </main></div>
-<footer>Chord Changes runs entirely in your browser. Nothing you make is sent anywhere unless you share or export it.</footer>
+<footer>Chord Changes runs entirely in your browser. Nothing you make is sent anywhere unless you share or export it. Made by <a href="https://github.com/ssk0011">ssk0011</a>; the source code is <a href="https://github.com/ssk0011/chord-progression-generator">on GitHub</a>.</footer>
 </body></html>
