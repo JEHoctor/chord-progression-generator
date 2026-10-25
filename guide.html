@@ -80,9 +80,9 @@ footer{max-width:1180px;margin:56px auto 0;color:var(--muted);font-size:14px;bor
   <div><b>Create</b>Generate a progression or harmonize a melody, and Chords allowed</div>
   <div class="ct"><b>Chart</b>Your progression. The line under the title (for example “G major · 4/4 · 4 bars”) opens key, mode and time. Below it: Edit as text, and Tools (chord finder, keys and modes)</div>
   <div><b>Chord / Swap ideas</b>Everything about the chord you selected, and what could replace it</div>
-  <div class="dk"><b>Play bar</b>Play, the chord now playing, loop, tempo, sound and playing style, and Export</div>
+  <div class="dk"><b>Play bar</b>Play, the chord now playing, loop, tempo and metronome, sound and playing style, and Export</div>
 </div>
-<p>On a smaller laptop or tablet, Create slides out from the left when you press <b>Create</b>. On a phone, a tab bar under the title switches between <b>Create</b>, <b>Chart</b>, <b>Chord</b> and <b>Tools</b>, one screen at a time.</p>
+<p>Drag the left edge of the side panel to make it wider or narrower (or focus it and use the arrow keys); double-click the edge to reset it. The chart reflows to fit, choosing how many bars to put on a line, and chord names shrink, or stack the chord type under the root in a short slot, so they stay readable. On a smaller laptop or tablet, Create slides out from the left when you press <b>Create</b>. On a phone, a tab bar under the title switches between <b>Create</b>, <b>Chart</b>, <b>Chord</b> and <b>Tools</b>, one screen at a time.</p>
 
 <h2 id="make">Making a progression</h2>
 <p>Open <b>Create → Generate</b>. (To start from a tune instead, see <a href="#tools">Harmonize a melody</a>.)</p>
@@ -108,7 +108,7 @@ footer{max-width:1180px;margin:56px auto 0;color:var(--muted);font-size:14px;bor
 <table>
   <tr><th>To…</th><th>Do this</th></tr>
   <tr><td>Hear a chord</td><td>Tap or click it.</td></tr>
-  <tr><td>Change a chord</td><td>Tap the ▾ next to its name (or double-click the chord, or select it and press <kbd>E</kbd>). Pick from the chords in your key, or choose root, type and bass, then Apply.</td></tr>
+  <tr><td>Change a chord</td><td>Tap the round ▾ button next to its name (an empty slot shows <b>▾ Pick</b>) (or double-click the chord, or select it and press <kbd>E</kbd>). Pick from the chords in your key, or choose root, type and bass, then Apply.</td></tr>
   <tr><td>Add a chord</td><td>Press <b>+ Add chord</b> at the end of the chart. It adds a blank bar and opens the picker.</td></tr>
   <tr><td>Move a chord</td><td>Drag it to a new place. Hold <kbd>Option</kbd>/<kbd>Alt</kbd> as you drop to copy it instead. On a phone, press and hold briefly before dragging.</td></tr>
   <tr><td>Make it longer or shorter</td><td>Drag its right edge. Lengths snap to whole beats. Hold <kbd>Shift</kbd> to trade beats with the next chord so everything after stays put.</td></tr>
@@ -152,10 +152,11 @@ D | E | F#m | E</pre>
   <li><b>Sound</b>: Piano or Guitar. Guitar plays the actual guitar shapes in your tuning and capo.</li>
   <li><b>Style</b>: piano can play block chords, a ballad (bass, then chords), a pop pulse or an arpeggio; guitar can strum once, play a strum pattern (down, down-up, up-down-up) or fingerpick.</li>
   <li><b>Smooth voice leading</b> (in Chart tools) keeps the piano’s notes close from chord to chord; <b>Fixed root position</b> plays every chord the plain way.</li>
-  <li><b>Click</b> adds a metronome.</li>
+  <li>The <b>metronome</b> button next to the tempo adds a click on every beat (accented on the downbeat), from the next pass through the chart.</li>
 </ul>
 <h3>Guitar and piano shapes</h3>
 <p>The <b>Chord</b> tab shows the chord’s notes, guitar shapes and piano voicings. The shape marked <b>Smoothest path</b> is the one playback uses, chosen so your hand moves as little as possible. Tap any shape or voicing to hear it, then <b>▶ In context</b> to hear it between its neighbours or <b>Use for this chord</b> to make playback use it.</p>
+<p>Under each guitar box are the notes that sound, and the green bass and gold right-hand notes of each piano voicing are written out underneath it. With a capo, the box shows the capo as a gold bar marked <b>CAPO</b> and its fret, fret numbers count from the capo, and the note names are the sounding notes; the Smoothest path badge names the capo it was worked out for. Press <b>Zoom</b> beside Guitar or Piano to see every diagram at about twice the size (press <b>Smaller</b> to go back); the choice is remembered.</p>
 <p>Pick a <b>Tuning</b> (standard, half or whole step down, Drop D, Drop C, double drop D, DADGAD, open G, D, E or C) and a <b>Capo</b>. <b>Find the easiest tuning for this chart</b> compares every tuning and capo position for your chords and recommends one, keeping standard tuning unless another is clearly easier.</p>
 
 <h2 id="export">Export, share and save</h2>
@@ -184,7 +185,7 @@ D | E | F#m | E</pre>
   <li><b>Chord finder</b> (under the chart): place fingers on a fretboard or press piano keys, and it names the chord and shows it on the other instrument.</li>
   <li><b>Harmonize a melody</b> (in Create → Harmonize): type one note per beat (for example <code>E D C D | E E E -</code>, with <code>-</code> to hold and <code>.</code> for a rest) and get three to five progressions, ranked by how many strong-beat melody notes are chord tones. It uses the chart’s key and time, and Chords allowed.</li>
   <li><b>Keys and modes</b>: the chords in your key, and how well your chart fits each mode on the same tonic.</li>
-  <li><b>Tension curve</b> above the chart shows how much each chord pulls away from home.</li>
+  <li><b>Tension curve</b> above the chart shows how much each chord pulls away from home. It is a map, not a score: higher is not better. Most songs rise and settle, and a calm progression of three plain chords is as good as a restless one full of borrowed and altered chords. Use it to see what you made and to try things, not as a target.</li>
   <li><b>Show voice leading</b> draws each voice’s path through the chart, marking held notes and big leaps.</li>
   <li><b>Quiz me</b> hides the colours and labels and asks what each chord does; your score is kept.</li>
 </ul>

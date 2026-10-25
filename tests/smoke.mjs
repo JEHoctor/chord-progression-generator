@@ -388,7 +388,7 @@ async function phase3() {
   await tap(page, '#detail .pickbar [data-gctx]'); await page.waitForTimeout(200);
   await tap(page, '#detail .pickbar [data-gpin]');
   const pin = await page.evaluate(() => ({ pin: chords[0].gpin, plan: guitarPlan().get(chords[0].id).fr, badge: document.querySelector('#detail .shape.ctx .badge')?.textContent }));
-  check('sound: pinned shape drives playback and is marked Your pick', pin.pin && JSON.stringify(pin.pin.fr) === JSON.stringify(pin.plan) && pin.badge === 'Your pick', JSON.stringify(pin));
+  check('sound: pinned shape drives playback and is marked Your pick', pin.pin && JSON.stringify(pin.pin.fr) === JSON.stringify(pin.plan) && /^Your pick · capo 2$/.test(pin.badge), JSON.stringify(pin));
   await page.reload();
   check('sound: pins and sound choice survive a reload', await page.evaluate(() => S.instrument === 'guitar' && gpinOk(chords[0]) && guitarPlan().get(chords[0].id).pinned));
   await page.evaluate(() => { S.capo = 0; sel = chords[0].id; renderAll(); });
@@ -660,6 +660,56 @@ async function notation() {
   await ctx.close();
 }
 
+// polish: names fit their slots, a clear picker arrow, the metronome in the Play bar, tension framed as a map,
+// bigger diagrams with a Zoom switch and a visible capo, and a side panel you can drag wider
+async function polish() {
+  const LONG = 'Bbm9 | Dbmaj7#11:2 Dbm7:1 Dbm:1 | Abadd9:8\nC#m7b5:1 Ebmaj13:1 F#13#11:1 Gm(maj9):1 | ?:1 G:1 Bbm7(add11):2 | C7sus4 | ?';
+  for (const [w, h, tag] of [[1440, 900, 'desktop'], [1100, 800, 'laptop'], [390, 844, 'phone']]) {
+    const { ctx, page } = await openPage({ viewport: { width: w, height: h } });
+    await page.goto(URL_);
+    const r = await page.evaluate(t => { S.tonic = 10; S.mode = 'ionian'; chords = parseProg(t).chords; if (innerWidth < 760) selectTab('phone', 'p-chart'); renderAll();
+      return [...document.querySelectorAll('#rows .slot:not(.tie)')].map(s => { const sr = s.getBoundingClientRect(), right = Math.max(...[...s.querySelectorAll('.nr,.nq,.cpk')].filter(e => e.offsetWidth).map(e => e.getBoundingClientRect().right)); return { t: s.querySelector('.cn').textContent.trim(), over: Math.round(right - (sr.right - 8)) }; }).filter(x => x.over > 0); }, LONG);
+    check(`polish: every chord name fits its slot (${tag})`, r.length === 0, JSON.stringify(r));
+    await ctx.close();
+  }
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(URL_);
+  const a = await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; chords = parseProg('C | ? | G | C').chords; renderAll(); const k = document.querySelector('#rows .slot .cpk').getBoundingClientRect(), e = document.querySelector('#rows .slot.empty .cpk'); return { w: k.width, h: k.height, pick: getComputedStyle(e, '::after').content }; });
+  check('polish: the picker arrow is a 24px button, and an empty slot says Pick', a.w >= 24 && a.h >= 24 && a.pick === '"Pick"', JSON.stringify(a));
+  await page.click('#click');
+  check('polish: the metronome is a toggle in the Play bar', await page.evaluate(() => S.click && !!document.querySelector('.dock #click[aria-pressed="true"]') && !document.querySelector('#chartTools #click')));
+  await page.click('#click');
+  check('polish: the tension curve says higher is not better', await page.evaluate(() => /not better/.test(document.querySelector('#tension .tl').title) && /map, not a score/.test(document.querySelector('#tension .tl').textContent)));
+  await page.evaluate(() => { S.instrument = 'guitar'; S.capo = 3; sel = chords[0].id; renderAll(); selectTab('right', 'chord'); });
+  const g = await page.evaluate(() => ({ capo: /CAPO 3/.test(document.querySelector('#detail .shape svg').outerHTML), badge: document.querySelector('#detail .shape .badge')?.textContent, w: document.querySelector('#detail .shape svg').getBoundingClientRect().width }));
+  check('polish: chord boxes show the capo, and the smoothest-path badge names it', g.capo && /Smoothest path · capo 3/.test(g.badge) && g.w >= 118, JSON.stringify(g));
+  await page.click('#detail [data-zoom]');
+  const z = await page.evaluate(() => ({ on: document.body.classList.contains('zoomdiag'), w: document.querySelector('#detail .shape svg').getBoundingClientRect().width }));
+  check('polish: Zoom makes the diagrams about twice the size', z.on && z.w >= 200, JSON.stringify(z));
+  await page.reload();
+  check('polish: Zoom is remembered', await page.evaluate(() => document.body.classList.contains('zoomdiag')));
+  await page.evaluate(() => { document.body.classList.remove('zoomdiag'); try { localStorage.removeItem('changes-zoom-v1'); } catch (e) {} });
+  // drag the side panel's edge
+  const sw = () => page.evaluate(() => Math.round(document.querySelector('#sideRight').getBoundingClientRect().width));
+  const w0 = await sw(), box = await page.locator('#sizer').boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + 200); await page.mouse.down(); await page.mouse.move(box.x - 150, box.y + 200, { steps: 6 }); await page.mouse.up();
+  const w1 = await sw();
+  check('polish: dragging the side panel edge makes it wider', w1 >= w0 + 140 && w1 <= w0 + 160, `${w0} → ${w1}`);
+  await page.focus('#sizer'); await page.keyboard.press('ArrowRight');
+  check('polish: the arrow keys nudge it', await sw() === w1 - 16, String(await sw()));
+  await page.reload();
+  check('polish: the width is remembered', await sw() === w1 - 16, String(await sw()));
+  await page.mouse.move(box.x + box.width / 2, box.y + 200); await page.mouse.down(); await page.mouse.move(100, box.y + 200, { steps: 4 }); await page.mouse.up();
+  const lim = await page.evaluate(() => ({ chart: document.querySelector('.chart-card').getBoundingClientRect().width, h: document.documentElement.scrollWidth <= innerWidth }));
+  check('polish: it stops while the chart still has room, with no sideways scroll', lim.chart >= 400 && lim.h, JSON.stringify(lim));
+  await page.dblclick('#sizer');
+  check('polish: double-click resets it', await sw() === w0, String(await sw()));
+  await page.setViewportSize({ width: 390, height: 844 });
+  check('polish: no resize handle on a phone', await page.evaluate(() => !document.querySelector('#sizer').checkVisibility()));
+  check('no console errors (polish)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
+
 // the top-bar menus must be visible and on top at every width, not just "open"
 async function menus() {
   for (const [w, h, tag] of [[1440, 900, 'desktop'], [1280, 720, 'small laptop'], [900, 900, 'tablet'], [390, 844, 'phone']]) {
@@ -847,6 +897,7 @@ try {
   await editing();
   await keyChanges();
   await notation();
+  await polish();
   await menus();
   await layout();
   await hardening();
