@@ -594,7 +594,7 @@ body:not(.simple) .onb{display:none}
 .tension .tl{position:absolute;left:0;top:0;font-size:11.5px;color:var(--muted);font-weight:500}
 .vlx-wrap{display:flex;flex-direction:column;gap:8px}
 #vlx{background:var(--sunk);border-radius:14px;padding:10px 12px;overflow-x:auto}
-#vlx svg{display:block;width:100%;min-width:520px;height:auto}
+#vlx svg{display:block;max-width:none}
 #vlx .cap{font-size:13px;color:var(--muted);margin:6px 2px 0}
 #vlx .cap b{color:var(--ink);font-weight:600}
 #vlx .key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin:2px 2px 6px}
@@ -2707,7 +2707,14 @@ function renderVLX(){
   chords.forEach(c=>{ const v=real(c)?playedVoicing(c):null; if(v) segs.push({c,v,start:pos,end:pos+c.beats,rh:[...v.rh].sort((a,b)=>a-b)}); pos+=c.beats; });
   if(segs.length<1){ el.innerHTML='<p class="cap">Add chords to see how the voices move.</p>'; return; }
   const all=segs.flatMap(s=>[s.v.bass,...s.rh]), lo=Math.min(...all)-2, hi=Math.max(...all)+2;
-  const W=1000, H=240, X0=40, X1=W-10, Y0=14, Y1=H-30, x=b=>X0+(X1-X0)*b/total, y=m=>Y1-(Y1-Y0)*(m-lo)/(hi-lo||1);
+  /* drawn at real pixel size: it fills the box, but never gives a beat less than BEAT_PX, so a long chart scrolls
+     sideways instead of squeezing the lines and the names together */
+  const BEAT_PX=18, avail=Math.max(300,(el.clientWidth||700)-24);
+  const W=Math.max(avail,Math.round(50+total*BEAT_PX)), H=252, X0=40, X1=W-10, Y0=14, Y1=H-44, x=b=>X0+(X1-X0)*b/total, y=m=>Y1-(Y1-Y0)*(m-lo)/(hi-lo||1);
+  /* chord names take turns on two rows; a name that fits neither is left to its line's tooltip */
+  const rowEnd=[-Infinity,-Infinity], labelAt=(s,name)=>{ const x0=x(s.start)+4, w=name.length*7+4;
+    for(const r of [0,1]) if(x0>rowEnd[r]+6){ rowEnd[r]=x0+w; return `<text x="${x0}" y="${H-24+r*16}" font-size="12" font-weight="600" fill="var(--ink)">${esc(name)}</text>`; }
+    return ''; };
   let g='';
   for(let m=Math.ceil(lo/12)*12;m<=hi;m+=12) g+=`<line x1="${X0}" x2="${X1}" y1="${y(m)}" y2="${y(m)}" stroke="var(--line)" stroke-dasharray="2 4"/><text x="${X0-6}" y="${y(m)+4}" text-anchor="end" font-size="11" fill="var(--muted)">C${m/12-1}</text>`;
   const voicesOf=s=>[s.v.bass,...s.rh];
@@ -2715,21 +2722,22 @@ function renderVLX(){
   segs.forEach((s,i)=>{
     voicesOf(s).forEach((m,j)=>{ const col=j===0?'var(--muted)':VOICE_COLORS[(j-1)%5+1];
       g+=`<line x1="${x(s.start)+4}" x2="${x(s.end)-4}" y1="${y(m)}" y2="${y(m)}" stroke="${col}" stroke-width="${j===0?4:3}" stroke-linecap="round"><title>${esc(chordName(s.c))}: ${esc(prettyNote(spell(mod(m))))}${Math.floor(m/12)-1}</title></line>`; });
-    g+=`<text x="${x(s.start)+4}" y="${H-10}" font-size="12" font-weight="600" fill="var(--ink)">${esc(chordName(s.c))}</text>`;
+    g+=labelAt(s,chordName(s.c));
     const nx=segs[(i+1)%segs.length]; if(segs.length<2) return;
     const wrap=i===segs.length-1, A=voicesOf(s), B=voicesOf(nx), pairs=[[A[0],B[0]],...pairVoices(s.rh,nx.rh)];
-    let moved=0, leap=0; pairs.forEach(([p,q],k)=>{ moved+=Math.abs(q-p); if(Math.abs(q-p)>Math.abs(leap)) leap=q-p;
-      if(wrap) return; const x1=x(s.end)-4, x2=x(nx.start)+4;
+    /* a bass moving a 4th or 5th is ordinary root motion, so only wider bass moves count as leaps; upper voices leap past 4 */
+    let moved=0, leap=0; pairs.forEach(([p,q],k)=>{ moved+=Math.abs(q-p); if(k>0&&Math.abs(q-p)>Math.abs(leap)) leap=q-p;
+      if(wrap) return; const x1=x(s.end)-4, x2=x(nx.start)+4, big=Math.abs(q-p)>(k===0?7:4);
       if(p===q) g+=`<line x1="${(x(s.start)+x(s.end))/2}" x2="${(x(nx.start)+x(nx.end))/2}" y1="${y(p)}" y2="${y(q)}" stroke="var(--accent)" stroke-width="9" stroke-linecap="round" opacity=".28"/><line x1="${x1}" x2="${x2}" y1="${y(p)}" y2="${y(q)}" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"><title>held ${esc(prettyNote(spell(mod(p))))}</title></line>`;
-      else if(Math.abs(q-p)>4) g+=`<line x1="${x1}" x2="${x2}" y1="${y(p)}" y2="${y(q)}" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 3"/><text x="${(x1+x2)/2+4}" y="${(y(p)+y(q))/2}" font-size="11" font-weight="600" fill="var(--accent)">${semis(q-p)}</text>`;
+      else if(big) g+=`<line x1="${x1}" x2="${x2}" y1="${y(p)}" y2="${y(q)}" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 3"><title>${semis(q-p)} semitones</title></line>${x(nx.end)-x(nx.start)>=30?`<text x="${(x1+x2)/2+4}" y="${(y(p)+y(q))/2}" font-size="11" font-weight="600" fill="var(--accent)">${semis(q-p)}</text>`:''}`;
       else g+=`<line x1="${x1}" x2="${x2}" y1="${y(p)}" y2="${y(q)}" stroke="${k===0?'var(--muted)':VOICE_COLORS[(k-1)%5+1]}" stroke-width="1.5" opacity=".7"/>`; });
     trans.push({a:s.c,b:nx.c,moved,leap,wrap});
   });
   let cap='';
   if(trans.length){ const sm=trans.reduce((p,t)=>t.moved<p.moved?t:p), ro=trans.reduce((p,t)=>t.moved>p.moved?t:p), nm=t=>`${esc(chordName(t.a))} → ${esc(chordName(t.b))}${t.wrap?' (loop back)':''}`;
     cap=`Smoothest: <b>${nm(sm)}</b>, ${sm.moved} semitone${sm.moved===1?'':'s'} in all. Roughest: <b>${nm(ro)}</b>, ${ro.moved} semitones${Math.abs(ro.leap)>4?`, with a leap of ${Math.abs(ro.leap)}`:''}.`; }
-  el.innerHTML=`<div class="key"><span><i style="background:var(--muted)"></i>Bass</span><span><i style="background:var(--t-bor)"></i><i style="background:var(--t-jazz)"></i><i style="background:var(--t-sec)"></i>Upper voices, low to high</span><span><i style="background:var(--accent);height:5px"></i>Held note</span><span><i style="background:repeating-linear-gradient(90deg,var(--accent) 0 4px,transparent 4px 7px)"></i>Leap over 4 semitones</span></div>
-    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Voice leading across the chart">${g}</svg><p class="cap">${cap}</p>`;
+  el.innerHTML=`<div class="key"><span><i style="background:var(--muted)"></i>Bass</span><span><i style="background:var(--t-bor)"></i><i style="background:var(--t-jazz)"></i><i style="background:var(--t-sec)"></i>Upper voices, low to high</span><span><i style="background:var(--accent);height:5px"></i>Held note</span><span><i style="background:repeating-linear-gradient(90deg,var(--accent) 0 4px,transparent 4px 7px)"></i>Leap: over 4 semitones (bass: over 7)</span></div>
+    <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Voice leading across the chart">${g}</svg><p class="cap">${cap}</p>`;
 }
 
 /* ============ tension curve ============ */
@@ -2743,13 +2751,14 @@ function tensionOf(c){
 function renderTension(){
   const el=$('#tension'), total=chords.reduce((a,c)=>a+c.beats,0);
   if(!total||!chords.some(real)){ el.innerHTML=''; return; }
-  const W=1000, H=56, X0=6, x=b=>X0+(W-X0-6)*b/total, y=v=>H-6-(H-14)*v; let pos=0; const pts=[];
+  const W=Math.max(200,el.clientWidth||700), H=56, X0=6, x=b=>X0+(W-X0-6)*b/total, y=v=>H-6-(H-14)*v; let pos=0; const pts=[];
   chords.forEach(c=>{ const v=tensionOf(c); if(v!=null) pts.push({x:x(pos+c.beats/2),y:y(v),c,v,k:analyze(c).kind}); pos+=c.beats; });
   const line=pts.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' ');
-  el.innerHTML=`<span class="tl">Tension</span><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Tension of each chord, low to high">
+  const gap=pts.length>1?Math.min(...pts.slice(1).map((p,i)=>p.x-pts[i].x)):99, r=Math.max(2.5,Math.min(4.5,gap/2.6));
+  el.innerHTML=`<span class="tl">Tension</span><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Tension of each chord, low to high">
     <line x1="${X0}" x2="${W}" y1="${H-6}" y2="${H-6}" stroke="var(--line)"/>
     ${pts.length>1?`<path d="${line} L${pts[pts.length-1].x} ${H-6} L${pts[0].x} ${H-6} Z" fill="var(--accent)" opacity=".08"/><path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/>`:''}
-    ${pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4" fill="var(--t-${p.k})" stroke="var(--surface)" stroke-width="1.5" vector-effect="non-scaling-stroke"><title>${esc(chordName(p.c))}: tension ${Math.round(p.v*10)}/10</title></circle>`).join('')}</svg>`;
+    ${pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r.toFixed(1)}" fill="var(--t-${p.k})" stroke="var(--surface)" stroke-width="1.5"><title>${esc(chordName(p.c))}: tension ${Math.round(p.v*10)}/10</title></circle>`).join('')}</svg>`;
 }
 
 /* ============ learning mode ============ */
@@ -3455,6 +3464,7 @@ function boot(){
     if(e.key==='ArrowLeft'&&idx>0){ sel=chords[idx-1].id; renderAll(); }
   });
   let rw=window.innerWidth<640; window.addEventListener('resize',()=>{ const n=window.innerWidth<640; if(n!==rw){ rw=n; renderChart(); } });
+  { let lastW=0, raf=0; new ResizeObserver(()=>{ cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{ const w=$('.chart-card').clientWidth; if(w&&w!==lastW){ lastW=w; renderTension(); renderVLX(); } }); }).observe($('.chart-card')); }
   /* if the saved session can't be shown, start fresh rather than leave the app broken; the old save is kept aside */
   try{ renderAll(); }
   catch(err){ try{ const old=localStorage.getItem('changes-v1'); if(old) localStorage.setItem('changes-v1-unreadable',old); }catch(e){}
