@@ -450,7 +450,6 @@ body[data-ptab=p-create] #sideLeft,body[data-ptab=p-tools] #tools,body[data-ptab
   .phonetabs [role=tab]{flex:1 1 0;min-width:0;text-align:center;font-size:19px;padding:10px 4px;min-height:48px}
   .phonetabs [role=tab][aria-selected=true]::before{inset:6px 4px}
   .phonetabs [data-tab=p-chart]{display:block}
-  .dock{bottom:var(--tabs-h,58px)}
   .app{display:block;border-top-left-radius:0;padding-bottom:calc(var(--dock-h,76px) + var(--tabs-h,58px) + 16px)}
   .center{padding:16px 16px 0}
   .pane{position:static;max-height:none;overflow:visible;border-left:0;padding:16px}
@@ -756,7 +755,7 @@ body{padding-bottom:0}
 .dock .export-btn{background:var(--stage-ink);border-color:var(--stage-ink);color:#141414}
 .dock .export-btn:hover{background:var(--stage-ink);opacity:.9}
 @media (max-width:1199px){ .dock{left:0} }
-@media (max-width:759px){ .dock #play.play-big{font-size:20px;height:44px;min-width:104px} .dock .now b{font-size:22px} .dock{padding-bottom:8px} .dock-in{padding:0} }
+@media (max-width:759px){ .dock #play.play-big{font-size:20px;height:44px;min-width:104px} .dock .now b{font-size:22px} .dock{bottom:var(--tabs-h,58px);padding-bottom:8px} .dock-in{padding:0} }
 .toast{background:var(--stage);color:var(--stage-ink);border-radius:var(--r-xs)}
 .toast-act{color:var(--spike)}
 </style>

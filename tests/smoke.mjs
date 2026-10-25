@@ -599,6 +599,8 @@ async function layout() {
   const seen = {};
   for (const tab of ['p-create', 'p-chord', 'p-tools', 'p-chart']) { await page.click(`#phoneTabs [data-tab="${tab}"]`); seen[tab] = await page.evaluate(() => ({ gen: document.querySelector('#gen').checkVisibility(), detail: document.querySelector('#detail').checkVisibility(), finder: document.querySelector('#finder').checkVisibility(), chart: document.querySelector('#rows').checkVisibility() })); }
   const one = Object.values(seen).every(v => Object.values(v).filter(Boolean).length === 1);
+  const bars = await page.evaluate(() => ({ play: document.querySelector('#play').getBoundingClientRect().bottom, dock: document.querySelector('.dock').getBoundingClientRect().bottom, tabs: document.querySelector('#phoneTabs').getBoundingClientRect().top }));
+  check('layout: phone Play bar sits fully above the tab bar', bars.dock <= bars.tabs + 1 && bars.play <= bars.tabs, JSON.stringify(bars));
   check('layout: phone shows one screen at a time from the tab bar', one && seen['p-create'].gen && seen['p-chord'].detail && seen['p-tools'].finder && seen['p-chart'].chart && await noHScroll(page), JSON.stringify(seen));
   check('no console errors (layout)', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
