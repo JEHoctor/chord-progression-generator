@@ -566,7 +566,7 @@ async function editing() {
   await page.click('#keyMenu summary');
   check('editing: the key line under Chart opens key, mode and time', await page.evaluate(() => document.querySelector('#keyMenu').open && document.querySelector('#key').checkVisibility() && document.querySelector('#meter').checkVisibility()));
   await page.selectOption('#key', '2');
-  check('editing: changing the key there updates the key line', await page.evaluate(() => /^D major/.test(document.querySelector('#keytag').textContent)));
+  check('editing: changing the key there updates the key line', await page.evaluate(() => /^D /.test(document.querySelector('#keytag').textContent)), await page.evaluate(() => document.querySelector('#keytag').textContent + ' ' + S.tonic + ' ' + document.querySelector('#key').value));
   await page.click('#chartTitle');
   check('editing: clicking elsewhere closes it', await page.evaluate(() => !document.querySelector('#keyMenu').open));
   await page.fill('#tempo', '132'); await page.press('#tempo', 'Enter'); await page.click('#tempoUp');
@@ -579,6 +579,55 @@ async function editing() {
   const lp = await page.evaluate(() => { stopAll(); const p = __passes; return { n: p.length, gap: p.length > 1 ? +(p[1].t - p[0].t).toFixed(6) : null, same: p.length > 1 && p[0].out === p[1].out }; });
   check('editing: looping is gapless: the next pass starts on the exact end time, in the same session', lp.n >= 2 && lp.gap === 2 && lp.same, JSON.stringify(lp));
   check('no console errors (editing)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
+
+// key changes: per-bar key and mode changes, read from text, analysed locally, kept through edits and exports
+async function keyChanges() {
+  const { ctx, page } = await openPage();
+  await page.goto(URL_); await page.evaluate(() => { stopAll(); S.tonic = 0; S.mode = 'ionian'; renderAll(); });
+  await page.fill('#prog', 'C | F | G | C\n[Bridge]\n[Key: D major]\nD | G | A | D'); await tap(page, '#load');
+  const a = await page.evaluate(() => ({ kc: chords[4].kc, home: [S.tonic, S.mode], nums: chords.map(c => analyze(c).num).join(' '), kinds: chords.map(c => analyze(c).kind).join(' '), tag: document.querySelector('#keytag').textContent, label: document.querySelector('#rows .sec-label')?.textContent, text: serialize() }));
+  check('keys: [Key: D major] starts a key change at that bar', a.kc && a.kc.t === 2 && a.kc.m === 'ionian' && a.home.join() === '0,ionian', JSON.stringify(a));
+  check('keys: chords after the change are analysed in the new key', a.nums === 'I IV V I I IV V I' && a.kinds.split(' ').every(k => k === 'dia'), a.nums + ' / ' + a.kinds);
+  check('keys: the key line and the chart label show the change', /^C major → D major/.test(a.tag) && /Bridge\s*Key: D major/.test(a.label), a.tag + ' / ' + a.label);
+  check('keys: the text form round-trips', a.text === 'C | F | G | C\n[Bridge]\n[Key: D major]\nD | G | A | D', JSON.stringify(a.text));
+  const sp = await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; chords = parseProg('C | G\n[Key: Eb major]\nEb | Ab | Bb7 | Cm\n[Key: E Dorian]\nEm | A | D#m7b5').chords; renderAll(); return { names: chords.map(c => chordName(c)).join(' '), nums: chords.map(c => analyze(c).num).join(' '), modes: chords.filter(c => c.kc).map(c => c.kc.m).join() }; });
+  check('keys: names are spelled and numbered in their own key, and a key can change mode', sp.names === 'C G E♭ A♭ B♭7 Cm Em A D♯m7♭5' && sp.nums.startsWith('I V I IV V7 vi i IV ') && sp.modes === 'ionian,dorian', JSON.stringify(sp));
+  await page.fill('#prog', '[Key: A minor]\nAm | Dm | E7 | Am'); await tap(page, '#load');
+  check('keys: a key marker at the top sets the opening key', await page.evaluate(() => S.tonic === 9 && S.mode === 'aeolian' && !chords[0].kc && analyze(chords[1]).num === 'iv'));
+  await page.fill('#prog', 'C | F\n[Key: H major]\nG | C'); await tap(page, '#load');
+  check('keys: an unreadable key name is reported', await page.evaluate(() => /H major/.test(document.querySelector('#err').textContent) && !document.querySelector('#err').hidden));
+
+  // the Chord panel sets and clears a key change; the swap ideas then speak in the new key
+  await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; chords = parseProg('C | F | G | C | F | G').chords; sel = chords[3].id; renderAll(); });
+  await page.selectOption('#kcT', '7');
+  const k1 = await page.evaluate(() => ({ kc: chords[3].kc, tag: document.querySelector('#keytag').textContent, num: analyze(chords[3]).num, dnum: document.querySelector('#detail .dnum').textContent, hint: document.querySelector('#detail .keychg .hint').textContent }));
+  check('keys: the Chord panel sets a key change on a bar', k1.kc && k1.kc.t === 7 && k1.kc.m === 'ionian' && /C major → G major/.test(k1.tag) && k1.num === 'IV' && k1.dnum === 'IV' && /dominant/.test(k1.hint), JSON.stringify(k1));
+  await page.selectOption('#kcM', 'mixolydian');
+  check('keys: and its mode', await page.evaluate(() => chords[3].kc.m === 'mixolydian' && /G Mixolydian/.test(document.querySelector('#keytag').textContent)));
+  await page.evaluate(() => { sel = chords[1].id; renderAll(); });
+  check('keys: a chord that starts mid-bar offers no key change', await page.evaluate(() => { chords[1].beats = 2; sel = chords[2].id; renderAll(); return !document.querySelector('#kcT'); }));
+  await page.evaluate(() => { chords[1].beats = 4; sel = chords[3].id; renderAll(); });
+  await page.selectOption('#kcT', '');
+  check('keys: choosing No change removes it', await page.evaluate(() => !chords[3].kc && /^C major ·/.test(document.querySelector('#keytag').textContent)));
+
+  // edits, exports and storage keep it
+  await page.evaluate(() => { chords = parseProg('C | F\n[Key: D major]\nD | G').chords; renderAll(); });
+  const t = await page.evaluate(() => { transpose(2); return { home: S.tonic, kc: chords[2].kc.t, names: chords.map(c => chordName(c)).join(' ') }; });
+  check('keys: transposing moves the key changes too', t.home === 2 && t.kc === 4 && t.names === 'D G E A', JSON.stringify(t));
+  const x = await page.evaluate(() => { const xml = buildMusicXML(); return [...xml.matchAll(/<fifths>(-?\d+)<\/fifths>/g)].map(m => m[1]).join(); });
+  check('keys: MusicXML gets a new key signature at the change', x === '2,4', x);
+  const sv = await page.evaluate(() => { const lib = sanitizeChords(JSON.parse(JSON.stringify(chords))); const code = shareCode(); applyShare(JSON.parse(atob(code.replace(/-/g, '+').replace(/_/g, '/')))); return { lib: lib && lib[2].kc && lib[2].kc.t, share: chords[2].kc && chords[2].kc.t, sheet: /Key: E major/.test(leadSheetHTML()) }; });
+  check('keys: library items, share links and the lead sheet keep key changes', sv.lib === 4 && sv.share === 4 && sv.sheet, JSON.stringify(sv));
+  await page.evaluate(() => { sel = chords[2].id; renderAll(); document.querySelector(`#rows .slot[data-id="${sel}"]`).focus(); });
+  await page.keyboard.press('Delete');
+  check('keys: deleting the chord that changes key hands the change to the next chord', await page.evaluate(() => chords.length === 3 && chords[2].kc && chords[2].kc.t === 4));
+  await page.evaluate(() => { chords = parseProg('C | F | G | C\n[Key: D major]\nD | G | A | D').chords; renderAll(); regenUnlocked(); });
+  const rg = await page.evaluate(() => ({ kc: chords[4].kc && chords[4].kc.t, inKey: chords.slice(4).filter(c => ['dia', 'bor', 'sec'].includes(analyze(c).kind)).length }));
+  check('keys: Regenerate unlocked keeps the key change and writes the new chords in that key', rg.kc === 2 && rg.inKey >= 3, JSON.stringify(rg));
+  check('keys: S keeps the opening key after all that', await page.evaluate(() => S.tonic === 2 && S.mode === 'ionian' && keyStack.length === 0));
+  check('no console errors (key changes)', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 }
 
@@ -749,6 +798,7 @@ const phaseFns = { 1: phase1, 2: phase2, 3: phase3 };
 try {
   for (const n of PHASES) { if (phaseFns[n]) { await phaseFns[n](); await phoneDark('phase' + n); } }
   await editing();
+  await keyChanges();
   await layout();
   await hardening();
   await iphone();

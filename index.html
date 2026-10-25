@@ -518,6 +518,14 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
 .keyhear{flex:1 1 100%;display:flex;align-items:flex-start;gap:10px}
 .keyhear .btn{flex:none}
 .keyhear .hint{margin:0;padding-top:5px}
+.keychg{display:flex;flex-direction:column;gap:6px}
+.keychg .kc-row{display:flex;gap:8px;flex-wrap:wrap}
+.keychg .kc-row select{flex:1 1 120px;min-width:0}
+.keychg .hint{margin:0}
+.kc-tag{font-size:13px;letter-spacing:.05em;padding:3px 8px 2px;background:var(--spike);color:#141414;border-radius:var(--r-xs)}
+.keychg select{background:var(--sunk);border:1.5px solid transparent;border-radius:var(--r-xs);height:38px;padding:0 10px}
+.keychg select:hover{border-color:var(--line)}
+.keychg select:disabled{opacity:.5}
 /* the key line under the chart title opens key, mode and time in place */
 .keymenu{position:relative;display:inline-block}
 .keymenu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border-radius:var(--r-xs);padding:2px 6px;margin-left:-6px;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
@@ -1133,6 +1141,45 @@ function diatonic(modeKey,d,size){
   return null;
 }
 
+/* ============ key changes ============ */
+/* A chord that starts a bar can carry kc:{t,m}: from that chord on, the chart is in that key and mode, until the next change.
+   S.tonic and S.mode stay the opening key. Everything that reads the key (spelling, numerals, analysis, tension, swap ideas,
+   the picker) is run inside the key in force at that chord by inKey(), which swaps S.tonic/S.mode and always puts them back. */
+const keyStack=[];
+const homeKey=()=>keyStack.length?keyStack[0]:{t:S.tonic,m:S.mode};
+const kcOk=k=>!!k&&typeof k==='object'&&Number.isInteger(k.t)&&k.t>=0&&k.t<12&&ownKey(MODES,k.m);
+function keyAt(i,list=chords){ for(let j=Math.min(i,list.length-1);j>=1;j--){ const k=list[j]&&list[j].kc; if(kcOk(k)) return k; } return homeKey(); }
+function inKey(k,fn){
+  if(!k||(k.t===S.tonic&&k.m===S.mode)) return fn();
+  keyStack.push({t:S.tonic,m:S.mode}); S.tonic=k.t; S.mode=k.m;
+  try{ return fn(); } finally{ const o=keyStack.pop(); S.tonic=o.t; S.mode=o.m; }
+}
+/* a chart chord is read in its own key; any other chord (a swap idea, a picker chip) in the key around it */
+const localized=fn=>function(c,...a){ const i=c&&c.id!=null?chords.indexOf(c):-1; return i>=0?inKey(keyAt(i),()=>fn(c,...a)):fn(c,...a); };
+/* runs fn over each stretch of the list that shares a key, in that key, and joins the results back up */
+function bySegments(list,fn){ const out=[]; let a=0;
+  for(let i=1;i<=list.length;i++){ if(i===list.length||kcOk(list[i].kc)){ const k=keyAt(a,list), seg=list.slice(a,i); out.push(...inKey(k,()=>fn(seg))); a=i; } }
+  return out; }
+const keyLabel=k=>inKey(k,()=>keyName());
+/* "D major", "Dm", "F# Dorian", "Bb harmonic minor" → {t,m} */
+function parseKeyName(str){
+  const m=String(str).trim().match(/^([A-Ga-g][#b♯♭]?)\s*(.*)$/); if(!m) return null;
+  const t=pcOf(m[1]), r=m[2].trim().toLowerCase().replace(/[()]/g,'');
+  const mm=r===''||r==='major'||r==='maj'?'ionian':r==='m'||r==='min'||r==='minor'?'aeolian':Object.keys(MODES).find(k=>k===r||MODES[k].short.toLowerCase()===r||MODES[k].name.toLowerCase()===r);
+  return t==null||!mm?null:{t,m:mm};
+}
+/* how a key change relates to the key before it, in words */
+function keyMove(a,b){
+  const d=mod(b.t-a.t), majA=modeFam(a.m)==='major', majB=modeFam(b.m)==='major';
+  if(d===0) return a.m===b.m?'':`Same home note, new mode: a change of colour rather than of key.`;
+  if(majA&&!majB&&d===9||!majA&&majB&&d===3) return `To the relative ${majB?'major':'minor'}: the same notes, centred on a new home.`;
+  const named={7:'up a 5th, to the dominant: a lift that feels like a natural step forward',5:'up a 4th, to the subdominant: a softer, settling move',
+    1:'up a half step: the classic last-chorus lift',2:'up a whole step: a bright last-chorus lift',10:'down a whole step: a relaxed, deflating move',
+    11:'down a half step: a sinking, unsettled move',3:'up a minor 3rd: a bold, cinematic jump',4:'up a major 3rd: a bright, surprising jump',
+    8:'down a major 3rd: a warm, dramatic shift',9:'down a minor 3rd: a darker shift',6:'a tritone away: as far as keys get'}[d];
+  return named?`A key change ${named}.`:'';
+}
+
 /* spelling: letters follow the scale degree, so bVI in G is E♭, not D♯ */
 function tonicName(){ const parent=mod(S.tonic-MODES[S.mode].off); return ([5,10,3,8,1].includes(parent)?FLAT:SHARP)[S.tonic]; }
 function spell(pc){
@@ -1144,16 +1191,17 @@ function spell(pc){
 }
 const prettyNote=s=>s.replace('#','♯').replace(/^([A-G])b/,'$1♭');
 const prettySfx=s=>s.replace(/b(?=\d)/g,'♭').replace(/#/g,'♯');
-function chordName(c,ascii){
+function chordName0(c,ascii){
   if(!real(c)) return '?';
   const n=spell(c.root), b=c.bass!=null?'/'+spell(c.bass):'';
   if(ascii) return n+Q[c.q].d+b;
   return prettyNote(n)+prettySfx(Q[c.q].d)+(c.bass!=null?'/'+prettyNote(spell(c.bass)):'');
 }
+const chordName=localized(chordName0);
 const keyName=()=>prettyNote(tonicName())+' '+MODES[S.mode].short;
 
 const NUMSFX={'':'','m':'','dim':'°','aug':'+','sus2':'sus2','sus4':'sus4','6':'6','m6':'6','add9':'add9','madd9':'add9','maj7':'maj7','7':'7','m7':'7','m7b5':'ø7','dim7':'°7','mMaj7':'(maj7)','7sus4':'7sus4','7#5':'+7','6/9':'6/9','maj9':'maj9','9':'9','m9':'9','m11':'11','13':'13','maj7#11':'maj7♯11','7b9':'7♭9','7#9':'7♯9','7alt':'7alt','m13':'13','maj13':'maj13','mMaj9':'(maj9)','11':'11','9sus4':'9sus4','13sus4':'13sus4','add11':'add11','madd11':'add11','m6/9':'6/9','7b5':'7♭5','7#11':'7♯11','9#11':'9♯11','7b13':'7♭13','13b9':'13♭9','13#11':'13♯11','dimMaj7':'°(maj7)','5':'5','maj7#5':'+maj7','9#5':'+9'};
-function numeral(c,plain){
+function numeral0(c,plain){
   if(!real(c)) return '?';
   const map=['I','bII','II','bIII','III','IV',S.mode==='locrian'?'bV':'#IV','V','bVI','VI','bVII','VII'];
   let b=map[mod(c.root-S.tonic)];
@@ -1161,6 +1209,7 @@ function numeral(c,plain){
   b=b.replace(/^b/,'♭').replace(/^#/,'♯');
   return plain?b:b+(NUMSFX[c.q]??prettySfx(Q[c.q].d));
 }
+const numeral=localized(numeral0);
 function fromNumeral(str){
   const m=str.match(/^([b#]?)(VII|VI|V|IV|III|II|I|vii|vi|v|iv|iii|ii|i)(.*)$/); if(!m) return null;
   const semis=NUMS[m[2].toUpperCase()]+(m[1]==='b'?-1:m[1]==='#'?1:0);
@@ -1175,7 +1224,8 @@ function findBorrowed(core){
   return null;
 }
 function targetNum(pc){ const d=MODES[S.mode].sc.indexOf(mod(pc-S.tonic)); const c=d>=0?diatonic(S.mode,d,3):{root:pc,q:''}; return numeral(c,true); }
-function analyze(c){
+const analyze=localized(analyze0);
+function analyze0(c){
   if(!real(c)) return {num:'?',kind:'empty',note:'Empty slot. Pick from the ideas to fill it.'};
   const num=numeral(c), sc=scaleSet(), core=corePcs(c), q=Q[c.q];
   if(core.every(p=>sc.has(p))) return {num,kind:'dia',note:`In the key of ${keyName()}.`};
@@ -1230,14 +1280,20 @@ function parseLine(line,out,bad){
   }
 }
 function parseProg(text){
-  const out=[], bad=[]; let sec=null;
+  const out=[], bad=[]; let sec=null, kc=null;
   for(const raw of text.split(/\r?\n/)){
     let line=raw.trim(); if(!line) continue;
+    /* [Chorus] names a section and [Key: D major] changes key from the next chord; either can lead a line */
+    let km;
+    while((km=line.match(/^\[\s*key\s*:?\s*([^\]]+)\]\s*(.*)$/i))){ const k=parseKeyName(km[1]); if(k) kc=k; else bad.push(`[Key: ${km[1].trim()}]`); line=km[2].trim(); }
     let m=line.match(/^\[([^\]]+)\]\s*(.*)$/);
-    if(!m){ const m2=line.match(/^([A-Za-z][A-Za-z0-9 '\-]*?)\s*:(?=\s|$)\s*(.*)$/); if(m2&&!m2[1].trim().split(/\s+/).some(w=>parseChord(w))) m=m2; }
-    if(m){ sec=m[1].trim(); line=m[2].trim(); if(!line) continue; }
+    if(!m){ const m2=line.match(/^([A-Za-z][A-Za-z0-9 '\-]*?)\s*:(?=\s|$)\s*(.*)$/); if(m2&&!/^key$/i.test(m2[1].trim())&&!m2[1].trim().split(/\s+/).some(w=>parseChord(w))) m=m2; }
+    if(m){ sec=m[1].trim(); line=m[2].trim();
+      while((km=line.match(/^\[\s*key\s*:?\s*([^\]]+)\]\s*(.*)$/i))){ const k=parseKeyName(km[1]); if(k) kc=k; else bad.push(`[Key: ${km[1].trim()}]`); line=km[2].trim(); }
+      if(!line) continue; }
+    if(!line) continue;
     const before=out.length; parseLine(line,out,bad);
-    if(out.length>before){ out[before].br=true; if(sec){ out[before].sec=sec; sec=null; } }
+    if(out.length>before){ out[before].br=true; if(sec){ out[before].sec=sec; sec=null; } if(kc){ out[before].kc=kc; kc=null; } }
   }
   return {chords:out,bad};
 }
@@ -1253,7 +1309,9 @@ function serialize(){
   }
   const anyBr=chords.some((c,k)=>k>0&&c.br); let out='', n=0;
   bars.forEach((b,k)=>{
-    if(b.c.sec){ out+=(k>0?'\n':'')+`[${b.c.sec}]\n`; n=0; }
+    const kc=k>0&&kcOk(b.c.kc)?`[Key: ${inKey(b.c.kc,()=>tonicName()+' '+MODES[S.mode].short)}]\n`:'';
+    if(b.c.sec){ out+=(k>0?'\n':'')+`[${b.c.sec}]\n`+kc; n=0; }
+    else if(kc){ out+='\n'+kc; n=0; }
     else if(k>0&&(b.c.br||(!anyBr&&n>=4))){ out+='\n'; n=0; }
     else if(k>0) out+=' | ';
     out+=b.t; n++;
@@ -1408,7 +1466,10 @@ function regenUnlocked(){
   }
   S.mode=keepMode; if(!best){ toast('Could not build a progression that fits those slots'); return; }
   pushHist(); if(!S.lock) S.mode=best.mode;
-  chords=best.list.map((c,i)=>{ const o=chords[i], nc={...c,id:o.id,beats:o.beats}; delete nc.br; delete nc.sec; if(o.br) nc.br=true; if(o.sec) nc.sec=o.sec; if(!anchors[i]) delete nc.lock; return nc; });
+  const home=homeKey();
+  chords=best.list.map((c,i)=>{ const o=chords[i], nc={...c,id:o.id,beats:o.beats}; delete nc.br; delete nc.sec; delete nc.kc; if(o.br) nc.br=true; if(o.sec) nc.sec=o.sec; if(kcOk(o.kc)&&i>0) nc.kc=o.kc; if(!anchors[i]) delete nc.lock;
+    /* generated in the opening key; a chord after a key change is moved by the same distance as the key */
+    const d=mod(keyAt(i).t-home.t); if(!anchors[i]&&d&&real(nc)){ nc.root=mod(nc.root+d); if(nc.bass!=null) nc.bass=mod(nc.bass+d); } return nc; });
   if(!chords.some(c=>c.id===sel)) sel=chords[0]?.id??null;
   commit(); const kept=anchors.filter(Boolean).length; toast(kept?`Kept ${kept} locked chord${kept>1?'s':''} and refilled the rest`:'Refilled every slot, keeping the lengths');
 }
@@ -1979,7 +2040,8 @@ function renderControls(){
   $('#surprise').value=S.surprise??30; const sv=S.surprise??30;
   $('#surpriseOut').textContent=sv<15?'Stays inside the key and the genre’s own moves.':sv<40?'Now and then a secondary dominant or borrowed chord.':sv<65?'Regular outside chords, including tritone subs.':'Frequent chromatic turns, including chromatic mediants.';
   const total=chords.reduce((a,c)=>a+c.beats,0), L=barLen();
-  $('#keytag').textContent=`${keyName()} · ${meterText()} · ${Math.floor(total/L)} bar${Math.floor(total/L)===1?'':'s'}${total%L?` + ${total%L} beat${total%L>1?'s':''}`:''}`;
+  const kcs=chords.filter((c,i)=>i>0&&kcOk(c.kc)).map(c=>keyLabel(c.kc)), kpath=[keyName(),...kcs];
+  $('#keytag').textContent=`${kpath.length>3?kpath[0]+' → '+(kpath.length-1)+' key changes':kpath.join(' → ')} · ${meterText()} · ${Math.floor(total/L)} bar${Math.floor(total/L)===1?'':'s'}${total%L?` + ${total%L} beat${total%L>1?'s':''}`:''}`;
   $('#undo').disabled=!hist.length;
 }
 /* plain-language summary of what Generate will do with the current mood, genres and vocabulary */
@@ -2019,8 +2081,7 @@ function restyleChart(){
   try{
     const st=blendStyle(gs[0],gs), Lv=Math.min(st.level,lvl()), free=c=>real(c)&&!c.lock;
     let list=chords.map(c=>{ if(!free(c)) return {...c}; let q=toTriad(c.q); if(st.keep7&&famOn('seventh')) q=q===''?'7':q==='m'?'m7':q; return {...c,q}; });
-    list=colorize(list,Lv,!!st.keep7);
-    list=spice(list,'',st).map(fitC);
+    list=bySegments(list,seg=>spice(colorize(seg,Lv,!!st.keep7),'',st).map(fitC));
     out=chords.map((c,i)=>{ if(!free(c)) return c; const n={...c,q:list[i].q,bass:list[i].bass??null}; if(n.root!==c.root) n.root=c.root; if(ckey(n)!==ckey(c)){ delete n.gpin; delete n.ppin; } return n; });
   } finally { S.vocab=keep; }
   const changed=out.filter((c,i)=>ckey(c)!==ckey(chords[i])).length;
@@ -2053,12 +2114,13 @@ function renderChart(){
   let html='', starts=[], pos=0, tileNewRow=false; chords.forEach(c=>{ starts.push(pos); pos+=c.beats; });
   const addTile=(col,span)=>`<button type="button" class="addtile" style="grid-column:${col} / span ${span}" title="Add a blank chord at the end and pick it">+ Add chord</button>`;
   const accents=new Set(ACCENTS[S.meter]), brBars=new Set(), secAt={};
-  chords.forEach((c,i)=>{ if(starts[i]%L===0){ const b=starts[i]/L; if(c.br&&i>0) brBars.add(b); if(c.sec) secAt[b]=c.sec; } });
+  const kcAt={};
+  chords.forEach((c,i)=>{ if(starts[i]%L===0){ const b=starts[i]/L; if(c.br&&i>0) brBars.add(b); if(c.sec) secAt[b]=c.sec; if(i>0&&kcOk(c.kc)) kcAt[b]=c.kc; } });
   const rowList=[]; let cur=null;
-  for(let b=0;b<nBars;b++){ if(!cur||cur.n>=per||brBars.has(b)||(secAt[b]&&b>0)){ cur={start:b,n:0,label:secAt[b]}; rowList.push(cur); } cur.n++; }
+  for(let b=0;b<nBars;b++){ if(!cur||cur.n>=per||brBars.has(b)||(secAt[b]&&b>0)||kcAt[b]){ cur={start:b,n:0,label:secAt[b],kc:kcAt[b]}; rowList.push(cur); } cur.n++; }
   for(const row of rowList){
     const r0=row.start*L, r1=(row.start+row.n)*L;
-    if(row.label) html+=`<div class="sec-label">${esc(row.label)}</div>`;
+    if(row.label||row.kc) html+=`<div class="sec-label">${row.label?esc(row.label):''}${row.kc?`<span class="kc-tag" title="Key change">Key: ${esc(keyLabel(row.kc))}</span>`:''}</div>`;
     html+=`<div class="row" data-rb="${rowBeats}" style="grid-template-columns:repeat(${rowBeats},minmax(0,1fr))">`;
     for(let b=0;b<row.n;b++){ const bi=row.start+b;
       html+=`<div class="bar${bi===nBars-1?' last':''}" style="grid-column:${b*L+1} / span ${L}"><span class="bn">${bi+1}</span><div class="ticks" style="grid-template-columns:repeat(${L},1fr)">${Array.from({length:L},(_,k)=>{ const cy=CYCLES[S.meter], gi=cy?cy.starts.indexOf(k):-1; return `<i class="${accents.has(k)?'g':''}"${gi>=0?` data-m="${cy.marks[gi]}"`:''}></i>`; }).join('')}</div></div>`; }
@@ -2112,7 +2174,11 @@ const IVNAME={0:'R',1:'♭9',2:'9',3:'♭3',4:'3',5:'4',6:'♭5',7:'5',8:'♯5',
 function ivLabel(c,i){ const q=Q[c.q]; if(i===2&&q.tri==='sus') return '2'; if(i===8&&q.tri==='aug') return '♯5'; if(i===9&&c.q==='dim7') return '°7'; return IVNAME[i]??i; }
 
 let viewBass=null, lastDetail=null, gFilter='All';
-function renderDetail(){
+const KEY_NAMES=['C','D♭','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+const selKey=()=>{ const i=chords.findIndex(c=>c.id===sel); return i>=0?keyAt(i):homeKey(); };
+/* the selected chord's panels speak in the key in force at that chord */
+function renderDetail(){ return inKey(selKey(),renderDetail0); }
+function renderDetail0(){
   const el=$('#detail'), idx=chords.findIndex(c=>c.id===sel);
   if(idx<0){ el.innerHTML=`<div class="empty-note">Click a chord in the chart to see how to play it and what could replace it.</div>`; return; }
   const c=chords[idx], a=analyze(c), L=barLen();
@@ -2127,6 +2193,14 @@ function renderDetail(){
     h+=`<div class="twins">Same notes, other names:${tw.map(r=>`<button class="btn small" data-twin="${r}">${esc(chordName({root:r,q:c.q}))}</button>`).join('')}<span>On guitar the shape repeats every ${st} frets.</span></div>`; }
   h+=`<div class="dur"><span class="label">Lasts</span><span class="stepper"><button type="button" data-act="minus" aria-label="One beat shorter">−</button><span class="beats">${c.beats}</span><button type="button" data-act="plus" aria-label="One beat longer">+</button></span><span class="hint">beats · ${lenTxt} · starts bar ${barN}, beat ${beatN}</span></div>`;
   h+=`<div class="actions">${real(c)?`<button class="btn small" data-act="hear">${IC.play}Hear</button><button class="btn small" data-act="lock" aria-pressed="${!!c.lock}" title="Locked chords stay put when you press Regenerate unlocked">${c.lock?'Unlock':'Lock'}</button>`:''}<button class="btn small" data-act="split" ${c.beats<2?'disabled':''}>Split in two</button><button class="btn small" data-act="insert">+ Slot after</button><button class="btn small" data-act="left" ${idx===0?'disabled':''}>${IC.left}Move</button><button class="btn small" data-act="right" ${idx===chords.length-1?'disabled':''}>Move${IC.right}</button><button class="btn small" data-act="del">Delete</button></div>`;
+  /* key change: only on a chord that starts a bar, so the text form and notation can show it at a bar line */
+  if(start%L===0){
+    if(idx===0) h+=`<div class="keychg"><span class="label">Key</span><p class="hint">The chart opens in ${esc(keyName())}. <button type="button" class="linkbtn" data-openkey>Change the opening key</button></p></div>`;
+    else { const prev=keyAt(idx-1), kc=kcOk(c.kc)?c.kc:null, mv=kc?keyMove(prev,kc):'';
+      h+=`<div class="keychg"><label class="label" for="kcT">Key from bar ${barN}</label><div class="kc-row"><select id="kcT" data-kc="t"><option value="">No change (${esc(keyLabel(prev))})</option>${KEY_NAMES.map((n,pc)=>`<option value="${pc}" ${kc&&kc.t===pc?'selected':''}>${n}</option>`).join('')}</select>
+        <select id="kcM" data-kc="m" aria-label="Mode from bar ${barN}" ${kc?'':'disabled'}>${Object.keys(MODES).map(m=>`<option value="${m}" ${(kc?kc.m:prev.m)===m?'selected':''}>${esc(MODE_LABEL[m])}</option>`).join('')}</select></div>
+        <p class="hint">${kc?esc(mv||`From here the chart is in ${keyLabel(kc)}.`)+' Chords, numerals and swap ideas from this bar follow the new key.':'Change key or mode here, for a bridge or a last-chorus lift.'}</p></div>`; }
+  }
   {
     const br=real(c)?c.root:S.tonic, bq=real(c)?c.q:'', bb=real(c)?c.bass:null;
     const rootOpts=Array.from({length:12},(_,i)=>mod(S.tonic+i)).map(pc=>`<option value="${pc}" ${pc===br?'selected':''}>${esc(prettyNote(spell(pc)))}</option>`).join('');
@@ -2275,7 +2349,9 @@ function keepGroup(idx){
   items.sort((x,y)=>(x.tag==='dia'?0:1)-(y.tag==='dia'?0:1));
   return {id:'keep',title:`Every chord with ${names} that fits here`,blurb:'Searched across all roots and the chord families you have switched on, ranked by key fit and how well it connects to its neighbours.',items};
 }
-function renderSubs(){
+/* the selected chord's panels speak in the key in force at that chord */
+function renderSubs(){ return inKey(selKey(),renderSubs0); }
+function renderSubs0(){
   const el=$('#subs'), idx=chords.findIndex(c=>c.id===sel);
   if(idx<0){ el.innerHTML=`<div class="sub-h"><h3>Swap ideas</h3></div><div class="empty-note">Select a chord, or add an empty slot with “+ Empty bar”, to get ideas for it.</div>`; return; }
   const c=chords[idx]; let {groups,P,N}=suggestions(idx);
@@ -2303,7 +2379,9 @@ function renderSubs(){
   });
   el.innerHTML=h; el._groups=groups; el._ctx={P,N,idx};
 }
-function renderPalette(){
+/* the selected chord's panels speak in the key in force at that chord */
+function renderPalette(){ return inKey(selKey(),renderPalette0); }
+function renderPalette0(){
   $('#diaTitle').textContent=`Chords in ${keyName()}`;
   const row=size=>[0,1,2,3,4,5,6].map(d=>{ const c=diatonic(S.mode,d,size); return `<button type="button" class="dchip" data-pal="${c.root}|${c.q}"><span class="nm">${chordHTML(c)}</span><span class="rn">${esc(numeral(c))}</span></button>`; }).join('');
   $('#dia').innerHTML=row(3); $('#dia7').innerHTML=row(famOn('ext')?5:4); $('#dia7Title').textContent=famOn('ext')?'Ninths':'Sevenths';
@@ -2487,9 +2565,10 @@ function initLayout(){
 let cpFor=null;
 /* removes a chord, handing its line break and section label to the next one; the toast offers Undo since a stray Backspace is easy */
 function deleteChord(idx){ const c=chords[idx]; if(!c) return; pushHist(); const nx=chords[idx+1];
-  if(nx){ if(c.br) nx.br=true; if(c.sec&&!nx.sec) nx.sec=c.sec; } chords.splice(idx,1); sel=chords[Math.min(idx,chords.length-1)]?.id??null; commit();
+  if(nx){ if(c.br) nx.br=true; if(c.sec&&!nx.sec) nx.sec=c.sec; if(c.kc&&!nx.kc&&idx>0) nx.kc=c.kc; } chords.splice(idx,1); sel=chords[Math.min(idx,chords.length-1)]?.id??null; commit();
   toast(`Deleted ${real(c)?chordName(c):'blank slot'}`,{label:'Undo',fn:undoTo(hist[hist.length-1])}); }
-function openPicker(id){
+function openPicker(id){ const i=chords.findIndex(x=>x.id===id); return inKey(i>=0?keyAt(i):homeKey(),()=>openPicker0(id)); }
+function openPicker0(id){
   const c=chords.find(x=>x.id===id); if(!c) return; cpFor=id;
   const el=$('#cpick'), size=sizeFor(lvl()), r=real(c)?c.root:S.tonic, q=real(c)?c.q:'', bb=real(c)?c.bass:null;
   const chip=x=>`<button type="button" class="chip" aria-pressed="${real(c)&&x.root===c.root&&x.q===c.q&&c.bass==null}" data-cpq="${x.root}|${esc(x.q)}">${esc(chordName(x))}<small>${esc(numeral(x))}</small></button>`;
@@ -2663,7 +2742,8 @@ function renderVLX(){
 }
 
 /* ============ tension curve ============ */
-function tensionOf(c){
+const tensionOf=localized(tensionOf0);
+function tensionOf0(c){
   if(!real(c)) return null;
   const a=analyze(c), q=Q[c.q]; let t={dia:.08,bor:.38,sec:.52,chr:.66}[a.kind]??.3;
   t+=({0:0,9:.08,4:.1,2:.14,5:.12,7:.26,11:.3})[mod(c.root-S.tonic)]??.18;
@@ -2820,7 +2900,7 @@ function splitDur(d){ const out=[]; while(d>0){ const v=NOTE_VALUES.find(x=>x[0]
 function buildMusicXML(){
   const DIV=4, bd=16/den(), L=barLen(), barDiv=L*bd, plan=chartPlan(), total=chords.reduce((a,c)=>a+c.beats,0), nBars=Math.max(1,Math.ceil(total/L));
   const starts=[]; let p=0; chords.forEach(c=>{ starts.push(p); p+=c.beats; });
-  const mode={ionian:'major',aeolian:'minor',dorian:'dorian',phrygian:'phrygian',lydian:'lydian',mixolydian:'mixolydian',locrian:'locrian',harmonic:'minor',melodic:'minor'}[S.mode]||'none';
+  const modeX=()=>({ionian:'major',aeolian:'minor',dorian:'dorian',phrygian:'phrygian',lydian:'lydian',mixolydian:'mixolydian',locrian:'locrian',harmonic:'minor',melodic:'minor'}[S.mode]||'none'), mode=modeX();
   const harmony=c=>{ const r=stepAlter(c.root), b=c.bass!=null?stepAlter(c.bass):null, txt=prettySfx(Q[c.q].d);
     return `<harmony placement="above"><root><root-step>${r.step}</root-step>${r.alter?`<root-alter>${r.alter}</root-alter>`:''}</root><kind text="${esc(txt)}">${MXL_KIND[c.q]||'other'}</kind>${b?`<bass><bass-step>${b.step}</bass-step>${b.alter?`<bass-alter>${b.alter}</bass-alter>`:''}</bass>`:''}</harmony>`; };
   const noteXML=(notes,staff,val,tieStop,tieStart)=>{ const [d,type,dot]=val, voice=staff===1?1:5, tail=`<voice>${voice}</voice><type>${type}</type>${dot?'<dot/>':''}<staff>${staff}</staff>`;
@@ -2832,8 +2912,10 @@ function buildMusicXML(){
     const b0=m*L, b1=b0+L; let head='', st1='', st2='', filled=b0;
     if(m===0) head+=`<attributes><divisions>${DIV}</divisions><key><fifths>${keyFifths()}</fifths><mode>${mode}</mode></key><time><beats>${L}</beats><beat-type>${den()}</beat-type></time><staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef></attributes>`
       +`<direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${Math.round(+S.tempo)||88}</per-minute></metronome></direction-type><sound tempo="${Math.round(+S.tempo)||88}"/></direction>`;
-    chords.forEach((c,i)=>{
+    chords.forEach((c,i)=>inKey(keyAt(i),()=>{
       const s0=Math.max(starts[i],b0), s1=Math.min(starts[i]+c.beats,b1); if(s1<=s0) return;
+      /* a key change gets a new key signature at its bar; notes and chord symbols are spelled in the new key */
+      if(i>0&&kcOk(c.kc)&&s0===starts[i]&&s0===b0) head+=`<attributes><key><fifths>${keyFifths()}</fifths><mode>${modeX()}</mode></key></attributes>`;
       const first=s0===starts[i], last=s1===starts[i]+c.beats, v=real(c)?plan.get(c.id):null;
       const all=v?[...new Set(v.all)].sort((a,b)=>a-b):[], hi=all.filter(x=>x>=60), lo=all.filter(x=>x<60);
       if(first&&c.sec){ if(m>0&&s0===b0) head=`<print new-system="yes"/>`+head; st1+=`<direction placement="above"><direction-type><rehearsal>${esc(c.sec)}</rehearsal></direction-type></direction>`; }
@@ -2842,7 +2924,7 @@ function buildMusicXML(){
       pieces.forEach((val,k)=>{ const stop=k>0||!first, start=k<pieces.length-1||!last;
         st1+=noteXML(v?hi:[],1,val,v&&hi.length?stop:false,v&&hi.length?start:false); st2+=noteXML(v?lo:[],2,val,v&&lo.length?stop:false,v&&lo.length?start:false); });
       filled=s1;
-    });
+    }));
     if(filled<b1){ splitDur((b1-filled)*bd).forEach(val=>{ st1+=noteXML([],1,val); st2+=noteXML([],2,val); }); }
     const bar=m===nBars-1?'<barline location="right"><bar-style>light-heavy</bar-style></barline>':'';
     measures+=`<measure number="${m+1}">${head}${st1}<backup><duration>${barDiv}</duration></backup>${st2}${bar}</measure>`;
@@ -2946,7 +3028,7 @@ function readShare(text){ const m=String(text||'').trim().match(/(?:#s=|^)([A-Za
   try{ const d=JSON.parse(unb64url(m[1])); if(d&&d.v===1&&typeof d.c==='string') return d; }catch(e){} return null; }
 function applyShare(d){
   Object.assign(S,sanitizeS({tonic:d.k,mode:d.m,meter:d.t,tempo:d.b}));
-  const r=parseProg(d.c); if(!r.chords.length) return false; chords=r.chords; sel=chords[0].id; return true; }
+  const r=parseProg(d.c); if(!r.chords.length) return false; chords=r.chords; delete chords[0].kc; sel=chords[0].id; return true; }
 
 /* clipboard, with an in-page copy box when the browser or frame blocks it */
 async function copyText(text,okMsg){ try{ await navigator.clipboard.writeText(text); toast(okMsg); return; }catch(e){} showCopyBox(text); }
@@ -2977,7 +3059,7 @@ function sanitizeChords(list){
     if(!c||typeof c!=='object'||!(Number.isInteger(c.beats)&&c.beats>0&&c.beats<=256)) return null;
     const blank=c.root==null; if(!blank&&!(pcOk(c.root)&&ownKey(Q,c.q))) return null; if(!pcOk(c.bass)) return null;
     const n={id:uid(),root:blank?null:c.root,q:blank?'':c.q,bass:blank?null:(c.bass??null),beats:c.beats};
-    if(c.br===true) n.br=true; if(typeof c.sec==='string'&&c.sec.length<=80) n.sec=c.sec; if(c.lock===true) n.lock=true;
+    if(c.br===true) n.br=true; if(typeof c.sec==='string'&&c.sec.length<=80) n.sec=c.sec; if(c.lock===true) n.lock=true; if(out.length&&kcOk(c.kc)) n.kc={t:c.kc.t,m:c.kc.m};
     const g=c.gpin; if(g&&ownKey(TUNINGS,g.t)&&Number.isInteger(g.cp)&&g.cp>=0&&g.cp<=7&&intsOk(g.fr,-1,24)&&g.fr.length===6) n.gpin={t:g.t,cp:g.cp,fr:g.fr.slice()};
     const pp=c.ppin; if(pp&&Number.isInteger(pp.bass)&&pp.bass>=21&&pp.bass<=108&&intsOk(pp.rh,21,108)&&pp.rh.length&&pp.rh.length<=12) n.ppin={bass:pp.bass,rh:pp.rh.slice()};
     out.push(n);
@@ -3045,10 +3127,10 @@ function leadSheetHTML(){
   const L=barLen(), bars=[]; let pos=0;
   chords.forEach(c=>{ let left=c.beats, first=true;
     while(left>0){ const bi=Math.floor(pos/L), take=Math.min(left,L-pos%L), bar=bars[bi]||(bars[bi]={cells:[]});
-      if(first&&pos%L===0){ if(c.sec) bar.sec=c.sec; if(c.br) bar.br=true; }
+      if(first&&pos%L===0){ if(c.sec) bar.sec=c.sec; if(c.br) bar.br=true; if(kcOk(c.kc)&&pos>0) bar.kc=keyLabel(c.kc); }
       bar.cells.push(first?{name:chordName(c),num:analyze(c).num,beats:take}:{cont:1,beats:take}); pos+=take; left-=take; first=false; } });
   const rows=[]; let cur=null;
-  bars.forEach((b,i)=>{ if(!cur||cur.bars.length>=4||b.br||b.sec){ cur={sec:b.sec,bars:[]}; rows.push(cur); } cur.bars.push({...b,i}); });
+  bars.forEach((b,i)=>{ if(!cur||cur.bars.length>=4||b.br||b.sec||b.kc){ cur={sec:[b.sec,b.kc&&'Key: '+b.kc].filter(Boolean).join(' · '),bars:[]}; rows.push(cur); } cur.bars.push({...b,i}); });
   const body=rows.map(r=>(r.sec?`<h2>${esc(r.sec)}</h2>`:'')+`<div class="row">${r.bars.map((b,k)=>`<div class="bar${k===r.bars.length-1?' lastinrow':''}${b.i===bars.length-1?' final':''}"><span class="n">${b.i+1}</span><div class="cells">${b.cells.map(c=>c.cont?`<div class="cell cont" style="flex:${c.beats}"><b>%</b></div>`:`<div class="cell" style="flex:${c.beats}"><b>${esc(c.name)}</b><i>${esc(c.num)}</i></div>`).join('')}</div></div>`).join('')}</div>`).join('');
   return `<h1>${esc(sheetTitle())}</h1><p class="meta">${esc(keyName())}, ${esc(meterText())}, ${Math.round(+S.tempo)||88} bpm</p>${body}`;
 }
@@ -3227,12 +3309,12 @@ function boot(){
     toast(`${n} chord${n>1?'s':''} brought inside ${vocabName()}`,{label:'Undo',fn:()=>$('#undo').click()}); };
   try{ if(localStorage.getItem('changes-finetune-v1')==='open') $('#fineTune').open=true; }catch(e){}
   $('#fineTune').addEventListener('toggle',()=>{ try{ localStorage.setItem('changes-finetune-v1',$('#fineTune').open?'open':'closed'); }catch(e){} });
-  $('#recolor').onclick=()=>{ pushHist(); chords=colorize(chords,lvl(),false).map(fitC); commit(); toast(`Chart rewritten with ${vocabName()}`); };
+  $('#recolor').onclick=()=>{ pushHist(); chords=bySegments(chords,seg=>colorize(seg,lvl(),false).map(fitC)); commit(); toast(`Chart rewritten with ${vocabName()}`); };
   $('#copy').onclick=()=>{ const txt=`${keyName()} · ${meterText()} · ♩=${S.tempo}\n`+serialize().split('\n').map(l=>l.startsWith('[')?l:`| ${l} |`).join('\n'); copyText(txt,'Chart copied'); };
   const load=()=>{ const r=parseProg($('#prog').value); const err=$('#err');
     if(r.bad.length){ err.hidden=false; err.textContent=`Couldn't read ${r.bad.map(b=>`“${b}”`).join(', ')}. Try names like Am7, D/F#, Bbmaj7, F#m7b5.`; }
     else err.hidden=true;
-    if(r.chords.length){ pushHist(); chords=r.chords; sel=chords[0].id; commit(); } };
+    if(r.chords.length){ pushHist(); chords=r.chords; const k0=chords[0].kc; if(k0){ S.tonic=k0.t; S.mode=k0.m; delete chords[0].kc; } sel=chords[0].id; commit(); } };
   $('#load').onclick=load; $('#prog').onkeydown=e=>{ if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); load(); } };
   $('#addslot').onclick=()=>{ pushHist(); const c={id:uid(),root:null,q:'',bass:null,beats:barLen()}; chords.push(c); sel=c.id; commit(); };
   /* drag a chord to move it, Option/Alt-drop to copy it; the text box is rewritten from the new order. Touch needs a short press
@@ -3256,8 +3338,8 @@ function boot(){
     const from=chords.findIndex(c=>c.id===d.id), tgt=chords.findIndex(c=>c.id===t.el.dataset.id); if(from<0||tgt<0) return;
     let to=tgt+(t.after?1:0); if(!copy&&(to===from||to===from+1)) return;
     pushHist(); const c=chords[from];
-    if(copy){ const n={...c,id:uid()}; delete n.br; delete n.sec; chords.splice(to,0,n); sel=n.id; }
-    else { const nx=chords[from+1]; if(nx){ if(c.br) nx.br=true; if(c.sec&&!nx.sec) nx.sec=c.sec; } delete c.br; delete c.sec;
+    if(copy){ const n={...c,id:uid()}; delete n.br; delete n.sec; delete n.kc; chords.splice(to,0,n); sel=n.id; }
+    else { const nx=chords[from+1]; if(nx){ if(c.br) nx.br=true; if(c.sec&&!nx.sec) nx.sec=c.sec; if(c.kc&&!nx.kc&&from>0) nx.kc=c.kc; } delete c.br; delete c.sec; delete c.kc;
       chords.splice(from,1); if(to>from) to--; chords.splice(to,0,c); sel=c.id; }
     commit(); const ta=$('#prog'); ta.classList.add('flash'); setTimeout(()=>ta.classList.remove('flash'),60);
     toast(`${copy?'Copied':'Moved'} ${chordName(c)}`);
@@ -3333,6 +3415,11 @@ function boot(){
     if(cp){ S.capo=+cp.dataset.capo; save(); guitarPlan.cache=null; renderDetail(); return; }
     if(tw){ const i=chords.findIndex(x=>x.id===sel); pushHist(); chords[i]={...chords[i],root:+tw.dataset.twin,bass:null}; commit(); playOne(chords[i]); return; }
   });
+  $('#detail').addEventListener('change',e=>{ const f=e.target.closest('[data-kc]'); if(!f) return; const idx=chords.findIndex(c=>c.id===sel); if(idx<1) return;
+    const c=chords[idx], t=$('#kcT').value; pushHist();
+    if(t==='') delete c.kc; else c.kc={t:+t,m:f.dataset.kc==='m'||c.kc?$('#kcM').value:keyAt(idx-1).m};
+    commit(); toast(c.kc?`Key changes to ${keyLabel(c.kc)} at bar ${Math.floor(chords.slice(0,idx).reduce((a,x)=>a+x.beats,0)/barLen())+1}`:'Key change removed',{label:'Undo',fn:undoTo(hist[hist.length-1])}); });
+  $('#detail').addEventListener('click',e=>{ if(e.target.closest('[data-openkey]')){ revealEl($('#keyMenu summary')); $('#keyMenu').open=true; $('#key').focus(); } });
   $('#detail').onclick=e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const idx=chords.findIndex(c=>c.id===sel); if(idx<0) return; const c=chords[idx], act=b.dataset.act;
     if(act==='hear'){ playOne(c); return; }
     if(act==='del'){ deleteChord(idx); return; }
@@ -3355,7 +3442,9 @@ function boot(){
     if(u){ replaceAt(idx,it.chords); toast(`Swapped in ${it.chords.map(c=>chordName(c)).join(' → ')}`); return; }
     const seq=[]; if(P) seq.push([P,.9]); it.chords.forEach(c=>seq.push([c,it.chords.length>1?.6:.9])); if(N) seq.push([N,1.3]); audition(seq); };
   document.querySelector('.palette').onclick=e=>{ const b=e.target.closest('[data-pal]'), m=e.target.closest('[data-mode]');
-    if(m){ pushHist(); S.mode=m.dataset.mode; commit(); return; }
+    if(m){ pushHist(); /* the modes shown are on the selected chord's key: change that key change's mode, or the opening one */
+      const i=chords.findIndex(x=>x.id===sel); let j=i; while(j>=1&&!kcOk(chords[j].kc)) j--;
+      if(j>=1) chords[j].kc={...chords[j].kc,m:m.dataset.mode}; else S.mode=m.dataset.mode; commit(); return; }
     if(!b) return; const [r,q]=b.dataset.pal.split('|'); const c={root:+r,q,bass:null};
     const idx=chords.findIndex(x=>x.id===sel);
     if(idx>=0) replaceAt(idx,[c]); else { pushHist(); const n={id:uid(),...c,beats:barLen()}; chords.push(n); sel=n.id; commit(); }
@@ -3384,7 +3473,7 @@ function boot(){
 }
 function transpose(n){
   pushHist(); S.tonic=mod(S.tonic+n);
-  chords=chords.map(c=>real(c)?{...c,root:mod(c.root+n),bass:c.bass==null?null:mod(c.bass+n)}:c);
+  chords=chords.map(c=>{ const o=real(c)?{...c,root:mod(c.root+n),bass:c.bass==null?null:mod(c.bass+n)}:{...c}; if(kcOk(c.kc)) o.kc={...c.kc,t:mod(c.kc.t+n)}; return o; });
   commit(); toast(`Transposed ${n>0?'up':'down'} ${Math.abs(n)} half step${Math.abs(n)>1?'s':''} to ${keyName()}`);
 }
 function vocabName(){ const vk=[...S.vocab].sort().join(); const p=Object.keys(PRESETS).find(k=>[...PRESETS[k]].sort().join()===vk); return p?'Chords allowed: '+p:'Chords allowed: '+['triads',...FAMS.filter(f=>!f.fixed&&famOn(f.id)).map(f=>f.name)].join(', '); }
