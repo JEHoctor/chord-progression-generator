@@ -51,10 +51,8 @@ const check = (name, ok, detail = '') => { results.push(`${ok ? 'PASS' : 'FAIL'}
 // headless Chromium on a machine with no audio device can stall creating an AudioContext; this flag gives it a silent output
 const browser = await chromium.launch({ args: ['--disable-audio-output'] });
 async function openPage(opts = {}) {
-  const { simpleView, noReveal, ...o } = opts;
+  const { noReveal, ...o } = opts;
   const ctx = await browser.newContext({ acceptDownloads: true, ...o });
-  // most checks drive the full tool set; first-time visitors would otherwise start in the Simple view
-  if (!simpleView) await ctx.addInitScript(() => { try { if (!localStorage.getItem('changes-view-v1')) localStorage.setItem('changes-view-v1', 'full'); } catch (e) {} });
   const page = await ctx.newPage(); page.errors = []; page.setDefaultTimeout(5000);
   // controls now live in tabs, the Create drawer and popovers: reveal one the way a person would before using it
   if (!noReveal) for (const m of ['click', 'fill', 'selectOption', 'check', 'uncheck', 'dblclick', 'setInputFiles', 'press']) {
@@ -88,6 +86,7 @@ async function phase1() {
   // generate, edit, play
   await tap(page, '#gen');
   check('generate makes a progression', await page.evaluate(() => chords.length > 0 && chords.every(c => c.beats > 0)));
+  await page.evaluate(() => stopAll()); // Generate plays what it made
   await page.fill('#prog', '[Verse]\nC | Am | F | G:2 G7:2\n[Chorus]\nF | G | C | C');
   await tap(page, '#load');
   const loaded = await page.evaluate(() => ({ text: document.querySelector('#prog').value, n: chords.length }));
@@ -510,7 +509,6 @@ async function phase3() {
   await page.evaluate(() => { sel = chords[0].id; renderAll(); revealEl(document.querySelector('#subs')); });
   const sw2 = await page.evaluate(() => { const it = document.querySelector('#subs .item'), why = it.querySelector('.why').getBoundingClientRect(), btn = it.querySelector('.btns').getBoundingClientRect(), box = it.getBoundingClientRect(); return { whyWidth: Math.round(why.width / box.width * 100), below: btn.top >= why.bottom - 1 }; });
   check('layout: swap ideas give the text the full width with buttons underneath', sw2.whyWidth > 85 && sw2.below, JSON.stringify(sw2));
-  check('layout: the view switch reads Simple / Advanced', await page.evaluate(() => [...document.querySelectorAll('.viewtoggle button')].map(b => b.textContent).join('/') === 'Simple/Advanced'));
   // easiest tuning for the chart: musically expected answers
   const expect = [['G | C | D | G', /^Standard tuning is the practical choice/], ['G | Am | C | D | Em', /^Standard tuning is the practical choice/],
     ['F | B♭ | E♭ | Cm', /^Standard tuning with a capo on \d/], ['Dsus4 | Gsus2 | Asus4 | Dsus4', /^DADGAD is the easiest/], ['D5 | C5 | G5 | A5 | F5', /^Drop [CD]/]];
@@ -532,33 +530,46 @@ async function phase3() {
   await ctx.close();
 }
 
-// Simple view: a first-time visitor gets a quick win
-async function simpleView() {
-  const { ctx, page } = await openPage({ simpleView: true });
+// editing: one full app for everyone, deleting chords, Harmonize under Create, gapless looping
+async function editing() {
+  const { ctx, page } = await openPage({ noReveal: true });
   await page.goto(URL_);
-  const v0 = await page.evaluate(() => ({ simple: document.body.classList.contains('simple'), quick: document.querySelector('#quick').checkVisibility(), rail: document.querySelector('.rail').checkVisibility(), gen: document.querySelector('#gen').checkVisibility(), dock: document.querySelector('#play').checkVisibility() }));
-  check('simple: a first visit opens the Simple view with the quick-start card', v0.simple && v0.quick && !v0.rail && !v0.gen && v0.dock, JSON.stringify(v0));
+  const v0 = await page.evaluate(() => ({ toggle: !!document.querySelector('.viewtoggle'), quick: !!document.querySelector('#quick'), simple: document.body.classList.contains('simple') }));
+  check('editing: a first visit opens the full app, with no Simple/Advanced switch', !v0.toggle && !v0.quick && !v0.simple, JSON.stringify(v0));
+  await page.evaluate(() => revealEl(document.querySelector('#gen')));
   const before = await page.evaluate(() => serialize());
-  await tap(page, '#qMoods [data-id="melan"]'); await page.waitForTimeout(300);
-  const m = await page.evaluate(() => ({ text: serialize(), playing, mood: S.mood, pressed: document.querySelector('#qMoods [aria-pressed="true"]')?.dataset.id }));
-  check('simple: one tap on a feeling makes a progression and plays it', m.text !== before && m.playing && m.mood === 'melan' && m.pressed === 'melan', m.text.replace(/\n/g, ' / '));
-  await tap(page, '#qStyles [data-g="jazz"]'); await page.waitForTimeout(200);
-  const j = await page.evaluate(() => ({ g: S.genres, rich: chords.filter(real).some(c => Q[c.q].iv.length > 3) }));
-  check('simple: picking a style uses that style and its own chords', j.g.join() === 'jazz' && j.rich, JSON.stringify(j));
-  const t1 = await page.evaluate(() => chords.map(c => c.id).join());
-  await tap(page, '#qAgain');
-  check('simple: Make another makes a new progression', await page.evaluate(t => chords.map(c => c.id).join() !== t, t1));
-  await page.evaluate(() => { stopAll(); sel = chords[0].id; renderAll(); });
-  const sw = await page.evaluate(() => ({ groups: [...document.querySelectorAll('#subs .group')].filter(g => getComputedStyle(g).display !== 'none').length, items: [...document.querySelectorAll('#subs .item')].filter(i => getComputedStyle(i).display !== 'none' && getComputedStyle(i.closest('.group')).display !== 'none').length, vl: [...document.querySelectorAll('#subs .vl')].some(e => getComputedStyle(e).display !== 'none') }));
-  check('simple: swap ideas stay short and plain', sw.groups <= 2 && sw.items <= 6 && sw.items > 0 && !sw.vl, JSON.stringify(sw));
-  await tap(page, '.viewtoggle [data-view="full"]');
-  check('simple: Advanced brings everything back', await page.evaluate(() => { revealEl(document.querySelector('.rail')); return !document.body.classList.contains('simple') && document.querySelector('.rail').checkVisibility(); }));
-  await page.reload();
-  check('simple: the chosen view is remembered', await page.evaluate(() => !document.body.classList.contains('simple')));
-  await page.evaluate(() => { setView('simple'); renderAll(); });
-  await page.setViewportSize({ width: 390, height: 844 });
-  check('simple: fits a phone without sideways scrolling', await noHScroll(page));
-  check('no console errors (simple view)', page.errors.length === 0, page.errors.join(' | '));
+  await tap(page, '#gen'); await page.waitForTimeout(200);
+  check('editing: Generate makes a progression and plays it', await page.evaluate(b => serialize() !== b && playing, before));
+  await page.evaluate(() => stopAll());
+
+  await page.evaluate(() => { chords = parseProg('C | F | G | Am').chords; sel = chords[1].id; renderAll(); document.querySelector(`#rows .slot[data-id="${sel}"]`).focus(); });
+  await page.keyboard.press('Delete');
+  const d1 = await page.evaluate(() => ({ text: serialize(), sel: chordName(chords.find(c => c.id === sel)), toast: document.querySelector('#toast').textContent }));
+  check('editing: Delete removes the selected chord and selects the next one', d1.text === 'C | G | Am' && d1.sel === 'G' && /Deleted F/.test(d1.toast), JSON.stringify(d1));
+  await page.keyboard.press('Backspace');
+  check('editing: Backspace removes it too', await page.evaluate(() => serialize() === 'C | Am'));
+  await page.click('#toast button');
+  check('editing: Undo in the toast brings the chord back', await page.evaluate(() => serialize() === 'C | G | Am'));
+  await page.evaluate(() => { const i = document.querySelector('#libName'); revealEl(i); i.focus(); });
+  await page.keyboard.press('Backspace');
+  check('editing: Backspace while typing in a box leaves the chart alone', await page.evaluate(() => serialize() === 'C | G | Am'));
+  await page.evaluate(() => { document.querySelector('#library').open = false; openPicker(chords[0].id); });
+  await page.click('#cpick [data-cpdel]');
+  check('editing: the in-chart picker has a Delete button', await page.evaluate(() => serialize() === 'G | Am' && document.querySelector('#cpick').hidden));
+
+  const h = await page.evaluate(() => { const t = document.querySelector('#tab-melody'); return { inCreate: !!t.closest('#sideLeft'), tools: [...document.querySelectorAll('#tools [role=tab]')].map(b => b.textContent).join('/') }; });
+  check('editing: Harmonize is a Create tab, beside Generate and Key and limits', h.inCreate && h.tools === 'Chord finder/Keys and modes', JSON.stringify(h));
+  await page.evaluate(() => revealEl(document.querySelector('#melIn')));
+  await page.click('#melody [data-goto="setkey"]');
+  check('editing: Harmonize links to the Key and limits it follows', await page.evaluate(() => document.querySelector('#key').checkVisibility()));
+
+  // a loop pass starts exactly where the last one ended on the audio clock, without a new session cutting the tails
+  await page.evaluate(() => { S.tempo = 240; S.meter = '4/4'; S.loop = true; S.gstyle = 'pick'; S.instrument = 'guitar'; chords = parseProg('C | G').chords; renderAll();
+    window.__passes = []; const orig = playPass; window.playPass = (t, out) => { __passes.push({ t, out }); return orig(t, out); }; playChart(); });
+  await page.waitForTimeout(2600);
+  const lp = await page.evaluate(() => { stopAll(); const p = __passes; return { n: p.length, gap: p.length > 1 ? +(p[1].t - p[0].t).toFixed(6) : null, same: p.length > 1 && p[0].out === p[1].out }; });
+  check('editing: looping is gapless: the next pass starts on the exact end time, in the same session', lp.n >= 2 && lp.gap === 2 && lp.same, JSON.stringify(lp));
+  check('no console errors (editing)', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 }
 
@@ -728,7 +739,7 @@ async function iphone() {
 const phaseFns = { 1: phase1, 2: phase2, 3: phase3 };
 try {
   for (const n of PHASES) { if (phaseFns[n]) { await phaseFns[n](); await phoneDark('phase' + n); } }
-  await simpleView();
+  await editing();
   await layout();
   await hardening();
   await iphone();

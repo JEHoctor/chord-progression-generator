@@ -125,7 +125,7 @@ footer{max-width:1180px;margin:56px auto 0;color:var(--muted);font-size:14px;bor
 <h2 id="sound">How the sound is made</h2>
 <p>Sound is synthesized live with the Web Audio API; there are no recordings. The piano is a triangle wave with a quiet sine an octave up, through a filter that darkens as the note decays. The guitar is a sawtooth and a slightly detuned triangle through a filter that closes quickly, so each string starts bright and mellows, with low strings ringing longer. Chords are strummed by staggering the notes by a few milliseconds.</p>
 <p>A playing style turns each chord into timed events: for example, the guitar strum pattern hits down on the beats and up on the off-beats (down, down-up, up-down-up in 4/4), and fingerpicking alternates the thumb between the two lowest notes under the treble strings. Playback adds a little random variation in timing and loudness; MIDI export writes the same events exactly on the grid.</p>
-<p>Notes are scheduled slightly ahead on the audio clock for steady timing. On iPhone and iPad, Safari normally treats web audio as “ambient” sound that the silent switch mutes, so the app marks its sound as media playback (through the audio session setting where Safari supports it, and a silent looping audio clip otherwise), and starts the audio engine inside your first tap.</p>
+<p>Notes are scheduled slightly ahead on the audio clock for steady timing. When the chart loops, the next pass is queued half a second before the current one ends and starts on the exact same clock time, so there is no gap at the seam and notes still ringing carry over it. On iPhone and iPad, Safari normally treats web audio as “ambient” sound that the silent switch mutes, so the app marks its sound as media playback (through the audio session setting where Safari supports it, and a silent looping audio clip otherwise), and starts the audio engine inside your first tap.</p>
 
 <h2 id="files">How the files are written</h2>
 <ul>
@@ -145,7 +145,7 @@ footer{max-width:1180px;margin:56px auto 0;color:var(--muted);font-size:14px;bor
   <li>share-link round trips and every explanation on every swap idea;</li>
   <li>locks, resizing and the in-chart picker;</li>
   <li>guitar shapes in every tuning, and the easiest-tuning picks on charts with clear musical answers;</li>
-  <li>the Simple view, phone widths and dark mode.</li>
+  <li>deleting chords, gapless looping, phone widths and dark mode.</li>
 </ul>
 <p>The MusicXML output was also read back with the music21 library to confirm bar lengths, chord symbols, keys, meters and pitches.</p>
 

@@ -356,7 +356,6 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
   .phonetabs{top:0}
   #libCount{display:none}
   .top-actions{margin-left:0}
-  .viewtoggle button{padding:5px 9px;font-size:13px}
 }
 /* ---------- app layout: one shell for every view. The chart stays in the middle; the navigation picks what the side
    panel shows (Create, Chord or Tools). Desktop: a stage-black rail. Tablet: the rail becomes a top bar. Phone: one
@@ -401,10 +400,6 @@ a.btn{text-decoration:none;color:var(--ink)}
 .top-actions .libmenu[open]>summary{border-color:var(--spike)}
 #libCount{color:var(--stage-mute)}
 .top-actions .libpop{left:calc(100% + 12px);right:auto;top:auto;bottom:0}
-.viewtoggle{display:flex;background:var(--stage-2);margin-top:6px}
-.viewtoggle button{flex:1;color:#C9C9C4}
-.viewtoggle button:hover{color:#fff}
-.viewtoggle button[aria-pressed="true"]{background:var(--stage-ink);color:var(--stage);box-shadow:none}
 .create-toggle,.drawer-close{display:none!important}
 .app{margin-left:200px;min-height:100vh;background:var(--bg);border-top-left-radius:18px;display:grid;grid-template-columns:minmax(0,1fr) 400px;align-items:start;
   padding-bottom:calc(var(--dock-h,76px) + 24px)}
@@ -418,8 +413,6 @@ body[data-ptab=p-create] #sideLeft,body[data-ptab=p-tools] #tools,body[data-ptab
 .tools .tabpanel>.panel{border:0;padding:0;background:none}
 .tabpanel{display:flex;flex-direction:column;gap:16px}
 .tabpanel[hidden]{display:none}
-.simple #phoneTabs [data-tab=p-tools]{display:none}
-.simple #sideLeft>:not(#quick){display:none!important}
 /* tablet: the rail becomes a top bar; the side panel narrows */
 @media (max-width:1199px){
   .topbar{position:sticky;top:0;bottom:auto;width:auto;flex-direction:row;align-items:center;gap:18px;padding:calc(10px + env(safe-area-inset-top,0px)) 20px 10px;overflow:visible}
@@ -433,7 +426,6 @@ body[data-ptab=p-create] #sideLeft,body[data-ptab=p-tools] #tools,body[data-ptab
   .top-actions .libmenu>summary{width:auto}
   #library>summary{display:inline-flex;height:38px;padding:0 14px;border-radius:var(--r-pill)}
   .top-actions .libpop{left:auto;right:0;top:calc(100% + 8px);bottom:auto}
-  .viewtoggle{margin:0}
   .app{margin-left:0;grid-template-columns:minmax(0,1fr) 340px}
   .center{padding:24px 24px 0}
   .pane{top:var(--top-h,60px);max-height:calc(100vh - var(--top-h,60px) - var(--dock-h,76px))}
@@ -445,7 +437,6 @@ body[data-ptab=p-create] #sideLeft,body[data-ptab=p-tools] #tools,body[data-ptab
   .top-actions{gap:6px;flex-wrap:wrap;justify-content:flex-end}
   .top-actions .btn{height:36px;padding:0 10px;font-size:13px}
   #libCount{display:none}
-  .viewtoggle button{padding:5px 9px;font-size:13px}
   .phonetabs{position:fixed;left:0;right:0;top:auto;bottom:0;z-index:46;background:var(--stage);border-top:1px solid #2E2E2B;padding:4px 6px calc(4px + env(safe-area-inset-bottom,0px));gap:2px}
   .phonetabs [role=tab]{flex:1 1 0;min-width:0;text-align:center;font-size:19px;padding:10px 4px;min-height:48px}
   .phonetabs [role=tab][aria-selected=true]::before{inset:6px 4px}
@@ -458,20 +449,7 @@ body[data-ptab=p-create] #sideLeft,body[data-ptab=p-tools] #tools,body[data-ptab
   .toast{bottom:calc(var(--dock-h,76px) + var(--tabs-h,58px) + 14px)!important}
 }
 header.top{justify-content:space-between}
-.viewtoggle{align-self:center}
-.quick{gap:14px;border-color:color-mix(in srgb,var(--accent) 35%,var(--line));background:linear-gradient(180deg,var(--accent-soft),var(--surface) 70%)}
-.quick h2{font-size:22px;font-weight:600;letter-spacing:-.02em}
-.quick .moods .chip{font-size:15px;padding:8px 16px}
-.quick .q-act{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
-.quick .q-again{height:44px;padding:0 20px;font-size:15px;border-radius:var(--r-pill)}
-body:not(.simple) #quick,body:not(.simple) .simple-only,.simple .full-only{display:none}
-.simple #rows .slot .cr,.simple #midiOutWrap{display:none!important}
-/* Simple view: the quick card, the chart, Play/Export and plain swap ideas; the rest is one tap away under Advanced */
-.simple .create-toggle,.simple .xpose,.simple label.check:has(#click),.simple #voicing,.simple #recolor,.simple .textedit,.simple .ctools-toggle,
-.simple .legend,.simple .vlx-wrap,.simple .tools,.simple #detail .adv,.simple #detail .builder,
-.simple #detail .bassrow,.simple #detail .pv-grid,.simple #detail .tunefind,.simple #detail .filters,.simple #detail .pickbar:has([data-pctx]),.simple #detail .tones,
-.simple #subs .keep,.simple #subs .vl,.simple #subs .tn,.simple #subs [data-ab],.simple #subs .more,.simple #subs .rn,.simple #subs .group-h p,
-.simple #subs .group[data-gi]:not([data-gi="0"]):not([data-gi="1"]),.simple #subs .item[data-ii]:not([data-ii="0"]):not([data-ii="1"]):not([data-ii="2"]){display:none!important}
+
 .genre-chords{background:var(--sunk);border-radius:var(--r-inset);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
 .genre-chords .gc-head{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;justify-content:space-between}
 .genre-chords .gc-row{display:flex;flex-direction:column;gap:6px}
@@ -550,17 +528,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
 .finetune .fams{margin-top:12px}
 .ft-tag{font-size:12px;font-weight:500;margin-left:4px}
 @media (pointer:coarse){ .vocabp .chip,.presets button{min-height:44px} }
-/* onboarding tips: one at a time, inline where the moment is, each shown once */
 .linkbtn{background:none;border:0;padding:0;font-weight:600;color:var(--accent);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
-.q-pro{margin:6px 0 0}
-.onb{display:flex;align-items:flex-start;gap:8px;background:var(--sunk);border-radius:var(--r-inset);padding:10px 8px 10px 14px;font-size:13.5px;line-height:1.45}
-.onb p{margin:0;flex:1;padding-top:3px}
-.onb p .linkbtn{margin-left:4px}
-.onb p .linkbtn+.linkbtn{margin-left:10px}
-.onb-x{flex:none;width:28px;height:28px;border:0;background:none;border-radius:var(--r-xs);color:var(--muted);font-size:18px;line-height:1}
-.onb-x:hover{background:var(--surface);color:var(--ink)}
-@media (pointer:coarse){ .onb-x{width:40px;height:40px} }
-body:not(.simple) .onb{display:none}
 .dronerow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
 .dronerow select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-s);height:34px;padding:0 10px;min-width:0;max-width:100%}
 .vlx-wrap .toggles{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
@@ -580,11 +548,11 @@ body:not(.simple) .onb{display:none}
 .mel-in select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-s);height:36px;padding:0 10px;max-width:100%}
 .melody>p.hint{margin:0}
 #melOut{display:flex;flex-direction:column;gap:6px}
-.mel-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:10px 12px;border-radius:var(--r-inset);background:var(--sunk)}
+.mel-row{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;align-items:center;padding:10px 12px;border-radius:var(--r-inset);background:var(--sunk)}
 .mel-row .mc{font-weight:600;font-size:16px;letter-spacing:-.01em;overflow-wrap:anywhere}
-.mel-row .ms{grid-column:1;font-size:12.5px;color:var(--muted)}
-.mel-row .mb{grid-column:2;grid-row:1 / span 2;display:flex;gap:6px}
-@media (max-width:520px){.mel-row{grid-template-columns:minmax(0,1fr)} .mel-row .mb{grid-column:1;grid-row:auto}}
+/* results sit in the side panel, so the buttons go under the chords at every width */
+.mel-row .ms{font-size:12.5px;color:var(--muted)}
+.mel-row .mb{display:flex;gap:6px;margin-top:4px}
 .dial .dialrow{display:flex;align-items:center;gap:10px}
 .dial input[type=range]{flex:1 1 auto;accent-color:var(--accent);min-width:0}
 .tension{position:relative;padding-top:16px}
@@ -623,7 +591,7 @@ body{font-size:15px;font-feature-settings:"tnum"}
 .label{font-size:12.5px;font-weight:600;color:var(--muted)}
 .hint{color:var(--muted)}
 h2,h3{letter-spacing:0}
-.side-head h2,.sub-h h2,.side .sub-h h2,.pane .sub-h h2,.pane h2,.quick h2{font-family:var(--f-chord);font-weight:800;font-size:24px;line-height:1;letter-spacing:.02em;text-transform:uppercase}
+.side-head h2,.sub-h h2,.side .sub-h h2,.pane .sub-h h2,.pane h2{font-family:var(--f-chord);font-weight:800;font-size:24px;line-height:1;letter-spacing:.02em;text-transform:uppercase}
 .sub-h h3,.pane h3{font-family:var(--f-chord);font-weight:800;font-size:19px;line-height:1.05;letter-spacing:.03em;text-transform:uppercase}
 .sub-h{padding-top:2px}
 
@@ -643,11 +611,10 @@ select.btn{border-radius:var(--r-pill)}
 .chip{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;padding:6px 14px}
 .chip:hover{border-color:var(--ink)}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-#genres .chip[aria-pressed="true"],#qStyles .chip[aria-pressed="true"]{background:var(--spike);border-color:var(--spike);color:#141414}
+#genres .chip[aria-pressed="true"]{background:var(--spike);border-color:var(--spike);color:#141414}
 .seg{background:var(--sunk);border-radius:var(--r-pill);padding:3px}
 .seg button{border-radius:var(--r-pill);font-weight:600;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1.5px var(--ink)}
-.viewtoggle button[aria-pressed="true"]{box-shadow:none}
 
 /* the chart: a sheet on the floor, chords taped onto it */
 .chart-card{background:none;border:0;border-radius:0;box-shadow:none;padding:0;gap:18px}
@@ -696,8 +663,8 @@ select.btn{border-radius:var(--r-pill)}
 .chead-acts{display:flex;gap:6px;align-items:center}
 .chart-head{justify-content:flex-start;column-gap:16px}
 .chart-head>div:first-child{flex:1 1 auto;min-width:0}
-body:not(.simple) .chart-card:not(.show-tools) .transport{display:none}
-body:not(.simple) .ctools-toggle{display:inline-flex}
+.chart-card:not(.show-tools) .transport{display:none}
+.ctools-toggle{display:inline-flex}
 .chart-card.show-tools .transport{display:flex;flex:1 1 100%;padding:12px 14px;background:var(--sunk);border-radius:var(--r-inset)}
 .slot.drop-before{box-shadow:-6px 0 0 -2px var(--ink)}
 .slot.drop-after{box-shadow:6px 0 0 -2px var(--ink)}
@@ -719,9 +686,6 @@ body:not(.simple) .ctools-toggle{display:inline-flex}
 .quiz{border-color:var(--ink);background:var(--sunk)}
 
 /* Simple view's one-tap card: a sheet of its own, no glow */
-.quick{background:var(--sunk);border:0;border-radius:var(--r)}
-.quick h2{font-size:clamp(30px,3vw,40px);font-weight:900}
-.quick .q-again{height:46px}
 
 /* side-panel fit: tabs may wrap, two-column tool layouts stack */
 body{padding-bottom:0}
@@ -736,8 +700,6 @@ body{padding-bottom:0}
 .pane .mode .mb{grid-column:1;grid-row:auto;flex-wrap:wrap;margin-top:6px}
 .fres.best{border-color:var(--ink);background:var(--sunk)}
 
-/* first-run tips sit on the sheet colour, with ink text */
-.onb{background:var(--sunk)}
 
 /* the Play bar: the front edge of the stage */
 .dock{left:200px;background:var(--stage);color:var(--stage-ink);border-top:0;backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -764,10 +726,9 @@ body{padding-bottom:0}
   <header class="topbar" id="topbar">
     <div class="brand">
       <h1>Chord Changes</h1>
-      <p class="full-only">Write, generate or harmonize a progression, and every swap idea explains why it works, down to how each voice moves; then export MIDI or notation, share a link, or print a lead sheet.</p>
-      <p class="simple-only">Chord progressions for songwriters: no music theory needed.</p>
+      <p>Write, generate or harmonize a progression, and every swap idea explains why it works, down to how each voice moves; then export MIDI or notation, share a link, or print a lead sheet.</p>
     </div>
-    <div class="tabs phonetabs" id="phoneTabs" role="tablist" aria-label="Screens" data-tabs="phone"><button type="button" role="tab" id="tab-p-create" aria-controls="sideLeft" data-tab="p-create">Create<small>Generate, key and limits</small></button><button type="button" role="tab" id="tab-p-chart" aria-controls="center" data-tab="p-chart">Chart<small>Your progression</small></button><button type="button" role="tab" id="tab-p-chord" aria-controls="sideRight" data-tab="p-chord">Chord<small>Shapes and swap ideas</small></button><button type="button" role="tab" id="tab-p-tools" aria-controls="tools" data-tab="p-tools">Tools<small>Finder, harmonize, keys</small></button></div>
+    <div class="tabs phonetabs" id="phoneTabs" role="tablist" aria-label="Screens" data-tabs="phone"><button type="button" role="tab" id="tab-p-create" aria-controls="sideLeft" data-tab="p-create">Create<small>Generate or harmonize</small></button><button type="button" role="tab" id="tab-p-chart" aria-controls="center" data-tab="p-chart">Chart<small>Your progression</small></button><button type="button" role="tab" id="tab-p-chord" aria-controls="sideRight" data-tab="p-chord">Chord<small>Shapes and swap ideas</small></button><button type="button" role="tab" id="tab-p-tools" aria-controls="tools" data-tab="p-tools">Tools<small>Chord finder, keys and modes</small></button></div>
     <nav class="top-actions" aria-label="App">
       <button type="button" class="btn small create-toggle" id="createToggle" aria-expanded="false" aria-controls="sideLeft">Create</button>
       <details class="libmenu" id="library">
@@ -788,22 +749,14 @@ body{padding-bottom:0}
         <summary class="btn">Help</summary>
         <div class="libpop helppop"><a href="guide.html"><b>How to use it</b><small>A tour of every part of the app</small></a><a href="how-it-works.html"><b>How it works under the hood</b><small>The music theory and code behind it</small></a><button type="button" data-help="sound"><b>Sound check</b><small>No sound? Test what this device can play</small></button></div>
       </details>
-      <div class="seg viewtoggle" role="group" aria-label="How much to show"><button type="button" data-view="simple">Simple</button><button type="button" data-view="full">Advanced</button></div>
     </nav>
   </header>
 
 
   <div class="app">
     <aside class="side left pane" id="sideLeft" aria-label="Create">
-  <section class="panel quick" id="quick" aria-label="Quick start">
-    <div><h2>Make a chord progression in one tap</h2><p class="hint">Pick a feeling and it plays straight away. Tap any chord below to hear it or swap it, then use Export to take it into your music app.</p>
-    <p class="hint q-pro">Know your way around? <button type="button" class="linkbtn" id="qPro">Open Advanced</button></p></div>
-    <div class="field"><span class="label">Feeling</span><div class="moods" id="qMoods" role="group" aria-label="Feeling"></div></div>
-    <div class="field"><span class="label">Style <span class="opt">optional</span></span><div class="moods" id="qStyles" role="group" aria-label="Style"></div></div>
-    <div class="q-act"><button type="button" class="btn primary q-again" id="qAgain">Make another</button><span class="hint" id="qHint">Each tap makes a new one in the same feeling.</span></div>
-  </section>
       <div class="side-head"><h2>Create</h2><button type="button" class="btn small drawer-close" id="createClose" aria-label="Close"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
-      <div class="tabs" role="tablist" aria-label="Create" data-tabs="left"><button type="button" role="tab" id="tab-gen" aria-controls="panel-gen" data-tab="gen">Generate</button><button type="button" role="tab" id="tab-setkey" aria-controls="panel-setkey" data-tab="setkey">Key and limits</button></div>
+      <div class="tabs" role="tablist" aria-label="Create" data-tabs="left"><button type="button" role="tab" id="tab-gen" aria-controls="panel-gen" data-tab="gen">Generate</button><button type="button" role="tab" id="tab-melody" aria-controls="panel-melody" data-tab="melody">Harmonize</button><button type="button" role="tab" id="tab-setkey" aria-controls="panel-setkey" data-tab="setkey">Key and limits</button></div>
       <div class="tabpanel" role="tabpanel" id="panel-gen" aria-labelledby="tab-gen" data-panel="gen">
     <section class="panel gen" aria-label="Generate a progression">
       <div class="sub-h"><h2>Generate a progression</h2><span class="hint">Mood sets the feeling, genre sets the style. Use either or both.</span></div>
@@ -824,6 +777,16 @@ body{padding-bottom:0}
         <button class="btn" id="regen" type="button" title="Keep locked chords and refill the rest, keeping every chord's length">Regenerate unlocked</button>
       </div>
     </section>
+      </div>
+      <div class="tabpanel" role="tabpanel" id="panel-melody" aria-labelledby="tab-melody" data-panel="melody" hidden>
+  <section class="panel melody" id="melody" aria-label="Harmonize a melody">
+    <div class="sub-h"><h2>Harmonize a melody</h2><span class="hint">One note per beat. The chords follow the key, time and Chords allowed in <button type="button" class="linkbtn" data-goto="setkey">Key and limits</button>.</span></div>
+    <div class="mel-in"><input id="melIn" type="text" spellcheck="false" autocomplete="off" placeholder="e.g. E D C D | E E E - | D D D - | E G G -" aria-label="Melody, one note per beat">
+      <select id="melRate" aria-label="Chords per bar"><option value="1">One chord per bar</option><option value="2">Two chords per bar</option></select>
+      <button class="btn" id="melPlay" type="button"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Melody</button><button class="btn primary" id="melGo" type="button">Suggest chords</button></div>
+    <p class="hint">Note names like C, F♯ or F#, B♭ or Bb. A dash (-) holds the last note, a dot (.) is a rest, and | between bars is optional. Octaves are ignored; notes are matched by pitch.</p>
+    <div id="melOut" aria-live="polite"></div>
+  </section>
       </div>
       <div class="tabpanel" role="tabpanel" id="panel-setkey" aria-labelledby="tab-setkey" data-panel="setkey" hidden>
   <section class="rail keyrail" aria-label="Key, mode, time and tempo">
@@ -882,19 +845,9 @@ body{padding-bottom:0}
     </main>
 
       <section class="panel tools pane" id="tools" aria-label="Tools">
-        <div class="tabs" role="tablist" aria-label="More tools" data-tabs="tools"><button type="button" role="tab" id="tab-finder" aria-controls="panel-finder" data-tab="finder">Chord finder</button><button type="button" role="tab" id="tab-melody" aria-controls="panel-melody" data-tab="melody">Harmonize a melody</button><button type="button" role="tab" id="tab-modes" aria-controls="panel-modes" data-tab="modes">Keys and modes</button></div>
+        <div class="tabs" role="tablist" aria-label="More tools" data-tabs="tools"><button type="button" role="tab" id="tab-finder" aria-controls="panel-finder" data-tab="finder">Chord finder</button><button type="button" role="tab" id="tab-modes" aria-controls="panel-modes" data-tab="modes">Keys and modes</button></div>
         <div class="tabpanel" role="tabpanel" id="panel-finder" aria-labelledby="tab-finder" data-panel="finder">
   <section class="panel finder" id="finder" aria-label="Chord finder"></section>
-        </div>
-        <div class="tabpanel" role="tabpanel" id="panel-melody" aria-labelledby="tab-melody" data-panel="melody" hidden>
-  <section class="panel melody" id="melody" aria-label="Harmonize a melody">
-    <div class="sub-h"><h2>Harmonize a melody</h2><span class="hint">One note per beat, in the chart’s key and meter</span></div>
-    <div class="mel-in"><input id="melIn" type="text" spellcheck="false" autocomplete="off" placeholder="e.g. E D C D | E E E - | D D D - | E G G -" aria-label="Melody, one note per beat">
-      <select id="melRate" aria-label="Chords per bar"><option value="1">One chord per bar</option><option value="2">Two chords per bar</option></select>
-      <button class="btn" id="melPlay" type="button"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Melody</button><button class="btn primary" id="melGo" type="button">Suggest chords</button></div>
-    <p class="hint">Note names like C, F♯ or F#, B♭ or Bb. A dash (-) holds the last note, a dot (.) is a rest, and | between bars is optional. Octaves are ignored; notes are matched by pitch.</p>
-    <div id="melOut" aria-live="polite"></div>
-  </section>
         </div>
         <div class="tabpanel" role="tabpanel" id="panel-modes" aria-labelledby="tab-modes" data-panel="modes" hidden>
   <section class="palette">
@@ -1859,7 +1812,13 @@ function stopAll(){ abReset(); midiAllOff(); clearTimers(); if(actx&&session){ n
 function playChart(){
   if(!chords.some(real)){ stopAll(); toast('Add a chord to play: press + Add chord or Generate'); return; }
   abReset(); const a=ac(); clearTimers(); const out=newSession(); playing=true; $('#play').innerHTML=IC.stop+'Stop';
-  const unit=60/S.tempo*(4/den()), L=barLen(), acc=new Set(ACCENTS[S.meter]); let t=a.currentTime+.08, beat=0;
+  playPass(a.currentTime+.08,out);
+}
+/* one pass through the chart from audio time t. The next pass is queued a little before this one ends and starts exactly
+   where it ends, in the same session, so a loop has no gap and ringing notes carry over the seam instead of being cut. */
+const LOOP_AHEAD=.5;
+function playPass(t,out){
+  const a=actx, unit=60/S.tempo*(4/den()), L=barLen(), acc=new Set(ACCENTS[S.meter]); let beat=0;
   if(S.drone) droneTones(t,chords.reduce((s,c)=>s+c.beats,0)*unit,out);
   chords.forEach(c=>{
     const dur=c.beats*unit, v=real(c)?playedVoicing(c):null; playStyled(c,t,c.beats,unit,out,v,beat);
@@ -1867,7 +1826,11 @@ function playChart(){
     if(S.click) for(let b=0;b<c.beats;b++){ const bb=(beat+b)%L; blip(t+b*unit,bb===0?2:acc.has(bb)?1:0,out); }
     beat+=c.beats; t+=dur;
   });
-  timers.push(setTimeout(()=>{ if(playing&&S.loop) playChart(); else stopAll(); },(t-a.currentTime)*1000));
+  const end=t;
+  timers.push(setTimeout(()=>{ if(!playing) return;
+    if(S.loop&&chords.some(real)) playPass(Math.max(end,actx.currentTime+.03),out);
+    else timers.push(setTimeout(()=>{ if(playing) stopAll(); },Math.max(0,(end-actx.currentTime)*1000)));
+  },Math.max(0,(end-a.currentTime-LOOP_AHEAD)*1000)));
 }
 function audition(seq){
   const a=ac(); stopAll(); const out=newSession(); let t=a.currentTime+.05;
@@ -2466,8 +2429,7 @@ const wideLayout=()=>matchMedia('(min-width:760px)').matches;
 const SCREEN_HASH={'p-create':'create','p-chart':'chart','p-chord':'chord','p-tools':'tools'};
 function screenFromHash(){ const h=location.hash.slice(1).toLowerCase(); return Object.keys(SCREEN_HASH).find(k=>SCREEN_HASH[k]===h)||null; }
 /* where the chart is always on view, "Chart" is not a screen of its own: the panel beside it shows the chord */
-function fitScreen(){ const cur=document.body.dataset.ptab; if(wideLayout()&&cur==='p-chart') selectTab('phone','p-chord');
-  if(document.body.classList.contains('simple')&&cur==='p-tools') selectTab('phone','p-create'); }
+function fitScreen(){ const cur=document.body.dataset.ptab; if(wideLayout()&&cur==='p-chart') selectTab('phone','p-chord'); }
 function setDrawer(open){ document.body.classList.toggle('drawer-open',open); $('#createToggle').setAttribute('aria-expanded',String(open)); if(open) $('#sideLeft').querySelector('[role=tab][aria-selected=true]')?.focus(); }
 /* makes a control visible wherever it lives: its tab, the Create drawer, the Library popover or the phone screen */
 function revealEl(el){
@@ -2478,7 +2440,7 @@ function revealEl(el){
   if(el.closest('#chartTools')) $('.chart-card').classList.add('show-tools');
   const pn=el.closest('[data-panel]'); if(pn){ const t=document.querySelector(`[role=tab][data-tab="${pn.dataset.panel}"]`); if(t) selectTab(t.closest('.tabs').dataset.tabs,pn.dataset.panel); }
   const area=el.closest('#sideLeft')?'p-create':el.closest('#sideRight')?'p-chord':el.closest('#tools')?'p-tools':el.closest('#center')?'p-chart':null;
-  if(area&&!(area==='p-chart'&&wideLayout())&&!(document.body.classList.contains('simple')&&area==='p-tools')) selectTab('phone',area);
+  if(area&&!(area==='p-chart'&&wideLayout())) selectTab('phone',area);
 }
 function initLayout(){
   let saved={}; try{ saved=JSON.parse(localStorage.getItem(TAB_KEY)||'{}'); }catch(e){}
@@ -2506,66 +2468,16 @@ function initLayout(){
   const topRO=new ResizeObserver(()=>document.documentElement.style.setProperty('--top-h',$('#topbar').offsetHeight+'px')); topRO.observe($('#topbar'));
 }
 
-/* ============ simple view and quick start ============ */
-/* first-time visitors start in Simple; anyone with saved work starts with Advanced. The choice is remembered. */
-const QUICK_STYLES=['pop','rock','folk','rnb','jazz','lofi','country','edm'];
-let quickStyle=null;
-function getView(){ try{ const v=localStorage.getItem('changes-view-v1'); if(v==='simple'||v==='full') return v; return localStorage.getItem('changes-v1')?'full':'simple'; }catch(e){ return 'full'; } }
-function setView(v){ try{ localStorage.setItem('changes-view-v1',v); }catch(e){} document.body.classList.toggle('simple',v==='simple'); fitScreen(); document.body.classList.toggle('simple',v==='simple'); document.querySelectorAll('.viewtoggle [data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===v))); }
-function quickMake(){
-  S.genres=quickStyle?[quickStyle]:[]; S.genreVocab=!!quickStyle; S.drone=false; S.lock=false;
-  if(!S.mood) S.mood=MOODS[0].id;
-  generate(); stopAll(); playChart(); onb.made();
-  document.querySelectorAll('#qMoods .chip').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===S.mood)));
-  document.querySelectorAll('#qStyles .chip').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===quickStyle)));
-}
 
-/* ============ first-run tips (Simple view) ============
-   Hear it → make it yours → play or keep it, then the way into Advanced. Each tip shows once, inline, one at a time,
-   and never before the first tap. Choosing Advanced at any point ends them. */
-const ONB_KEY='changes-hints-v1';
-const onb={st:{seen:[],changed:false,kept:false,played:false,adv:false},makes:0,tapped:false,keepDue:false,
-  load(){ try{ const d=JSON.parse(localStorage.getItem(ONB_KEY)||'null'); if(d&&typeof d==='object') Object.assign(this.st,d,{seen:Array.isArray(d.seen)?d.seen:[]}); }catch(e){} },
-  save(){ try{ localStorage.setItem(ONB_KEY,JSON.stringify(this.st)); }catch(e){} },
-  set(k){ if(this.st[k]) return; this.st[k]=true; this.save();
-    /* a tip whose suggestion was just followed has done its job */
-    document.querySelector({changed:'[data-hint=swap]',kept:'[data-hint=keep]',played:'[data-hint=play]'}[k])?.remove();
-    if(k==='changed') setTimeout(()=>{ this.keepDue=true; this.check(); },60000);
-    this.check(); },
-  made(){ this.makes++; this.check(); },
-  tap(){ this.tapped=true; this.check(); },
-  check(){
-    const st=this.st, seen=id=>st.seen.includes(id);
-    if(st.adv||!document.body.classList.contains('simple')||document.querySelector('.onb')) return;
-    if(!st.changed&&(this.tapped||this.makes>=3)&&!seen('swap'))
-      return this.show('swap','#sideRight .tabs','Try a swap idea: each one says why it works.',[['Show swap ideas',()=>{ selectTab('phone','p-chord'); selectTab('right','swaps'); }]]);
-    if(st.changed&&!seen('play'))
-      return this.show('play','#sideRight .tabs','Want to play it? The Chord panel shows guitar shapes for each chord. Piano voicings are in Advanced.',[['Show me',()=>{ this.set('played'); selectTab('phone','p-chord'); selectTab('right','chord');
-        [...document.querySelectorAll('#detail h3')].find(h=>h.textContent.startsWith('Guitar'))?.scrollIntoView({block:'center'}); }]]);
-    if(st.changed&&this.keepDue&&!st.kept&&!seen('keep'))
-      return this.show('keep','#err','Keep it: save it to your Library, or Export it to your music app.',[['Save',()=>{ $('#library').open=true; $('#libName').focus(); }],['Export',()=>$('#exportBtn').click()]]);
-    if(st.changed&&(st.kept||st.played)&&!seen('bridge'))
-      return this.show('bridge','#sideRight .tabs','Want more control? Advanced adds key and mode, locks, genres and Chords allowed. Your chart comes with you.',[['Open Advanced',openAdvanced]]);
-  },
-  show(id,before,text,acts){
-    /* wide layouts: beside the chart for chart moments, in the side panel otherwise; phones: top of the screen in view */
-    if(before==='#sideRight .tabs') before=wideLayout()?'.chart-card':({'p-create':'#quick','p-chord':'#sideRight .tabs','p-tools':'#tools .tabs'}[document.body.dataset.ptab]||'.chart-card');
-    const at=document.querySelector(before); if(!at) return;
-    this.st.seen.push(id); this.save();
-    const el=document.createElement('div'); el.className='onb'; el.dataset.hint=id; el.setAttribute('role','status');
-    el.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; el.remove(); if(b.dataset.act) acts[+b.dataset.act][1](); this.check(); };
-    at.before(el);
-    /* filled after it is in the page, so screen readers announce it as a status message */
-    requestAnimationFrame(()=>{ el.innerHTML=`<p>${esc(text)}${acts.map((a,i)=>`<button type="button" class="linkbtn" data-act="${i}">${esc(a[0])}</button>`).join('')}</p><button type="button" class="onb-x" aria-label="Dismiss this tip">${IC.x}</button>`; });
-  },
-  advanced(){ this.st.adv=true; this.save(); document.querySelectorAll('.onb').forEach(x=>x.remove()); }
-};
-function openAdvanced(){ onb.advanced(); setView('full'); renderAll(); document.querySelector('.viewtoggle [data-view="full"]').focus(); }
 
 /* ============ in-chart chord picker ============ */
 /* opens under a chord in the chart: one-click chips for the chords in the key, or root, type and bass dropdowns.
    Picking keeps the chord's length, section and lock; pinned shapes are dropped because they belong to the old chord. */
 let cpFor=null;
+/* removes a chord, handing its line break and section label to the next one; the toast offers Undo since a stray Backspace is easy */
+function deleteChord(idx){ const c=chords[idx]; if(!c) return; pushHist(); const nx=chords[idx+1];
+  if(nx){ if(c.br) nx.br=true; if(c.sec&&!nx.sec) nx.sec=c.sec; } chords.splice(idx,1); sel=chords[Math.min(idx,chords.length-1)]?.id??null; commit();
+  toast(`Deleted ${real(c)?chordName(c):'blank slot'}`,{label:'Undo',fn:undoTo(hist[hist.length-1])}); }
 function openPicker(id){
   const c=chords.find(x=>x.id===id); if(!c) return; cpFor=id;
   const el=$('#cpick'), size=sizeFor(lvl()), r=real(c)?c.root:S.tonic, q=real(c)?c.q:'', bb=real(c)?c.bass:null;
@@ -2579,7 +2491,7 @@ function openPicker(id){
     <div class="cp-build"><select id="cpRoot" aria-label="Root">${notes.map(pc=>`<option value="${pc}" ${pc===r?'selected':''}>${esc(prettyNote(spell(pc)))}</option>`).join('')}</select>
       <select id="cpQual" aria-label="Chord type">${FAMS.map(f=>`<optgroup label="${f.name}${famOn(f.id)?'':' (not in Chords allowed)'}">${(f.id==='triad'?['','m','dim','aug']:f.qs).map(x=>`<option value="${esc(x)}" ${x===q?'selected':''}>${esc(prettySfx(Q[x].d)||'major')}</option>`).join('')}</optgroup>`).filter(g=>!g.includes('<optgroup label="Slash')).join('')}</select>
       <select id="cpBass" aria-label="Bass note"><option value="">root bass</option>${notes.map(pc=>`<option value="${pc}" ${pc===bb?'selected':''}>/${esc(prettyNote(spell(pc)))}</option>`).join('')}</select></div>
-    <div class="cp-act"><button type="button" class="btn small" data-cphear>${IC.play}Hear</button><button type="button" class="btn small" data-cpblank>Make blank</button><button type="button" class="btn small primary" data-cpapply>Apply</button></div>`;
+    <div class="cp-act"><button type="button" class="btn small" data-cphear>${IC.play}Hear</button><button type="button" class="btn small" data-cpblank>Make blank</button><button type="button" class="btn small" data-cpdel>Delete</button><button type="button" class="btn small primary" data-cpapply>Apply</button></div>`;
   el.hidden=false; placePicker(); (el.querySelector('.chip[aria-pressed="true"]')||el.querySelector('.chip,select'))?.focus();
 }
 function placePicker(){
@@ -2591,7 +2503,7 @@ function closePicker(){ const el=$('#cpick'); if(!el.hidden){ el.hidden=true; el
 const pickerChord=()=>{ const r=+$('#cpRoot').value, q=$('#cpQual').value, b=$('#cpBass').value; return {root:r,q,bass:b===''||+b===r?null:+b}; };
 function applyPicked(nc){
   const c=chords.find(x=>x.id===cpFor); if(!c) return closePicker();
-  pushHist(); c.root=nc.root; c.q=nc.q; c.bass=nc.bass; delete c.gpin; delete c.ppin; sel=c.id; closePicker(); commit(); if(real(c)) playOne(c); onb.set('changed');
+  pushHist(); c.root=nc.root; c.q=nc.q; c.bass=nc.bass; delete c.gpin; delete c.ppin; sel=c.id; closePicker(); commit(); if(real(c)) playOne(c);
   toast(real(c)?`${chordName(c)} in bar ${Math.floor(chords.slice(0,chords.indexOf(c)).reduce((a,x)=>a+x.beats,0)/barLen())+1}`:'Made it a blank slot');
 }
 
@@ -3082,7 +2994,7 @@ function libSaveCurrent(){
   const name=typed||cur?.name||`Progression ${LIB.items.length+1}`;
   let it=LIB.items.find(i=>i.name.toLowerCase()===name.toLowerCase());
   if(it){ it.snap=JSON.parse(JSON.stringify(curSnap())); it.updated=Date.now(); } else { it=newItem(name,curSnap()); LIB.items.unshift(it); }
-  libCurrent=it.id; $('#libName').value=''; if(libSave()){ toast(`Saved “${name}”`); onb.set('kept'); } renderLibrary();
+  libCurrent=it.id; $('#libName').value=''; if(libSave()){ toast(`Saved “${name}”`); } renderLibrary();
 }
 function renderLibrary(){
   const n=LIB.items.length; $('#libCount').textContent=n?`${n} saved`:'Nothing saved yet';
@@ -3150,7 +3062,7 @@ function initIO(){
   const exBtn=$('#exportBtn'), exMenu=$('#exportMenu');
   window.closeExport=()=>{ exMenu.hidden=true; exBtn.setAttribute('aria-expanded','false'); };
   exBtn.onclick=()=>{ const open=exMenu.hidden; exMenu.hidden=!open; exBtn.setAttribute('aria-expanded',String(open)); if(open) exMenu.querySelector('button').focus(); };
-  exMenu.addEventListener('click',e=>{ if(e.target.closest('button')){ setTimeout(closeExport,0); onb.set('kept'); } });
+  exMenu.addEventListener('click',e=>{ if(e.target.closest('button')){ setTimeout(closeExport,0); } });
   exMenu.addEventListener('keydown',e=>{ const items=[...exMenu.querySelectorAll('button')], i=items.indexOf(document.activeElement);
     if(e.key==='Escape'){ closeExport(); exBtn.focus(); } if(e.key==='ArrowDown'){ e.preventDefault(); items[(i+1)%items.length].focus(); } if(e.key==='ArrowUp'){ e.preventDefault(); items[(i-1+items.length)%items.length].focus(); } });
   document.addEventListener('pointerdown',e=>{ if(!exMenu.hidden&&!e.target.closest('.export')) closeExport(); });
@@ -3236,25 +3148,10 @@ function boot(){
   $('#moods').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; S.mood=S.mood===b.dataset.id?'':b.dataset.id; save(); renderControls(); };
   $('#genres').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; const g=b.dataset.g; S.genres=S.genres.includes(g)?S.genres.filter(x=>x!==g):[...S.genres,g]; save(); renderControls(); };
   $('#recipe').onclick=e=>{ const b=e.target.closest('[data-addfams]'); if(!b) return; S.vocab=[...new Set([...S.vocab,...b.dataset.addfams.split(',')])]; commit(); toast(`Vocabulary updated: ${vocabName()}`); };
-  $('#gen').onclick=generate;
+  $('#gen').onclick=()=>{ generate(); stopAll(); playChart(); };
   $('#regen').onclick=regenUnlocked;
   $('#clearChart').onclick=()=>{ if(!chords.length) return; stopAll(); pushHist(); chords=[]; sel=null; commit(); toast('Chart cleared',{label:'Undo',fn:undoTo(hist[hist.length-1])}); };
-  onb.load();
-  const askAdv=/^#advanced$/i.test(location.hash)||new URLSearchParams(location.search).get('view')==='advanced';
-  const v0=askAdv?'full':getView(); initLayout(); setView(v0);
-  /* returning visitors who start in Advanced never get first-run tips; with storage blocked the app opens in Advanced
-     by default, which is not a choice, so tips stay available if they switch to Simple */
-  let canStore=true; try{ localStorage.getItem(ONB_KEY); }catch(e){ canStore=false; }
-  if(v0==='full'&&(askAdv||canStore)) onb.advanced();
-  if(v0==='simple'&&!screenFromHash()) selectTab('phone','p-create');
-  fitScreen();
-  $('#qPro').onclick=openAdvanced;
-  document.querySelector('.viewtoggle').addEventListener('click',e=>{ const b=e.target.closest('[data-view]'); if(b){ if(b.dataset.view==='full') onb.advanced(); setView(b.dataset.view); renderAll(); } });
-  $('#qMoods').innerHTML=MOODS.map(m=>`<button type="button" class="chip" data-id="${m.id}" aria-pressed="false" title="${esc(m.blurb)}">${m.name}</button>`).join('');
-  $('#qStyles').innerHTML=QUICK_STYLES.map(id=>{ const g=GENRES.find(x=>x.id===id); return `<button type="button" class="chip" data-g="${id}" aria-pressed="false" title="${esc(g.blurb)}">${esc(g.name)}</button>`; }).join('');
-  $('#qMoods').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; S.mood=b.dataset.id; quickMake(); };
-  $('#qStyles').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; quickStyle=quickStyle===b.dataset.g?null:b.dataset.g; quickMake(); };
-  $('#qAgain').onclick=quickMake;
+  initLayout(); fitScreen();
   $('#genreChords').addEventListener('change',e=>{ if(e.target.id==='genreVocab'){ S.genreVocab=e.target.checked; save(); renderControls(); } });
   $('#genreChords').addEventListener('click',e=>{ if(e.target.closest('[data-restyle]')){ restyleChart(); return; } const b=e.target.closest('[data-gchord]'); if(!b) return; const [r,q]=b.dataset.gchord.split('|'); playOne({root:+r,q,bass:null}); });
   $('#soundCheck').onclick=()=>{ const b=$('#soundbox'); if(b.hidden) b._opener=document.activeElement; b.hidden=false; renderSoundBox(); b.querySelector('button')?.focus(); };
@@ -3267,6 +3164,7 @@ function boot(){
     const q=t.closest('[data-cpq]'); if(q){ const [r,qq]=q.dataset.cpq.split('|'); applyPicked(fitC({root:+r,q:qq,bass:null})); return; }
     if(t.closest('[data-cphear]')){ playOne(pickerChord()); return; }
     if(t.closest('[data-cpblank]')){ applyPicked({root:null,q:'',bass:null}); return; }
+    if(t.closest('[data-cpdel]')){ const i=chords.findIndex(x=>x.id===cpFor); closePicker(); if(i>=0){ deleteChord(i); document.querySelector(`#rows .slot[data-id="${sel}"]`)?.focus(); } return; }
     if(t.closest('[data-cpapply]')) applyPicked(pickerChord()); });
   cp.addEventListener('change',()=>{ const n=$('#cpName'); if(n) n.textContent=chordName(pickerChord()); });
   cp.addEventListener('keydown',e=>{ if(e.key==='Escape'){ e.stopPropagation(); const id=cpFor; closePicker(); document.querySelector(`#rows .slot[data-id="${id}"]`)?.focus(); }
@@ -3282,6 +3180,7 @@ function boot(){
     if(e.target.closest('[data-quizreset]')){ quizScore={correct:0,total:0}; quizSave(); quizDone.clear(); renderDetail(); renderControls(); } });
   $('#melIn').value=S.melText||''; $('#melRate').value=String(S.melRate||1);
   $('#melGo').onclick=melodySuggest;
+  $('#melody').addEventListener('click',e=>{ if(e.target.closest('[data-goto]')) selectTab('left','setkey'); });
   $('#melIn').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); melodySuggest(); } };
   $('#melPlay').onclick=()=>{ const r=parseMelody($('#melIn').value); if(r.bad||!r.beats.some(Boolean)){ toast('Type a melody first: note names, - to hold, . to rest'); return; } playMelody(r.beats,null); };
   $('#melOut').addEventListener('click',e=>{ const p=e.target.closest('[data-mplay]'), u=e.target.closest('[data-muse]');
@@ -3405,7 +3304,7 @@ function boot(){
     const bl=t.closest('[data-b]');
     if(bl){ const r=+$('#bRoot').value, q=$('#bQual').value, bv=$('#bBass').value; const nc={root:r,q,bass:bv===''||+bv===r?null:+bv};
       if(bl.dataset.b==='hear'){ playOne(nc); return; }
-      const i=chords.findIndex(x=>x.id===sel); pushHist(); chords[i]={...chords[i],...nc}; commit(); playOne(nc); onb.set('changed'); toast(`${chordName(nc)} placed`); return; }
+      const i=chords.findIndex(x=>x.id===sel); pushHist(); chords[i]={...chords[i],...nc}; commit(); playOne(nc); toast(`${chordName(nc)} placed`); return; }
     if(t.closest('[data-tunefind]')){ findEasiestTuning(); return; }
     const ut=t.closest('[data-usetune]'); if(ut){ const [id,cp]=ut.dataset.usetune.split('|'); setTuning(id); S.capo=+cp; commit(); toast(`Guitar set to ${TUNINGS[id].name}${+cp?`, capo ${cp}`:''}`); return; }
     const vb=t.closest('[data-vb]'), sh=t.closest('[data-shape]'), pv=t.closest('[data-pv]'), gf=t.closest('[data-gf]'), tw=t.closest('[data-twin]'), cp=t.closest('[data-capo]');
@@ -3425,6 +3324,7 @@ function boot(){
   });
   $('#detail').onclick=e=>{ const b=e.target.closest('[data-act]'); if(!b) return; const idx=chords.findIndex(c=>c.id===sel); if(idx<0) return; const c=chords[idx], act=b.dataset.act;
     if(act==='hear'){ playOne(c); return; }
+    if(act==='del'){ deleteChord(idx); return; }
     pushHist();
     if(act==='lock'){ if(c.lock) delete c.lock; else c.lock=true; }
     if(act==='slash'){ const vb=viewBass??c.root; c.bass=vb===c.root?null:vb; viewBass=null; }
@@ -3434,7 +3334,6 @@ function boot(){
     if(act==='insert'){ const n={id:uid(),root:null,q:'',bass:null,beats:Math.min(c.beats,barLen())}; chords.splice(idx+1,0,n); sel=n.id; }
     if(act==='left'&&idx>0) [chords[idx-1],chords[idx]]=[chords[idx],chords[idx-1]];
     if(act==='right'&&idx<chords.length-1) [chords[idx+1],chords[idx]]=[chords[idx],chords[idx+1]];
-    if(act==='del'){ const nx=chords[idx+1]; if(nx){ if(c.br) nx.br=true; if(c.sec&&!nx.sec) nx.sec=c.sec; } chords.splice(idx,1); sel=chords[Math.min(idx,chords.length-1)]?.id??null; }
     commit(); };
   $('#subs').addEventListener('change',e=>{ if(e.target.id==='keepOther'&&e.target.value!==''){ keepNotes.push(+e.target.value); renderSubs(); } });
   $('#subs').addEventListener('click',e=>{ const mo=e.target.closest('[data-more]'); if(mo){ openGroups.add(mo.dataset.more); renderSubs(); return; } const k=e.target.closest('[data-keep]'); if(!k) return; const pc=+k.dataset.keep; keepNotes=keepNotes.includes(pc)?keepNotes.filter(x=>x!==pc):[...keepNotes,pc]; renderSubs(); });
@@ -3442,7 +3341,7 @@ function boot(){
     if(ab){ const [gi,ii]=ab.dataset.ab.split('.').map(Number), it=el._groups[gi].items[ii], {P,N,idx}=el._ctx; abPlay(chords[idx],it,P,N,ab); return; }
     const u=e.target.closest('[data-use]'), a=e.target.closest('[data-aud]'); const k=(u||a)?.dataset[u?'use':'aud']; if(!k) return;
     const [gi,ii]=k.split('.').map(Number), it=el._groups[gi].items[ii], {P,N,idx}=el._ctx;
-    if(u){ replaceAt(idx,it.chords); onb.set('changed'); toast(`Swapped in ${it.chords.map(c=>chordName(c)).join(' → ')}`); return; }
+    if(u){ replaceAt(idx,it.chords); toast(`Swapped in ${it.chords.map(c=>chordName(c)).join(' → ')}`); return; }
     const seq=[]; if(P) seq.push([P,.9]); it.chords.forEach(c=>seq.push([c,it.chords.length>1?.6:.9])); if(N) seq.push([N,1.3]); audition(seq); };
   document.querySelector('.palette').onclick=e=>{ const b=e.target.closest('[data-pal]'), m=e.target.closest('[data-mode]');
     if(m){ pushHist(); S.mode=m.dataset.mode; commit(); return; }
@@ -3458,6 +3357,7 @@ function boot(){
     /* Option/Alt + arrow moves the selected chord, the keyboard version of dragging */
     if(e.altKey&&(e.key==='ArrowLeft'||e.key==='ArrowRight')&&idx>=0){ e.preventDefault(); const j=idx+(e.key==='ArrowRight'?1:-1);
       if(j>=0&&j<chords.length){ pushHist(); [chords[idx],chords[j]]=[chords[j],chords[idx]]; commit(); } return; }
+    if((e.key==='Delete'||e.key==='Backspace')&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&idx>=0){ e.preventDefault(); deleteChord(idx); document.querySelector(`#rows .slot[data-id="${sel}"]`)?.focus(); return; }
     if((e.key==='e'||e.key==='E')&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&idx>=0){ e.preventDefault(); openPicker(chords[idx].id); return; }
     if(e.key==='ArrowRight'&&idx<chords.length-1){ sel=chords[idx+1].id; renderAll(); }
     if(e.key==='ArrowLeft'&&idx>0){ sel=chords[idx-1].id; renderAll(); }
