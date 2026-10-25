@@ -399,7 +399,9 @@ a.btn{text-decoration:none;color:var(--ink)}
 .top-actions .libmenu>summary::after{color:var(--stage-mute)}
 .top-actions .libmenu[open]>summary{border-color:var(--spike)}
 #libCount{color:var(--stage-mute)}
-.top-actions .libpop{left:calc(100% + 12px);right:auto;top:auto;bottom:0}
+/* the rail scrolls, which clips anything absolutely placed inside it, so on desktop the menus are fixed to the viewport
+   just right of the rail, level with the bottom of the rail where the Library and Help buttons sit */
+.top-actions .libpop{position:fixed;left:212px;right:auto;top:auto;bottom:calc(var(--dock-h,76px) + 16px)}
 .create-toggle,.drawer-close{display:none!important}
 .app{margin-left:200px;min-height:100vh;background:var(--bg);border-top-left-radius:18px;display:grid;grid-template-columns:minmax(0,1fr) 400px;align-items:start;
   padding-bottom:calc(var(--dock-h,76px) + 24px)}
@@ -425,14 +427,17 @@ body[data-ptab=p-create] #sideLeft,body[data-ptab=p-tools] #tools,body[data-ptab
   .top-actions{flex-direction:row;align-items:center;margin:0 0 0 auto}
   .top-actions .libmenu>summary{width:auto}
   #library>summary{display:inline-flex;height:38px;padding:0 14px;border-radius:var(--r-pill)}
-  .top-actions .libpop{left:auto;right:0;top:calc(100% + 8px);bottom:auto}
+  .top-actions .libpop{position:absolute;left:auto;right:0;top:calc(100% + 8px);bottom:auto}
   .app{margin-left:0;grid-template-columns:minmax(0,1fr) 340px}
   .center{padding:24px 24px 0}
   .pane{top:var(--top-h,60px);max-height:calc(100vh - var(--top-h,60px) - var(--dock-h,76px))}
 }
 /* phone: one screen at a time; the tabs sit at the bottom where a thumb reaches them, the Play bar just above */
 @media (max-width:759px){
-  .topbar{position:static;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;gap:8px 10px;flex-wrap:wrap}
+  .topbar{position:relative;z-index:47;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;gap:8px 10px;flex-wrap:wrap}
+  /* menus span the screen under the top bar instead of hanging off their button, which would push them off the left edge */
+  .top-actions .libmenu{position:static}
+  .top-actions .libpop{left:16px;right:16px;width:auto;top:calc(100% - 4px)}
   .topbar .brand h1{font-size:22px}
   .top-actions{gap:6px;flex-wrap:wrap;justify-content:flex-end}
   .top-actions .btn{height:36px;padding:0 10px;font-size:13px}
@@ -3081,7 +3086,7 @@ function libLoad(){
     libSave();
   }catch(e){}
 }
-function libOpen(it){ const list=sanitizeChords(it.snap.chords); if(!list){ toast('That saved progression is damaged and can’t be opened'); return; } pushHist(); Object.assign(S,sanitizeS(pickS(it.snap.S))); chords=list; sel=chords[0]?.id??null; libCurrent=it.id; commit(); toast(`Opened “${it.name}”`); }
+function libOpen(it){ const list=sanitizeChords(it.snap.chords); if(!list){ toast('That saved progression is damaged and can’t be opened'); return; } pushHist(); Object.assign(S,sanitizeS(pickS(it.snap.S))); chords=list; sel=chords[0]?.id??null; libCurrent=it.id; commit(); $('#library').open=false; toast(`Opened “${it.name}”`); }
 function libSaveCurrent(){
   const typed=$('#libName').value.trim(), cur=LIB.items.find(i=>i.id===libCurrent);
   const name=typed||cur?.name||`Progression ${LIB.items.length+1}`;

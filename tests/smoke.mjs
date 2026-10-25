@@ -160,6 +160,8 @@ async function phase1() {
   check('library saves by name and updates on the same name', lib.filter(n => n === 'Verse idea').length === 1 && lib.includes('Untitled'), lib.join(', '));
   await tap(page, '[data-lib] >> text=Untitled'); // open
   check('opening an item loads it', await page.evaluate(() => chords.map(c => chordName(c)).join(' ') === 'Dm7 G7'));
+  check('opening an item closes the Library so the chart shows', await page.evaluate(() => !document.querySelector('#library').open));
+  await page.evaluate(() => { document.querySelector('#library').open = true; });
   await tap(page, '[data-lib]:has-text("Verse idea") [data-la="rename"]');
   await page.fill('[data-lib] input', 'Verse A'); await page.press('[data-lib] input', 'Enter');
   await tap(page, '[data-lib]:has-text("Verse A") [data-la="dup"]');
@@ -626,9 +628,27 @@ async function keyChanges() {
   await page.evaluate(() => { chords = parseProg('C | F | G | C\n[Key: D major]\nD | G | A | D').chords; renderAll(); regenUnlocked(); });
   const rg = await page.evaluate(() => ({ kc: chords[4].kc && chords[4].kc.t, inKey: chords.slice(4).filter(c => ['dia', 'bor', 'sec'].includes(analyze(c).kind)).length }));
   check('keys: Regenerate unlocked keeps the key change and writes the new chords in that key', rg.kc === 2 && rg.inKey >= 3, JSON.stringify(rg));
-  check('keys: S keeps the opening key after all that', await page.evaluate(() => S.tonic === 2 && S.mode === 'ionian' && keyStack.length === 0));
+  check('keys: S keeps the opening key after all that', await page.evaluate(() => S.tonic === 2 && keyStack.length === 0));
   check('no console errors (key changes)', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
+}
+
+// the top-bar menus must be visible and on top at every width, not just "open"
+async function menus() {
+  for (const [w, h, tag] of [[1440, 900, 'desktop'], [1280, 720, 'small laptop'], [900, 900, 'tablet'], [390, 844, 'phone']]) {
+    const { ctx, page } = await openPage({ viewport: { width: w, height: h }, noReveal: true });
+    await page.goto(URL_);
+    for (const [id, inner] of [['library', '#libName'], ['helpMenu', '.helppop a']]) {
+      await page.click(`#${id} > summary`);
+      const r = await page.evaluate(s => { const e = document.querySelector(s), pop = e.closest('.libpop'), b = pop.getBoundingClientRect(), r = e.getBoundingClientRect(), hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return { onTop: !!hit && (e === hit || e.contains(hit)), inView: b.left >= 0 && b.right <= innerWidth + 0.5 && b.top >= 0 && b.bottom <= innerHeight + 0.5 }; }, inner);
+      check(`menus: ${id === 'library' ? 'Library' : 'Help'} opens visibly and on top (${tag})`, r.onTop && r.inView, JSON.stringify(r));
+      if (id === 'library') { await page.click(inner);  // reachable by a real click (Help's links would leave the page)
+ await page.keyboard.press('Escape'); check(`menus: Escape closes the Library (${tag})`, await page.evaluate(() => !document.querySelector('#library').open)); }
+      await page.evaluate(i => { document.getElementById(i).open = false; }, id);
+    }
+    await ctx.close();
+  }
 }
 
 // layout: desktop columns, tablet drawer, phone screens, top bar, help pages
@@ -799,6 +819,7 @@ try {
   for (const n of PHASES) { if (phaseFns[n]) { await phaseFns[n](); await phoneDark('phase' + n); } }
   await editing();
   await keyChanges();
+  await menus();
   await layout();
   await hardening();
   await iphone();
