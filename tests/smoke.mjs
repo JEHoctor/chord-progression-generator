@@ -561,7 +561,16 @@ async function editing() {
   check('editing: Harmonize is a Create tab, beside Generate and Key and limits', h.inCreate && h.tools === 'Chord finder/Keys and modes', JSON.stringify(h));
   await page.evaluate(() => revealEl(document.querySelector('#melIn')));
   await page.click('#melody [data-goto="setkey"]');
-  check('editing: Harmonize links to the Key and limits it follows', await page.evaluate(() => document.querySelector('#key').checkVisibility()));
+  check('editing: Harmonize links to the Chords allowed it follows', await page.evaluate(() => document.querySelector('#presets').checkVisibility()));
+  // key, mode and time open from the key line under the chart title; tempo lives only in the Play bar
+  await page.click('#keyMenu summary');
+  check('editing: the key line under Chart opens key, mode and time', await page.evaluate(() => document.querySelector('#keyMenu').open && document.querySelector('#key').checkVisibility() && document.querySelector('#meter').checkVisibility()));
+  await page.selectOption('#key', '2');
+  check('editing: changing the key there updates the key line', await page.evaluate(() => /^D major/.test(document.querySelector('#keytag').textContent)));
+  await page.click('#chartTitle');
+  check('editing: clicking elsewhere closes it', await page.evaluate(() => !document.querySelector('#keyMenu').open));
+  await page.fill('#tempo', '132'); await page.press('#tempo', 'Enter'); await page.click('#tempoUp');
+  check('editing: tempo has one control, in the Play bar, typed or nudged', await page.evaluate(() => document.querySelectorAll('input#tempo,#tempoShow').length === 1 && !!document.querySelector('.dock #tempo') && S.tempo === 136 && document.querySelector('#tempo').value === '136'), await page.evaluate(() => S.tempo));
 
   // a loop pass starts exactly where the last one ended on the audio clock, without a new session cutting the tails
   await page.evaluate(() => { S.tempo = 240; S.meter = '4/4'; S.loop = true; S.gstyle = 'pick'; S.instrument = 'guitar'; chords = parseProg('C | G').chords; renderAll();

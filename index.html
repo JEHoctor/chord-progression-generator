@@ -514,11 +514,21 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
 .keyrail .field:has(#key){flex:0 0 80px}
 .keyrail .field:has(#mode){flex:1 1 calc(100% - 94px)}
 .keyrail .field:has(#meter){flex:1 1 calc(100% - 110px)}
-.keyrail .field:has(#tempo){flex:0 0 96px}
 .keyrail .field select,.keyrail .field input[type=number]{width:100%}
 .keyhear{flex:1 1 100%;display:flex;align-items:flex-start;gap:10px}
 .keyhear .btn{flex:none}
 .keyhear .hint{margin:0;padding-top:5px}
+/* the key line under the chart title opens key, mode and time in place */
+.keymenu{position:relative;display:inline-block}
+.keymenu>summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border-radius:var(--r-xs);padding:2px 6px;margin-left:-6px;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
+.keymenu>summary::-webkit-details-marker{display:none}
+.keymenu>summary::after{content:"";width:11px;height:11px;flex:none;background:currentColor;opacity:.7;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
+.keymenu>summary:hover,.keymenu[open]>summary{background:var(--sunk);color:var(--ink);text-decoration-color:currentColor}
+.keypop{position:absolute;left:-6px;top:calc(100% + 8px);width:min(380px,calc(100vw - 32px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:var(--pop);padding:14px;z-index:50}
+.keypop .keyrail{display:flex;flex-wrap:wrap;gap:12px;border:0;padding:0;margin:0;background:none;box-shadow:none}
+.tempo-in{width:2.8em;text-align:center;font:inherit;font-variant-numeric:tabular-nums;background:transparent;color:inherit;border:1px solid transparent;border-radius:var(--r-xs);padding:2px 0;-moz-appearance:textfield;appearance:textfield}
+.tempo-in::-webkit-inner-spin-button,.tempo-in::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.tempo-in:hover,.tempo-in:focus{border-color:currentColor;outline:none}
 .presets{display:flex}
 .presets button{flex:1 1 auto;min-width:0;padding:5px 8px}
 .vstatus{display:flex;flex-direction:column;gap:8px;font-size:13.5px}
@@ -756,7 +766,7 @@ body{padding-bottom:0}
   <div class="app">
     <aside class="side left pane" id="sideLeft" aria-label="Create">
       <div class="side-head"><h2>Create</h2><button type="button" class="btn small drawer-close" id="createClose" aria-label="Close"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
-      <div class="tabs" role="tablist" aria-label="Create" data-tabs="left"><button type="button" role="tab" id="tab-gen" aria-controls="panel-gen" data-tab="gen">Generate</button><button type="button" role="tab" id="tab-melody" aria-controls="panel-melody" data-tab="melody">Harmonize</button><button type="button" role="tab" id="tab-setkey" aria-controls="panel-setkey" data-tab="setkey">Key and limits</button></div>
+      <div class="tabs" role="tablist" aria-label="Create" data-tabs="left"><button type="button" role="tab" id="tab-gen" aria-controls="panel-gen" data-tab="gen">Generate</button><button type="button" role="tab" id="tab-melody" aria-controls="panel-melody" data-tab="melody">Harmonize</button><button type="button" role="tab" id="tab-setkey" aria-controls="panel-setkey" data-tab="setkey">Chords allowed</button></div>
       <div class="tabpanel" role="tabpanel" id="panel-gen" aria-labelledby="tab-gen" data-panel="gen">
     <section class="panel gen" aria-label="Generate a progression">
       <div class="sub-h"><h2>Generate a progression</h2><span class="hint">Mood sets the feeling, genre sets the style. Use either or both.</span></div>
@@ -780,7 +790,7 @@ body{padding-bottom:0}
       </div>
       <div class="tabpanel" role="tabpanel" id="panel-melody" aria-labelledby="tab-melody" data-panel="melody" hidden>
   <section class="panel melody" id="melody" aria-label="Harmonize a melody">
-    <div class="sub-h"><h2>Harmonize a melody</h2><span class="hint">One note per beat. The chords follow the key, time and Chords allowed in <button type="button" class="linkbtn" data-goto="setkey">Key and limits</button>.</span></div>
+    <div class="sub-h"><h2>Harmonize a melody</h2><span class="hint">One note per beat. The chords follow the chart’s key and time, and <button type="button" class="linkbtn" data-goto="setkey">Chords allowed</button>.</span></div>
     <div class="mel-in"><input id="melIn" type="text" spellcheck="false" autocomplete="off" placeholder="e.g. E D C D | E E E - | D D D - | E G G -" aria-label="Melody, one note per beat">
       <select id="melRate" aria-label="Chords per bar"><option value="1">One chord per bar</option><option value="2">Two chords per bar</option></select>
       <button class="btn" id="melPlay" type="button"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Melody</button><button class="btn primary" id="melGo" type="button">Suggest chords</button></div>
@@ -789,14 +799,6 @@ body{padding-bottom:0}
   </section>
       </div>
       <div class="tabpanel" role="tabpanel" id="panel-setkey" aria-labelledby="tab-setkey" data-panel="setkey" hidden>
-  <section class="rail keyrail" aria-label="Key, mode, time and tempo">
-    <div class="field"><label class="label" for="key">Key</label><select id="key"></select></div>
-    <div class="field"><label class="label" for="mode">Mode</label><select id="mode" aria-describedby="modeFeel"></select></div>
-    <div class="field"><label class="label" for="meter">Time</label><select id="meter"></select></div>
-    <div class="field"><label class="label" for="tempo">Tempo <span class="opt">40–240</span></label><input id="tempo" type="number" min="40" max="240" step="1"></div>
-    <div class="keyhear"><button type="button" class="btn small" id="hearKey"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Hear</button><p class="hint" id="modeFeel"></p></div>
-    <p class="hint cycle-note" id="cycleNote" hidden></p>
-  </section>
     <section class="panel vocabp" aria-labelledby="vocabTitle">
       <div class="sub-h"><h2 id="vocabTitle">Chords allowed</h2></div>
       <p class="hint vtext">The chord colours that can appear. Plain major and minor chords are always in.</p>
@@ -810,7 +812,16 @@ body{padding-bottom:0}
     <main class="center" id="center">
   <section class="chart-card" aria-label="Progression chart">
     <div class="chart-head">
-      <div><h2 id="chartTitle">Chart</h2><div class="keytag" id="keytag"></div></div>
+      <div><h2 id="chartTitle">Chart</h2>
+      <details class="keymenu" id="keyMenu"><summary class="keytag" title="Change the key, mode or time signature"><span id="keytag"></span></summary><div class="keypop">
+  <section class="rail keyrail" aria-label="Key, mode and time">
+    <div class="field"><label class="label" for="key">Key</label><select id="key"></select></div>
+    <div class="field"><label class="label" for="mode">Mode</label><select id="mode" aria-describedby="modeFeel"></select></div>
+    <div class="field"><label class="label" for="meter">Time</label><select id="meter"></select></div>
+    <div class="keyhear"><button type="button" class="btn small" id="hearKey"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Hear</button><p class="hint" id="modeFeel"></p></div>
+    <p class="hint cycle-note" id="cycleNote" hidden></p>
+  </section>
+      </div></details></div>
       <span class="chead-acts"><button class="btn small" id="undo" type="button">Undo</button><button type="button" class="btn small ctools-toggle" id="ctoolsToggle" aria-expanded="false" aria-controls="chartTools">Chart tools</button></span>
       <div class="transport" id="chartTools">
         <span class="xpose" role="group" aria-label="Transpose"><span class="label">Transpose</span><button class="btn small" id="tdown" type="button" aria-label="Down a half step">−½</button><button class="btn small" id="tup" type="button" aria-label="Up a half step">+½</button><select id="tto" aria-label="Transpose to key"></select></span>
@@ -875,7 +886,7 @@ body{padding-bottom:0}
     <div class="now" aria-live="polite"><span class="label">Now</span><b id="nowChord">–</b></div>
     <div class="dock-opts">
       <label class="check"><input type="checkbox" id="loop" checked> Loop</label>
-      <span class="tempo-mini" role="group" aria-label="Tempo"><button type="button" class="btn small" id="tempoDown" aria-label="Slower">−</button><span id="tempoShow">88</span><span class="hint">bpm</span><button type="button" class="btn small" id="tempoUp" aria-label="Faster">+</button></span>
+      <span class="tempo-mini" role="group" aria-label="Tempo"><button type="button" class="btn small" id="tempoDown" aria-label="Slower">−</button><input id="tempo" class="tempo-in" type="number" min="40" max="240" step="1" aria-label="Tempo in beats per minute (40 to 240)"><span class="hint">bpm</span><button type="button" class="btn small" id="tempoUp" aria-label="Faster">+</button></span>
       <select id="instrument" class="btn" aria-label="Playback sound"><option value="piano">Piano sound</option><option value="guitar">Guitar sound</option></select>
       <select id="pstyle" class="btn" aria-label="Playing style"></select>
     </div>
@@ -1963,7 +1974,7 @@ function renderControls(){
   document.querySelectorAll('#moods .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===S.mood));
   document.querySelectorAll('#genres .chip').forEach(b=>b.setAttribute('aria-pressed',S.genres.includes(b.dataset.g)));
   renderRecipe(); renderPhase3Controls();
-  $('#tempoShow').textContent=S.tempo; renderStyleSelect(); if(!playing){ const sc=chords.find(x=>x.id===sel); $('#nowChord').innerHTML=sc&&real(sc)?chordHTML(sc):'–'; }
+  renderStyleSelect(); if(!playing){ const sc=chords.find(x=>x.id===sel); $('#nowChord').innerHTML=sc&&real(sc)?chordHTML(sc):'–'; }
   $('#voicing').disabled=S.instrument==='guitar'; $('#voicing').title=S.instrument==='guitar'?'Guitar sound follows the smoothest guitar path and any shapes you pin':'';
   $('#surprise').value=S.surprise??30; const sv=S.surprise??30;
   $('#surpriseOut').textContent=sv<15?'Stays inside the key and the genre’s own moves.':sv<40?'Now and then a secondary dominant or borrowed chord.':sv<65?'Regular outside chords, including tritone subs.':'Frequent chromatic turns, including chromatic mediants.';
@@ -2462,8 +2473,8 @@ function initLayout(){
   try{ if(localStorage.getItem('changes-textedit-v1')==='open') $('#textEdit').open=true; }catch(e){}
   $('#textEdit').addEventListener('toggle',()=>{ try{ localStorage.setItem('changes-textedit-v1',$('#textEdit').open?'open':'closed'); }catch(e){} });
   $('#createClose').onclick=()=>setDrawer(false);
-  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.body.classList.contains('drawer-open')) setDrawer(false); const l=$('#library'); if(l.open&&!e.target.closest('.lib-item')){ l.open=false; l.querySelector('summary').focus(); } const hm=$('#helpMenu'); if(hm.open){ hm.open=false; hm.querySelector('summary').focus(); } } });
-  document.addEventListener('pointerdown',e=>{ const l=$('#library'); if(l.open&&!l.contains(e.target)) l.open=false; const hm=$('#helpMenu'); if(hm.open&&!hm.contains(e.target)) hm.open=false;
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ if(document.body.classList.contains('drawer-open')) setDrawer(false); const l=$('#library'); if(l.open&&!e.target.closest('.lib-item')){ l.open=false; l.querySelector('summary').focus(); } const hm=$('#helpMenu'); if(hm.open){ hm.open=false; hm.querySelector('summary').focus(); } const km=$('#keyMenu'); if(km.open){ km.open=false; km.querySelector('summary').focus(); } } });
+  document.addEventListener('pointerdown',e=>{ const l=$('#library'); if(l.open&&!l.contains(e.target)) l.open=false; const hm=$('#helpMenu'); if(hm.open&&!hm.contains(e.target)) hm.open=false; const km=$('#keyMenu'); if(km.open&&!km.contains(e.target)) km.open=false;
     if(document.body.classList.contains('drawer-open')&&!e.target.closest('#sideLeft')&&!e.target.closest('#createToggle')&&!e.target.closest('#dock')) setDrawer(false); });
   const topRO=new ResizeObserver(()=>document.documentElement.style.setProperty('--top-h',$('#topbar').offsetHeight+'px')); topRO.observe($('#topbar'));
 }
