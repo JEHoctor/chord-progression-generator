@@ -16,7 +16,8 @@
   --f-ui:'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --f-num:'Geist', ui-sans-serif, system-ui, sans-serif;
   --f-mono:'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --r:14px; --r-s:9px;
+  --r:14px; --r-s:9px; --r-inset:12px; --r-clip:10px; --r-xs:8px; --r-pill:999px;
+  --pop:0 24px 60px -18px rgb(0 0 0 / .45); --seg-lift:0 1px 2px rgb(0 0 0 / .1),0 0 0 1px var(--line);
   --lift:0 1px 2px rgb(16 20 30 / .04), 0 8px 24px -12px rgb(16 20 30 / .12);
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
@@ -57,12 +58,12 @@ header.top{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding-top
 .field select,.field input[type=number]{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-s);height:36px;padding:0 10px;min-width:0}
 .field select:hover,.field input[type=number]:hover{border-color:var(--line)}
 .field input[type=number]{width:80px}
-.seg{display:inline-flex;background:var(--sunk);border-radius:10px;padding:3px;gap:2px}
-.seg button{border:0;background:transparent;padding:5px 12px;border-radius:7px;font-weight:500;color:var(--muted)}
+.seg{display:inline-flex;background:var(--sunk);border-radius:var(--r-clip);padding:3px;gap:2px}
+.seg button{border:0;background:transparent;padding:5px 12px;border-radius:var(--r-xs);font-weight:500;color:var(--muted)}
 .seg button:hover{color:var(--ink)}
-.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .1),0 0 0 1px var(--line)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--seg-lift)}
 .moods{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%}
-.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px;font-weight:500;font-size:13.5px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:5px 13px;font-weight:500;font-size:13.5px}
 .chip:hover{border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}
 .chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .chip:disabled{cursor:default}
@@ -71,7 +72,7 @@ header.top{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding-top
 .btn:hover{background:var(--sunk)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
 .btn.primary:hover{background:var(--accent);filter:brightness(1.08)}
-.btn.small{height:30px;padding:0 10px;font-size:13px;border-radius:8px}
+.btn.small{height:30px;padding:0 10px;font-size:13px;border-radius:var(--r-xs)}
 .btn:disabled{opacity:.4;cursor:default}
 .btn:disabled:hover{background:var(--surface)}
 .check{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;color:var(--muted)}
@@ -80,10 +81,13 @@ header.top{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding-top
 .vocab-row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
 .fams{display:flex;flex-wrap:wrap;gap:6px}
 .fams .chip{display:inline-flex;align-items:baseline;gap:7px}
-.fams .chip small{font-size:12px;opacity:.6;font-weight:500}
+.fams .chip small{font-size:12px;opacity:.75;font-weight:500}
 .fams .chip[aria-pressed="false"]{color:var(--muted)}
-.builder{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;background:var(--sunk);border-radius:12px;padding:12px}
-.builder select{background:var(--surface);border:1px solid var(--line);border-radius:8px;height:32px;padding:0 8px;min-width:0;max-width:100%}
+.fams .chip[aria-pressed="false"] small{opacity:1}
+.fams .chip.fixed{background:var(--sunk);border-color:transparent;cursor:default}
+.fams .chip.fixed em{font-style:normal;font-size:12px;font-weight:500;color:var(--muted)}
+.builder{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;background:var(--sunk);border-radius:var(--r-inset);padding:12px}
+.builder select{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-xs);height:32px;padding:0 8px;min-width:0;max-width:100%}
 .setup{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:16px;align-items:start}
 @media (max-width:860px){.setup{grid-template-columns:minmax(0,1fr)}}
 .setup h2{font-size:16px;font-weight:600}
@@ -91,7 +95,7 @@ header.top{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding-top
 .opt{font-weight:400;margin-left:6px;opacity:.85}
 .vtext{margin:0;max-width:60ch}
 .vocabp .fams{gap:6px}
-.recipe{background:var(--sunk);border-radius:12px;padding:12px 14px;font-size:13.5px;display:flex;flex-direction:column;gap:6px}
+.recipe{background:var(--sunk);border-radius:var(--r-inset);padding:12px 14px;font-size:13.5px;display:flex;flex-direction:column;gap:6px}
 .recipe b{font-weight:600}
 .recipe .need{display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--muted)}
 .recipe .need .btn{height:28px}
@@ -107,10 +111,10 @@ header.top{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding-top
 #play{min-width:88px;justify-content:center;background:var(--ink);border-color:var(--ink);color:var(--bg);font-weight:600}
 #play:hover{filter:none;opacity:.9}
 .prog-input{display:flex;gap:8px;flex-wrap:wrap}
-.prog-input textarea{flex:1 1 260px;min-width:0;background:var(--sunk);border:1px solid transparent;border-radius:12px;padding:12px 14px;font-family:var(--f-mono);font-size:13.5px;line-height:1.7;resize:vertical}
+.prog-input textarea{flex:1 1 260px;min-width:0;background:var(--sunk);border:1px solid transparent;border-radius:var(--r-inset);padding:12px 14px;font-family:var(--f-mono);font-size:13.5px;line-height:1.7;resize:vertical}
 .prog-input textarea:focus{border-color:var(--line);background:var(--surface)}
 .prog-input .pbtns{display:flex;flex-direction:column;gap:8px}
-.sec-label{align-self:flex-start;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--ink);color:var(--bg);margin:6px 0 -6px}
+.sec-label{align-self:flex-start;font-size:12px;font-weight:600;padding:3px 10px;border-radius:var(--r-pill);background:var(--ink);color:var(--bg);margin:6px 0 -6px}
 .more{align-self:flex-start;margin-left:10px}
 .hint{font-size:12.5px;color:var(--muted)}
 .err{color:var(--t-chr);font-size:13px}
@@ -122,7 +126,7 @@ header.top{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding-top
 .ticks{display:grid;gap:0}
 .ticks i{height:3px;width:3px;border-radius:50%;background:var(--line);justify-self:start}
 .ticks i.g{background:var(--muted)}
-.slot{grid-row:1;z-index:1;margin:18px 3px 12px;border:1px solid color-mix(in srgb,var(--k,var(--line)) 28%,transparent);border-radius:10px;
+.slot{grid-row:1;z-index:1;margin:18px 3px 12px;border:1px solid color-mix(in srgb,var(--k,var(--line)) 28%,transparent);border-radius:var(--r-clip);
   background:color-mix(in srgb,var(--k,var(--muted)) 11%,var(--surface));box-shadow:inset 3px 0 0 var(--k,transparent);
   display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;padding:5px 10px 6px 13px;text-align:left;min-width:0;overflow:hidden;position:relative}
 .slot:hover{background:color-mix(in srgb,var(--k,var(--muted)) 18%,var(--surface))}
@@ -158,15 +162,15 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .dhead{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
 .dname{font-weight:600;font-size:48px;line-height:1;letter-spacing:-.04em}
 .dnum{font-size:17px;color:var(--muted);font-weight:500}
-.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;color:var(--k);background:color-mix(in srgb,var(--k) 14%,transparent)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:var(--r-pill);color:var(--k);background:color-mix(in srgb,var(--k) 14%,transparent)}
 .dnote{color:var(--muted);font-size:14px;flex:1 1 100%}
 .tones{display:flex;gap:6px;flex-wrap:wrap}
-.tone{font-weight:600;font-size:14px;background:var(--sunk);border-radius:8px;padding:5px 10px 4px;display:flex;flex-direction:column;align-items:center;line-height:1.15;min-width:38px}
+.tone{font-weight:600;font-size:14px;background:var(--sunk);border-radius:var(--r-xs);padding:5px 10px 4px;display:flex;flex-direction:column;align-items:center;line-height:1.15;min-width:38px}
 .tone small{font-family:var(--f-mono);font-weight:400;font-size:10.5px;color:var(--muted)}
-.dur{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--sunk);border-radius:12px;padding:8px 12px}
+.dur{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--sunk);border-radius:var(--r-inset);padding:8px 12px}
 .dur .beats{font-size:18px;font-weight:600;min-width:2ch;text-align:center}
 .stepper{display:inline-flex;align-items:center;gap:6px}
-.stepper button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-size:16px;line-height:1}
+.stepper button{width:30px;height:30px;border-radius:var(--r-xs);border:1px solid var(--line);background:var(--surface);font-size:16px;line-height:1}
 .stepper button:hover{background:var(--sunk)}
 .actions{display:flex;flex-wrap:wrap;gap:6px}
 .sub-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:4px}
@@ -196,7 +200,7 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .finder-out{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
 @media (max-width:860px){.finder-out{grid-template-columns:minmax(0,1fr)}}
 .names-list{display:flex;flex-direction:column;gap:6px}
-.fres{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--sunk);border:1px solid transparent}
+.fres{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:10px 12px;border-radius:var(--r-inset);background:var(--sunk);border:1px solid transparent}
 .fres.best{border-color:var(--accent);background:var(--accent-soft)}
 .fres .nm{font-weight:600;font-size:19px;letter-spacing:-.02em;line-height:1.15}
 .fres .rn{font-size:12.5px;color:var(--muted);margin-left:8px}
@@ -209,11 +213,11 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .filters{display:flex;flex-wrap:wrap;gap:5px}
 .filters .chip{font-size:12.5px;padding:3px 11px}
 .shapes{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity}
-.shape{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:8px 5px 6px;scroll-snap-align:start;flex:0 0 auto;position:relative}
+.shape{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-inset);padding:8px 5px 6px;scroll-snap-align:start;flex:0 0 auto;position:relative}
 .shape:hover{background:var(--sunk)}
 .shape .ty{font-size:11.5px;font-weight:600}
 .pv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
-.pv{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 10px 10px;display:flex;flex-direction:column;gap:4px;text-align:left;min-width:0}
+.pv{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-inset);padding:9px 10px 10px;display:flex;flex-direction:column;gap:4px;text-align:left;min-width:0}
 .pv:hover{background:var(--sunk)}
 .pv.ctx,.shape.ctx{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
 .badge{font-size:11px;font-weight:600;color:var(--accent)}
@@ -223,10 +227,10 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .pv .tn{font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
 .pv svg{width:100%;height:auto;display:block}
 .capo{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
-.capo select{background:var(--sunk);border:1px solid transparent;border-radius:8px;height:30px;padding:0 6px}
+.capo select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-xs);height:30px;padding:0 6px}
 .capo{flex-wrap:wrap;min-width:0;max-width:100%}
 .tunefind{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
-.tunes{background:var(--sunk);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;align-self:stretch}
+.tunes{background:var(--sunk);border-radius:var(--r-inset);padding:12px 14px;display:flex;flex-direction:column;gap:8px;align-self:stretch}
 .tunes p{margin:0;font-size:14px}
 .tunes ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
 .tunes li{font-size:13.5px}
@@ -241,16 +245,16 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 /* subs */
 .ctx{color:var(--muted);font-size:14px}
 .ctx b{color:var(--ink);font-weight:600}
-.keep{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--sunk);border-radius:12px;padding:10px 12px}
+.keep{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--sunk);border-radius:var(--r-inset);padding:10px 12px}
 .keep .chip{font-weight:600;font-size:13px;padding:3px 11px}
 .keep .chip small{font-family:var(--f-mono);font-weight:400;font-size:10.5px;opacity:.75}
-.keep select{background:var(--surface);border:1px solid var(--line);border-radius:999px;height:28px;padding:0 8px;font-size:13px}
+.keep select{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-pill);height:28px;padding:0 8px;font-size:13px}
 .role{font-family:var(--f-mono);font-size:10.5px;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:1px 6px}
 .group{display:flex;flex-direction:column;gap:4px}
 .group-h{display:flex;flex-direction:column;gap:2px;padding:8px 0 6px}
 .group-h h3{font-size:14.5px;font-weight:600}
 .group-h p{margin:0;font-size:12.5px;color:var(--muted);max-width:70ch}
-.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:9px 10px 9px 14px;border-radius:10px;position:relative}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:9px 10px 9px 14px;border-radius:var(--r-clip);position:relative}
 .item::before{content:"";position:absolute;left:4px;top:10px;bottom:10px;width:3px;border-radius:2px;background:var(--k)}
 .item:hover{background:var(--sunk)}
 .item .names{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
@@ -268,7 +272,7 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 @media (max-width:860px){.palette{grid-template-columns:minmax(0,1fr)}}
 .dia-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
 @media (max-width:520px){.dia-row{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.dchip{border:1px solid transparent;background:var(--sunk);border-radius:10px;padding:9px 4px 7px;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0}
+.dchip{border:1px solid transparent;background:var(--sunk);border-radius:var(--r-clip);padding:9px 4px 7px;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0}
 .dchip:hover{border-color:var(--line);background:var(--surface)}
 .dchip .nm{font-weight:600;font-size:16px;letter-spacing:-.02em;line-height:1.15;white-space:nowrap}
 .dchip .rn{font-size:11.5px;color:var(--muted)}
@@ -280,13 +284,13 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .mode .mf{font-size:12.5px;color:var(--muted);grid-column:1}
 .mode .mb{grid-column:2;grid-row:1 / span 2;display:flex;gap:6px;align-items:center}
 .mode.cur .mn{color:var(--accent)}
-.charchip{font-weight:600;font-size:14px;border:1px solid transparent;background:var(--sunk);border-radius:8px;height:30px;padding:0 10px}
+.charchip{font-weight:600;font-size:14px;border:1px solid transparent;background:var(--sunk);border-radius:var(--r-xs);height:30px;padding:0 10px}
 .charchip:hover{border-color:var(--line)}
 .charchip small{font-weight:500;font-size:11.5px;color:var(--muted);margin-left:5px}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:13.5px;font-weight:500;z-index:10;box-shadow:0 12px 32px -12px rgb(0 0 0 / .45)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r-inset);font-size:13.5px;font-weight:500;z-index:10;box-shadow:0 12px 32px -12px rgb(0 0 0 / .45)}
 .io-row{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding-top:2px}
 .io-pair{display:inline-flex;align-items:center;gap:6px}
-.io-pair select{background:var(--sunk);border:1px solid transparent;border-radius:8px;height:30px;padding:0 8px;font-size:13px;max-width:100%}
+.io-pair select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-xs);height:30px;padding:0 8px;font-size:13px;max-width:100%}
 .library{display:block;padding:14px 18px}
 .library summary{display:flex;align-items:baseline;gap:10px;cursor:pointer;list-style:none}
 .library summary::-webkit-details-marker{display:none}
@@ -295,9 +299,9 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .library summary h2{font-size:16px;font-weight:600}
 .lib-body{display:flex;flex-direction:column;gap:12px;padding-top:12px}
 .lib-save,.lib-open{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.lib-save input,.lib-open input,.lib-item input{background:var(--sunk);border:1px solid transparent;border-radius:8px;height:32px;padding:0 10px;min-width:0;flex:1 1 200px}
+.lib-save input,.lib-open input,.lib-item input{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-xs);height:32px;padding:0 10px;min-width:0;flex:1 1 200px}
 .lib-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
-.lib-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:8px 10px;border-radius:10px;background:var(--sunk)}
+.lib-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:8px 10px;border-radius:var(--r-clip);background:var(--sunk)}
 .lib-item.cur{box-shadow:inset 3px 0 0 var(--accent)}
 .lib-item .ln{font-weight:600;background:none;border:0;padding:0;text-align:left;cursor:pointer;color:var(--ink);min-width:0;overflow-wrap:anywhere}
 .lib-item .ln:hover{color:var(--accent)}
@@ -310,7 +314,7 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 .toast-act{background:none;border:0;color:var(--accent);font-weight:600;padding:0;text-decoration:underline;cursor:pointer}
 .copybox{position:fixed;left:50%;top:20%;transform:translateX(-50%);width:min(520px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;z-index:60;box-shadow:0 24px 60px -20px rgb(0 0 0 / .5);display:flex;flex-direction:column;gap:10px}
 .copybox p{margin:0;font-size:14px}
-.copybox textarea{width:100%;font-family:var(--f-mono);font-size:12.5px;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
+.copybox textarea{width:100%;font-family:var(--f-mono);font-size:12.5px;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-xs);padding:8px;resize:vertical}
 .copybox button{align-self:flex-end}
 #printSheet{display:none}
 /* swap ideas in the sidebar: text gets the full width, buttons sit underneath */
@@ -319,14 +323,14 @@ body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:
 #subs .item .why,#subs .item .vl{grid-column:1}
 #subs .item .vl{line-height:1.5}
 .helppop{width:min(340px,calc(100vw - 32px));padding:6px;display:flex;flex-direction:column}
-.helppop a,.helppop button{display:flex;flex-direction:column;gap:1px;padding:9px 12px;border-radius:10px;text-decoration:none;color:var(--ink);border:0;background:none;text-align:left;cursor:pointer;font:inherit}
+.helppop a,.helppop button{display:flex;flex-direction:column;gap:1px;padding:9px 12px;border-radius:var(--r-clip);text-decoration:none;color:var(--ink);border:0;background:none;text-align:left;cursor:pointer;font:inherit}
 .helppop a:hover,.helppop button:hover{background:var(--sunk)}
 .helppop b{font-weight:600;font-size:14px} .helppop small{font-size:12px;color:var(--muted)}
 .textedit{border-top:1px solid var(--rule);padding-top:10px}
-.textedit>summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--muted);list-style:none;display:inline-flex;align-items:center;gap:6px}
-.textedit>summary::-webkit-details-marker{display:none}
-.textedit>summary::before{content:"▸";font-size:12px;transition:transform .15s}
-.textedit[open]>summary::before{transform:rotate(90deg)}
+.textedit>summary,.finetune>summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--muted);list-style:none;display:inline-flex;align-items:center;gap:6px}
+.textedit>summary::-webkit-details-marker,.finetune>summary::-webkit-details-marker{display:none}
+.textedit>summary::before,.finetune>summary::before{content:"▸";font-size:12px;transition:transform .15s}
+.textedit[open]>summary::before,.finetune[open]>summary::before{transform:rotate(90deg)}
 .textedit[open]{display:flex;flex-direction:column;gap:10px}
 .ctools-toggle{display:none}
 @media (max-width:759px){
@@ -365,7 +369,7 @@ a.btn{text-decoration:none;color:var(--ink)}
 .libmenu>summary::-webkit-details-marker{display:none}
 .libmenu>summary::after{content:"▾";font-size:11px;color:var(--muted)}
 .libmenu[open]>summary{border-color:var(--accent)}
-.libpop{position:absolute;right:0;top:calc(100% + 8px);width:min(460px,calc(100vw - 32px));max-height:min(70vh,640px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px -18px rgb(0 0 0 / .45);padding:14px;z-index:50}
+.libpop{position:absolute;right:0;top:calc(100% + 8px);width:min(460px,calc(100vw - 32px));max-height:min(70vh,640px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--pop);padding:14px;z-index:50}
 .libpop .lib-body{padding-top:0}
 .app{display:grid;grid-template-columns:320px minmax(0,1fr) 380px;gap:16px;align-items:start}
 .simple .app{grid-template-columns:minmax(0,1fr) 380px}
@@ -375,10 +379,10 @@ a.btn{text-decoration:none;color:var(--ink)}
 .side .panel{padding:16px}
 .side .rail{padding:14px;gap:12px 14px}
 .center{display:flex;flex-direction:column;gap:16px;min-width:0}
-.tabs{display:flex;gap:2px;background:var(--sunk);border-radius:10px;padding:3px}
-.tabs [role=tab]{flex:1 1 auto;border:0;background:none;border-radius:8px;padding:7px 10px;font-weight:600;font-size:13.5px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tabs{display:flex;gap:2px;background:var(--sunk);border-radius:var(--r-clip);padding:3px}
+.tabs [role=tab]{flex:1 1 auto;border:0;background:none;border-radius:var(--r-xs);padding:7px 10px;font-weight:600;font-size:13.5px;color:var(--muted);cursor:pointer;white-space:nowrap}
 .tabs [role=tab]:hover{color:var(--ink)}
-.tabs [role=tab][aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .1),0 0 0 1px var(--line)}
+.tabs [role=tab][aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:var(--seg-lift)}
 .tabpanel{display:flex;flex-direction:column;gap:12px}
 .tabpanel[hidden]{display:none}
 .tools{gap:14px}
@@ -418,7 +422,7 @@ header.top{justify-content:space-between}
 .quick h2{font-size:22px;font-weight:600;letter-spacing:-.02em}
 .quick .moods .chip{font-size:15px;padding:8px 16px}
 .quick .q-act{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
-.quick .q-again{height:44px;padding:0 20px;font-size:15px;border-radius:999px}
+.quick .q-again{height:44px;padding:0 20px;font-size:15px;border-radius:var(--r-pill)}
 body:not(.simple) #quick,body:not(.simple) .simple-only,.simple .full-only{display:none}
 .simple #rows .slot .cr,.simple #midiOutWrap{display:none!important}
 /* Simple view: the quick card, the chart, Play/Export and plain swap ideas; the rest is one tap away under Advanced */
@@ -427,7 +431,7 @@ body:not(.simple) #quick,body:not(.simple) .simple-only,.simple .full-only{displ
 .simple #detail .bassrow,.simple #detail .pv-grid,.simple #detail .tunefind,.simple #detail .filters,.simple #detail .pickbar:has([data-pctx]),.simple #detail .tones,
 .simple #subs .keep,.simple #subs .vl,.simple #subs .tn,.simple #subs [data-ab],.simple #subs .more,.simple #subs .rn,.simple #subs .group-h p,
 .simple #subs .group[data-gi]:not([data-gi="0"]):not([data-gi="1"]),.simple #subs .item[data-ii]:not([data-ii="0"]):not([data-ii="1"]):not([data-ii="2"]){display:none!important}
-.genre-chords{background:var(--sunk);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.genre-chords{background:var(--sunk);border-radius:var(--r-inset);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
 .genre-chords .gc-head{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;justify-content:space-between}
 .genre-chords .gc-row{display:flex;flex-direction:column;gap:6px}
 .genre-chords .gc-chips{display:flex;flex-wrap:wrap;gap:5px}
@@ -440,7 +444,7 @@ body{padding-bottom:calc(var(--dock-h,76px) + 24px)}
 html{scroll-padding-bottom:calc(var(--dock-h,76px) + 16px)}
 .dock{position:fixed;left:0;right:0;bottom:0;z-index:40;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
 .dock-in{max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
-.dock .play-big{height:48px;min-width:132px;justify-content:center;border-radius:999px;font-size:16px;font-weight:700;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:0 6px 18px -8px var(--accent)}
+.dock .play-big{height:48px;min-width:132px;justify-content:center;border-radius:var(--r-pill);font-size:16px;font-weight:700;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:0 6px 18px -8px var(--accent)}
 .dock .play-big:hover{filter:brightness(1.08);background:var(--accent)}
 .dock .now{display:flex;flex-direction:column;line-height:1.15;min-width:64px}
 .dock .now b{font-size:18px;letter-spacing:-.02em}
@@ -448,9 +452,9 @@ html{scroll-padding-bottom:calc(var(--dock-h,76px) + 16px)}
 .tempo-mini{display:inline-flex;align-items:center;gap:6px;font-weight:600}
 .tempo-mini .btn{width:30px;padding:0;justify-content:center}
 .export{position:relative;margin-left:auto}
-.export-btn{height:44px;padding:0 18px;font-size:15px;border-radius:999px}
-.menu{position:absolute;right:0;bottom:calc(100% + 10px);width:min(360px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px -18px rgb(0 0 0 / .45);padding:6px;display:flex;flex-direction:column}
-.menu button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:0;background:none;border-radius:10px;padding:9px 12px;cursor:pointer;color:var(--ink)}
+.export-btn{height:44px;padding:0 18px;font-size:15px;border-radius:var(--r-pill)}
+.menu{position:absolute;right:0;bottom:calc(100% + 10px);width:min(360px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--pop);padding:6px;display:flex;flex-direction:column}
+.menu button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:0;background:none;border-radius:var(--r-clip);padding:9px 12px;cursor:pointer;color:var(--ink)}
 .menu button:hover,.menu button:focus-visible{background:var(--sunk)}
 .menu button b{font-weight:600;font-size:14px}
 .menu button small{font-size:12px;color:var(--muted)}
@@ -463,9 +467,9 @@ html{scroll-padding-bottom:calc(var(--dock-h,76px) + 16px)}
 .soundbox ol{margin:0;padding-left:18px;font-size:13.5px;display:flex;flex-direction:column;gap:4px}
 .slot .cpk{display:inline-block;margin-left:5px;font-size:12px;color:var(--muted);padding:2px 4px;border-radius:5px;cursor:pointer;vertical-align:2px;font-weight:600}
 .slot .cpk:hover{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
-.addtile{grid-row:1;margin:18px 3px 12px;border:1.5px dashed var(--line);border-radius:10px;background:transparent;color:var(--muted);font-weight:600;font-size:14px;min-width:0}
+.addtile{grid-row:1;margin:18px 3px 12px;border:1.5px dashed var(--line);border-radius:var(--r-clip);background:transparent;color:var(--muted);font-weight:600;font-size:14px;min-width:0}
 .addtile:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
-.cpick{position:absolute;z-index:55;width:min(420px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px -18px rgb(0 0 0 / .45);padding:14px;display:flex;flex-direction:column;gap:10px}
+.cpick{position:absolute;z-index:55;width:min(420px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--pop);padding:14px;display:flex;flex-direction:column;gap:10px}
 .cpick .cp-head{display:flex;align-items:baseline;gap:10px}
 .cpick .cp-head b{font-size:20px;letter-spacing:-.02em}
 .cpick .cp-head .hint{flex:1}
@@ -474,23 +478,54 @@ html{scroll-padding-bottom:calc(var(--dock-h,76px) + 16px)}
 .cpick .cp-row .chip{padding:4px 10px;font-weight:600}
 .cpick .cp-row .chip small{font-weight:400;color:var(--muted);margin-left:4px;font-size:11px}
 .cpick .cp-build{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px}
-.cpick select{background:var(--sunk);border:1px solid transparent;border-radius:8px;height:34px;padding:0 8px;min-width:0;max-width:100%}
+.cpick select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-xs);height:34px;padding:0 8px;min-width:0;max-width:100%}
 .cpick .cp-act{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 .slot .rz{position:absolute;top:0;right:0;bottom:0;width:11px;cursor:ew-resize;touch-action:none;z-index:2}
 .slot .rz::after{content:"";position:absolute;right:4px;top:32%;bottom:32%;width:3px;border-radius:2px;background:color-mix(in srgb,var(--muted) 45%,transparent)}
 .slot:hover .rz::after,.slot.resizing .rz::after{background:var(--accent)}
 .slot.resizing{border-color:var(--accent)}
 body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select:none}
-.rztip{position:fixed;z-index:60;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;font-weight:600;padding:4px 8px;border-radius:8px;transform:translate(-50%,-210%);white-space:nowrap}
-.pickbar{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;background:var(--accent-soft);border-radius:10px;padding:8px 10px;font-size:13.5px}
+.rztip{position:fixed;z-index:60;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12.5px;font-weight:600;padding:4px 8px;border-radius:var(--r-xs);transform:translate(-50%,-210%);white-space:nowrap}
+.pickbar{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;background:var(--accent-soft);border-radius:var(--r-clip);padding:8px 10px;font-size:13.5px}
 .shape.picked,.pv.picked{border-color:var(--accent);background:var(--accent-soft)}
 .cycle-note{flex:1 1 100%;margin:0;max-width:80ch}
+/* Key and limits: song settings in a 2×2 grid, then the limits with their effect on the chart spelled out */
+.side .sub-h h2{font-size:16px;font-weight:600}
+/* two rows: a narrow Key beside a wide Mode, a wide Time beside a narrow Tempo */
+.keyrail .field:has(#key){flex:0 0 80px}
+.keyrail .field:has(#mode){flex:1 1 calc(100% - 94px)}
+.keyrail .field:has(#meter){flex:1 1 calc(100% - 110px)}
+.keyrail .field:has(#tempo){flex:0 0 96px}
+.keyrail .field select,.keyrail .field input[type=number]{width:100%}
+.keyhear{flex:1 1 100%;display:flex;align-items:flex-start;gap:10px}
+.keyhear .btn{flex:none}
+.keyhear .hint{margin:0;padding-top:5px}
+.presets{display:flex}
+.presets button{flex:1 1 auto;min-width:0;padding:5px 8px}
+.vstatus{display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.vstatus p{margin:0}
+.vacts{display:flex;flex-wrap:wrap;gap:6px}
+.finetune{border-top:1px solid var(--rule);padding-top:12px}
+.finetune .fams{margin-top:12px}
+.ft-tag{font-size:12px;font-weight:500;margin-left:4px}
+@media (pointer:coarse){ .vocabp .chip,.presets button{min-height:44px} }
+/* onboarding tips: one at a time, inline where the moment is, each shown once */
+.linkbtn{background:none;border:0;padding:0;font-weight:600;color:var(--accent);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.q-pro{margin:6px 0 0}
+.onb{display:flex;align-items:flex-start;gap:8px;background:var(--sunk);border-radius:var(--r-inset);padding:10px 8px 10px 14px;font-size:13.5px;line-height:1.45}
+.onb p{margin:0;flex:1;padding-top:3px}
+.onb p .linkbtn{margin-left:4px}
+.onb p .linkbtn+.linkbtn{margin-left:10px}
+.onb-x{flex:none;width:28px;height:28px;border:0;background:none;border-radius:var(--r-xs);color:var(--muted);font-size:18px;line-height:1}
+.onb-x:hover{background:var(--surface);color:var(--ink)}
+@media (pointer:coarse){ .onb-x{width:40px;height:40px} }
+body:not(.simple) .onb{display:none}
 .dronerow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
 .dronerow select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-s);height:34px;padding:0 10px;min-width:0;max-width:100%}
 .vlx-wrap .toggles{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center}
 .ticks i{position:relative}
 .ticks i[data-m]::after{content:attr(data-m);position:absolute;top:5px;left:-1px;font-size:10px;font-weight:600;color:var(--accent);white-space:nowrap}
-.quiz{border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.quiz{border:1px solid var(--accent);background:var(--accent-soft);border-radius:var(--r-inset);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .quiz h3{font-size:15px;font-weight:600}
 .quiz p{margin:0;font-size:14px}
 .quiz.no{border-color:var(--t-chr);background:color-mix(in srgb,var(--t-chr) 10%,var(--surface))}
@@ -504,7 +539,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
 .mel-in select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-s);height:36px;padding:0 10px;max-width:100%}
 .melody>p.hint{margin:0}
 #melOut{display:flex;flex-direction:column;gap:6px}
-.mel-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--sunk)}
+.mel-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:10px 12px;border-radius:var(--r-inset);background:var(--sunk)}
 .mel-row .mc{font-weight:600;font-size:16px;letter-spacing:-.01em;overflow-wrap:anywhere}
 .mel-row .ms{grid-column:1;font-size:12.5px;color:var(--muted)}
 .mel-row .mb{grid-column:2;grid-row:1 / span 2;display:flex;gap:6px}
@@ -599,25 +634,28 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
     </section>
       </div>
       <div class="tabpanel" role="tabpanel" id="panel-setkey" aria-labelledby="tab-setkey" data-panel="setkey" hidden>
-  <section class="rail" aria-label="Key, mode, meter and tempo">
+  <section class="rail keyrail" aria-label="Key, mode, time and tempo">
     <div class="field"><label class="label" for="key">Key</label><select id="key"></select></div>
-    <div class="field"><label class="label" for="mode">Mode</label><select id="mode"></select></div>
+    <div class="field"><label class="label" for="mode">Mode</label><select id="mode" aria-describedby="modeFeel"></select></div>
     <div class="field"><label class="label" for="meter">Time</label><select id="meter"></select></div>
-    <div class="field"><label class="label" for="tempo">Tempo ♩</label><input id="tempo" type="number" min="40" max="240" step="1"></div>
+    <div class="field"><label class="label" for="tempo">Tempo <span class="opt">40–240</span></label><input id="tempo" type="number" min="40" max="240" step="1"></div>
+    <div class="keyhear"><button type="button" class="btn small" id="hearKey">▶ Hear</button><p class="hint" id="modeFeel"></p></div>
     <p class="hint cycle-note" id="cycleNote" hidden></p>
   </section>
-    <section class="panel vocabp" aria-label="Chords allowed">
-      <div class="sub-h"><h2>Chords allowed</h2></div>
-      <p class="hint vtext">Your limits: the most colourful chord types you want anywhere in the app. Generated progressions, swap ideas and “Apply chords allowed” stay within these, unless you let the genres choose. Plain major and minor chords are always allowed.</p>
-      <div class="seg" id="presets" role="group" aria-label="Vocabulary presets"></div>
-      <div class="fams" id="fams" role="group" aria-label="Chord families"></div>
+    <section class="panel vocabp" aria-labelledby="vocabTitle">
+      <div class="sub-h"><h2 id="vocabTitle">Chords allowed</h2></div>
+      <p class="hint vtext">The chord colours that can appear. Plain major and minor chords are always in.</p>
+      <div class="seg presets" id="presets" role="group" aria-label="Chords allowed presets"></div>
+      <div class="vstatus" id="vocabStatus"><p id="vocabSays" role="status"></p><div class="vacts"><button type="button" class="btn small" id="vocabFit" hidden></button><button type="button" class="btn small" id="vocabApply" title="Rewrite every chord using the richest chord types these limits allow">Apply chords allowed</button></div></div>
+      <details class="finetune" id="fineTune"><summary>Fine-tune chord families<span class="ft-tag" id="ftTag" hidden>custom mix</span></summary><div class="fams" id="fams" role="group" aria-label="Chord families"></div></details>
     </section>
       </div>
     </aside>
 
     <main class="center" id="center">
   <section class="panel quick" id="quick" aria-label="Quick start">
-    <div><h2>Make a chord progression in one tap</h2><p class="hint">Pick a feeling and it plays straight away. Tap any chord below to hear it or swap it, then use Export to take it into your music app.</p></div>
+    <div><h2>Make a chord progression in one tap</h2><p class="hint">Pick a feeling and it plays straight away. Tap any chord below to hear it or swap it, then use Export to take it into your music app.</p>
+    <p class="hint q-pro">Know your way around? <button type="button" class="linkbtn" id="qPro">Open Advanced</button></p></div>
     <div class="field"><span class="label">Feeling</span><div class="moods" id="qMoods" role="group" aria-label="Feeling"></div></div>
     <div class="field"><span class="label">Style <span class="opt">optional</span></span><div class="moods" id="qStyles" role="group" aria-label="Style"></div></div>
     <div class="q-act"><button type="button" class="btn primary q-again" id="qAgain">Make another</button><span class="hint" id="qHint">Each tap makes a new one in the same feeling.</span></div>
@@ -798,6 +836,10 @@ const MODES={
   harmonic:{name:'Harmonic minor',short:'harmonic minor',sc:[0,2,3,5,7,8,11],off:9,feel:'Minor with a raised 7th. Dramatic pull home.',ch:'V7'},
   melodic:{name:'Melodic minor',short:'melodic minor',sc:[0,2,3,5,7,9,11],off:9,feel:'Minor with major 6th and 7th. The jazz minor.',ch:'IV7'},
 };
+/* the Mode menu leads with the sound; the theory name follows */
+const MODE_LABEL={ionian:'Major (Ionian)',aeolian:'Minor (Aeolian)',dorian:'Dorian · soulful minor',mixolydian:'Mixolydian · bluesy',lydian:'Lydian · floating major',
+  phrygian:'Phrygian · dark minor',locrian:'Locrian · unstable',harmonic:'Harmonic minor · tense',melodic:'Melodic minor · jazzy'};
+const MODE_GROUPS=[['Most songs',['ionian','aeolian']],['Modes',['dorian','mixolydian','lydian','phrygian','locrian']],['Minor scales',['harmonic','melodic']]];
 const FAMS=[
   {id:'triad',name:'Triads',ex:'C Cm C° C+',qs:['','m','dim','aug'],fixed:1},
   {id:'power',name:'Power',ex:'C5',qs:['5']},
@@ -1741,11 +1783,28 @@ function toast(msg,action){ const t=$('#toast'); t.textContent=msg;
   t.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>t.hidden=true,action?6000:Math.max(1600,msg.length*45)); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+/* chords in the chart whose type or bass note Chords allowed would change */
+function outsideVocab(){ return chords.filter(c=>real(c)&&!c.lock&&(fitQ(c.q)!==c.q||(c.bass!=null&&!famOn('slash')))); }
+function renderVocabStatus(){
+  const vk=[...S.vocab].sort().join(), preset=Object.keys(PRESETS).find(k=>[...PRESETS[k]].sort().join()===vk);
+  const names=FAMS.filter(f=>famOn(f.id)).map(f=>f.name.toLowerCase()), list=names.length>1?names.slice(0,-1).join(', ')+' and '+names.at(-1):names[0];
+  const out=outsideVocab().length, locked=chords.some(c=>real(c)&&c.lock&&(fitQ(c.q)!==c.q||(c.bass!=null&&!famOn('slash'))));
+  $('#vocabSays').innerHTML=`<b>${preset||'Custom mix'}:</b> ${esc(list)}. `+(out?`${out} chord${out>1?'s':''} in your chart ${out>1?'are':'is'} outside these limits.`:'Your chart fits. New progressions and swap ideas will too.')+(locked?' Locked chords stay as they are.':'');
+  const fit=$('#vocabFit'); fit.hidden=!out; fit.textContent=`Fit ${out} chord${out>1?'s':''}`; fit.title='Step these chords down to the nearest type Chords allowed includes';
+  $('#ftTag').hidden=!!preset;
+}
+function hearKey(){
+  /* tonic, the mode's signature chord, tonic: the quickest way to hear what a mode does */
+  const sig=MODES[S.mode].ch, d=['I','II','III','IV','V','VI','VII'].indexOf(sig.replace(/^[b#]/,'').replace(/7$/,'').toUpperCase());
+  const home=diatonic(S.mode,0,3), turn=d>0?diatonic(S.mode,d,/7$/.test(sig)?4:3):diatonic(S.mode,4,3);
+  if(home&&turn) audition([[home,.9],[turn,.9],[home,1.4]]);
+}
 function renderControls(){
   $('#key').value=S.tonic; $('#mode').value=S.mode; $('#meter').value=S.meter; $('#tempo').value=S.tempo;
   $('#bars').value=S.bars; $('#rhythm').value=S.rhythm; $('#lockmode').checked=S.lock; $('#loop').checked=S.loop; $('#click').checked=S.click;
   const vk=[...S.vocab].sort().join(); document.querySelectorAll('#presets button').forEach(b=>b.setAttribute('aria-pressed',[...PRESETS[b.dataset.p]].sort().join()===vk));
-  document.querySelectorAll('#fams .chip').forEach(b=>b.setAttribute('aria-pressed',famOn(b.dataset.f)));
+  document.querySelectorAll('#fams button.chip').forEach(b=>b.setAttribute('aria-pressed',famOn(b.dataset.f)));
+  renderVocabStatus(); $('#modeFeel').textContent=MODES[S.mode].feel;
   document.querySelectorAll('#moods .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.id===S.mood));
   document.querySelectorAll('#genres .chip').forEach(b=>b.setAttribute('aria-pressed',S.genres.includes(b.dataset.g)));
   renderRecipe(); renderPhase3Controls();
@@ -2255,10 +2314,50 @@ function setView(v){ try{ localStorage.setItem('changes-view-v1',v); }catch(e){}
 function quickMake(){
   S.genres=quickStyle?[quickStyle]:[]; S.genreVocab=!!quickStyle; S.drone=false; S.lock=false;
   if(!S.mood) S.mood=MOODS[0].id;
-  generate(); stopAll(); playChart();
+  generate(); stopAll(); playChart(); onb.made();
   document.querySelectorAll('#qMoods .chip').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===S.mood)));
   document.querySelectorAll('#qStyles .chip').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.g===quickStyle)));
 }
+
+/* ============ first-run tips (Simple view) ============
+   Hear it → make it yours → play or keep it, then the way into Advanced. Each tip shows once, inline, one at a time,
+   and never before the first tap. Choosing Advanced at any point ends them. */
+const ONB_KEY='changes-hints-v1';
+const onb={st:{seen:[],changed:false,kept:false,played:false,adv:false},makes:0,tapped:false,keepDue:false,
+  load(){ try{ const d=JSON.parse(localStorage.getItem(ONB_KEY)||'null'); if(d&&typeof d==='object') Object.assign(this.st,d,{seen:Array.isArray(d.seen)?d.seen:[]}); }catch(e){} },
+  save(){ try{ localStorage.setItem(ONB_KEY,JSON.stringify(this.st)); }catch(e){} },
+  set(k){ if(this.st[k]) return; this.st[k]=true; this.save();
+    /* a tip whose suggestion was just followed has done its job */
+    document.querySelector({changed:'[data-hint=swap]',kept:'[data-hint=keep]',played:'[data-hint=play]'}[k])?.remove();
+    if(k==='changed') setTimeout(()=>{ this.keepDue=true; this.check(); },60000);
+    this.check(); },
+  made(){ this.makes++; this.check(); },
+  tap(){ this.tapped=true; this.check(); },
+  check(){
+    const st=this.st, seen=id=>st.seen.includes(id);
+    if(st.adv||!document.body.classList.contains('simple')||document.querySelector('.onb')) return;
+    if(!st.changed&&(this.tapped||this.makes>=3)&&!seen('swap'))
+      return this.show('swap','#sideRight .tabs','Try a swap idea: each one says why it works.',[['Show swap ideas',()=>selectTab('right','swaps')]]);
+    if(st.changed&&!seen('play'))
+      return this.show('play','#sideRight .tabs','Want to play it? The Chord panel shows guitar shapes for each chord. Piano voicings are in Advanced.',[['Show me',()=>{ this.set('played'); selectTab('right','chord');
+        [...document.querySelectorAll('#detail h3')].find(h=>h.textContent.startsWith('Guitar'))?.scrollIntoView({block:'center'}); }]]);
+    if(st.changed&&this.keepDue&&!st.kept&&!seen('keep'))
+      return this.show('keep','#err','Keep it: save it to your Library, or Export it to your music app.',[['Save',()=>{ $('#library').open=true; $('#libName').focus(); }],['Export',()=>$('#exportBtn').click()]]);
+    if(st.changed&&(st.kept||st.played)&&!seen('bridge'))
+      return this.show('bridge','#sideRight .tabs','Want more control? Advanced adds key and mode, locks, genres and Chords allowed. Your chart comes with you.',[['Open Advanced',openAdvanced]]);
+  },
+  show(id,before,text,acts){
+    const at=document.querySelector(before); if(!at) return;
+    this.st.seen.push(id); this.save();
+    const el=document.createElement('div'); el.className='onb'; el.dataset.hint=id; el.setAttribute('role','status');
+    el.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; el.remove(); if(b.dataset.act) acts[+b.dataset.act][1](); this.check(); };
+    at.before(el);
+    /* filled after it is in the page, so screen readers announce it as a status message */
+    requestAnimationFrame(()=>{ el.innerHTML=`<p>${esc(text)}${acts.map((a,i)=>`<button type="button" class="linkbtn" data-act="${i}">${esc(a[0])}</button>`).join('')}</p><button type="button" class="onb-x" aria-label="Dismiss this tip">×</button>`; });
+  },
+  advanced(){ this.st.adv=true; this.save(); document.querySelectorAll('.onb').forEach(x=>x.remove()); }
+};
+function openAdvanced(){ onb.advanced(); setView('full'); renderAll(); document.querySelector('.viewtoggle [data-view="full"]').focus(); }
 
 /* ============ in-chart chord picker ============ */
 /* opens under a chord in the chart: one-click chips for the chords in the key, or root, type and bass dropdowns.
@@ -2289,7 +2388,7 @@ function closePicker(){ const el=$('#cpick'); if(!el.hidden){ el.hidden=true; el
 const pickerChord=()=>{ const r=+$('#cpRoot').value, q=$('#cpQual').value, b=$('#cpBass').value; return {root:r,q,bass:b===''||+b===r?null:+b}; };
 function applyPicked(nc){
   const c=chords.find(x=>x.id===cpFor); if(!c) return closePicker();
-  pushHist(); c.root=nc.root; c.q=nc.q; c.bass=nc.bass; delete c.gpin; delete c.ppin; sel=c.id; closePicker(); commit(); if(real(c)) playOne(c);
+  pushHist(); c.root=nc.root; c.q=nc.q; c.bass=nc.bass; delete c.gpin; delete c.ppin; sel=c.id; closePicker(); commit(); if(real(c)) playOne(c); onb.set('changed');
   toast(real(c)?`${chordName(c)} in bar ${Math.floor(chords.slice(0,chords.indexOf(c)).reduce((a,x)=>a+x.beats,0)/barLen())+1}`:'Made it a blank slot');
 }
 
@@ -2771,7 +2870,7 @@ function libSaveCurrent(){
   const name=typed||cur?.name||`Progression ${LIB.items.length+1}`;
   let it=LIB.items.find(i=>i.name.toLowerCase()===name.toLowerCase());
   if(it){ it.snap=JSON.parse(JSON.stringify(curSnap())); it.updated=Date.now(); } else { it=newItem(name,curSnap()); LIB.items.unshift(it); }
-  libCurrent=it.id; $('#libName').value=''; if(libSave()) toast(`Saved “${name}”`); renderLibrary();
+  libCurrent=it.id; $('#libName').value=''; if(libSave()){ toast(`Saved “${name}”`); onb.set('kept'); } renderLibrary();
 }
 function renderLibrary(){
   const n=LIB.items.length; $('#libCount').textContent=n?`${n} saved`:'Nothing saved yet';
@@ -2839,7 +2938,7 @@ function initIO(){
   const exBtn=$('#exportBtn'), exMenu=$('#exportMenu');
   window.closeExport=()=>{ exMenu.hidden=true; exBtn.setAttribute('aria-expanded','false'); };
   exBtn.onclick=()=>{ const open=exMenu.hidden; exMenu.hidden=!open; exBtn.setAttribute('aria-expanded',String(open)); if(open) exMenu.querySelector('button').focus(); };
-  exMenu.addEventListener('click',e=>{ if(e.target.closest('button')) setTimeout(closeExport,0); });
+  exMenu.addEventListener('click',e=>{ if(e.target.closest('button')){ setTimeout(closeExport,0); onb.set('kept'); } });
   exMenu.addEventListener('keydown',e=>{ const items=[...exMenu.querySelectorAll('button')], i=items.indexOf(document.activeElement);
     if(e.key==='Escape'){ closeExport(); exBtn.focus(); } if(e.key==='ArrowDown'){ e.preventDefault(); items[(i+1)%items.length].focus(); } if(e.key==='ArrowUp'){ e.preventDefault(); items[(i-1+items.length)%items.length].focus(); } });
   document.addEventListener('pointerdown',e=>{ if(!exMenu.hidden&&!e.target.closest('.export')) closeExport(); });
@@ -2879,7 +2978,7 @@ function initIO(){
 /* ============ boot ============ */
 function boot(){
   $('#key').innerHTML=KEYLABEL.map((k,i)=>`<option value="${i}">${k}</option>`).join('');
-  $('#mode').innerHTML=Object.entries(MODES).map(([k,m])=>`<option value="${k}">${m.name}</option>`).join('');
+  $('#mode').innerHTML=MODE_GROUPS.map(([g,ks])=>`<optgroup label="${g}">${ks.map(k=>`<option value="${k}">${MODE_LABEL[k]}</option>`).join('')}</optgroup>`).join('');
   $('#meter').innerHTML=Object.keys(METERS).filter(m=>!CYCLES[m]).map(m=>`<option value="${m}">${m}</option>`).join('')
     +['Carnatic','Hindustani'].map(t=>`<optgroup label="${t} cycles (sketching aids)">${Object.entries(CYCLES).filter(([,c])=>c.trad===t).map(([k,c])=>`<option value="${k}">${c.name}, ${c.groups.reduce((a,b)=>a+b,0)} (${c.groups.join('+')})</option>`).join('')}</optgroup>`).join('');
   $('#moods').innerHTML=MOODS.map(m=>`<button type="button" class="chip" data-id="${m.id}" title="${esc(m.blurb)}">${m.name}</button>`).join('');
@@ -2904,7 +3003,10 @@ function boot(){
   $('#key').onchange=e=>{ pushHist(); S.tonic=+e.target.value; commit(); };
   $('#mode').onchange=e=>{ pushHist(); S.mode=e.target.value; commit(); };
   $('#meter').onchange=e=>{ pushHist(); const o=barLen(); S.meter=e.target.value; rebar(o,barLen()); commit(); };
-  $('#tempo').onchange=e=>{ S.tempo=Math.min(240,Math.max(40,+e.target.value||88)); commit(); };
+  $('#tempo').onchange=e=>{ const v=e.target.value.trim()===''?NaN:+e.target.value;
+    if(Number.isFinite(v)){ const n=Math.round(Math.min(240,Math.max(40,v))); if(n!==v) toast(`Tempo set to ${n}: it goes from 40 to 240`); S.tempo=n; }
+    commit(); };
+  $('#hearKey').onclick=hearKey;
   $('#bars').onchange=e=>{ S.bars=+e.target.value; save(); };
   $('#rhythm').onchange=e=>{ S.rhythm=e.target.value; save(); };
   $('#lockmode').onchange=e=>{ S.lock=e.target.checked; save(); };
@@ -2916,17 +3018,24 @@ function boot(){
   $('#voicing').value=S.voicing; $('#voicing').onchange=e=>{ S.voicing=e.target.value; commit(); toast(S.voicing==='smooth'?'Playback moves each voice as little as possible':'Playback uses root position for every chord'); };
   $('#click').onchange=e=>{ S.click=e.target.checked; save(); };
   $('#presets').innerHTML=Object.keys(PRESETS).map(k=>`<button type="button" data-p="${k}">${k}</button>`).join('');
-  $('#fams').innerHTML=FAMS.map(f=>`<button type="button" class="chip" data-f="${f.id}" ${f.fixed?'disabled title="Always on"':''}>${f.name}<small>${f.ex}</small></button>`).join('');
+  $('#fams').innerHTML=FAMS.map(f=>f.fixed?`<span class="chip fixed">${f.name}<small>${f.ex}</small><em>always on</em></span>`:`<button type="button" class="chip" data-f="${f.id}">${f.name}<small>${f.ex}</small></button>`).join('');
   $('#presets').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; S.vocab=[...PRESETS[b.dataset.p]]; commit(); };
-  $('#fams').onclick=e=>{ const b=e.target.closest('.chip'); if(!b||b.disabled) return; const f=b.dataset.f; S.vocab=S.vocab.includes(f)?S.vocab.filter(x=>x!==f):[...S.vocab,f]; commit(); };
+  $('#fams').onclick=e=>{ const b=e.target.closest('button.chip'); if(!b) return; const f=b.dataset.f; S.vocab=S.vocab.includes(f)?S.vocab.filter(x=>x!==f):[...S.vocab,f]; commit(); };
   $('#moods').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; S.mood=S.mood===b.dataset.id?'':b.dataset.id; save(); renderControls(); };
   $('#genres').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; const g=b.dataset.g; S.genres=S.genres.includes(g)?S.genres.filter(x=>x!==g):[...S.genres,g]; save(); renderControls(); };
   $('#recipe').onclick=e=>{ const b=e.target.closest('[data-addfams]'); if(!b) return; S.vocab=[...new Set([...S.vocab,...b.dataset.addfams.split(',')])]; commit(); toast(`Vocabulary updated: ${vocabName()}`); };
   $('#gen').onclick=generate;
   $('#regen').onclick=regenUnlocked;
   $('#clearChart').onclick=()=>{ if(!chords.length) return; stopAll(); pushHist(); chords=[]; sel=null; commit(); toast('Chart cleared',{label:'Undo',fn:undoTo(hist[hist.length-1])}); };
-  initLayout(); setView(getView());
-  document.querySelector('.viewtoggle').addEventListener('click',e=>{ const b=e.target.closest('[data-view]'); if(b){ setView(b.dataset.view); renderAll(); } });
+  onb.load();
+  const askAdv=/^#advanced$/i.test(location.hash)||new URLSearchParams(location.search).get('view')==='advanced';
+  const v0=askAdv?'full':getView(); initLayout(); setView(v0);
+  /* returning visitors who start in Advanced never get first-run tips; with storage blocked the app opens in Advanced
+     by default, which is not a choice, so tips stay available if they switch to Simple */
+  let canStore=true; try{ localStorage.getItem(ONB_KEY); }catch(e){ canStore=false; }
+  if(v0==='full'&&(askAdv||canStore)) onb.advanced();
+  $('#qPro').onclick=openAdvanced;
+  document.querySelector('.viewtoggle').addEventListener('click',e=>{ const b=e.target.closest('[data-view]'); if(b){ if(b.dataset.view==='full') onb.advanced(); setView(b.dataset.view); renderAll(); } });
   $('#qMoods').innerHTML=MOODS.map(m=>`<button type="button" class="chip" data-id="${m.id}" aria-pressed="false" title="${esc(m.blurb)}">${m.name}</button>`).join('');
   $('#qStyles').innerHTML=QUICK_STYLES.map(id=>{ const g=GENRES.find(x=>x.id===id); return `<button type="button" class="chip" data-g="${id}" aria-pressed="false" title="${esc(g.blurb)}">${esc(g.name)}</button>`; }).join('');
   $('#qMoods').onclick=e=>{ const b=e.target.closest('.chip'); if(!b) return; S.mood=b.dataset.id; quickMake(); };
@@ -2989,6 +3098,11 @@ function boot(){
   $('#tto').onchange=e=>{ if(e.target.value==='') return; const n=mod(+e.target.value-S.tonic); e.target.value=''; if(n) transpose(n>6?n-12:n); };
   $('#play').onclick=()=>playing?stopAll():playChart();
   $('#undo').onclick=undo;
+  $('#vocabApply').onclick=()=>$('#recolor').onclick();
+  $('#vocabFit').onclick=()=>{ const n=outsideVocab().length; if(!n) return; pushHist(); chords=chords.map(c=>c.lock?c:fitC(c)); commit();
+    toast(`${n} chord${n>1?'s':''} brought inside ${vocabName()}`,{label:'Undo',fn:()=>$('#undo').click()}); };
+  try{ if(localStorage.getItem('changes-finetune-v1')==='open') $('#fineTune').open=true; }catch(e){}
+  $('#fineTune').addEventListener('toggle',()=>{ try{ localStorage.setItem('changes-finetune-v1',$('#fineTune').open?'open':'closed'); }catch(e){} });
   $('#recolor').onclick=()=>{ pushHist(); chords=colorize(chords,lvl(),false).map(fitC); commit(); toast(`Chart rewritten with ${vocabName()}`); };
   $('#copy').onclick=()=>{ const txt=`${keyName()} · ${meterText()} · ♩=${S.tempo}\n`+serialize().split('\n').map(l=>l.startsWith('[')?l:`| ${l} |`).join('\n'); copyText(txt,'Chart copied'); };
   const load=()=>{ const r=parseProg($('#prog').value); const err=$('#err');
@@ -3071,13 +3185,13 @@ function boot(){
        browser's own dblclick can lose its target) */
     const now=Date.now(), dbl=rowsClick.id===b.dataset.id&&now-rowsClick.t<400; rowsClick={id:b.dataset.id,t:now};
     if(dbl){ rowsClick={}; openPicker(b.dataset.id); return; }
-    if(e.target.closest('.lk')){ const c=chords.find(x=>x.id===b.dataset.id); if(c){ pushHist(); delete c.lock; sel=c.id; commit(); toast(`Unlocked ${chordName(c)}`); } return; } sel=b.dataset.id; const c=chords.find(x=>x.id===sel); if(real(c)&&!playing) playOne(c); renderAll(); };
+    if(e.target.closest('.lk')){ const c=chords.find(x=>x.id===b.dataset.id); if(c){ pushHist(); delete c.lock; sel=c.id; commit(); toast(`Unlocked ${chordName(c)}`); } return; } sel=b.dataset.id; const c=chords.find(x=>x.id===sel); if(real(c)&&!playing) playOne(c); renderAll(); onb.tap(); };
   $('#detail').addEventListener('change',e=>{ if(e.target.id==='capoSel'){ S.capo=+e.target.value; commit(); } if(e.target.id==='tuneSel'){ setTuning(e.target.value); commit(); toast(`Guitar shapes now use ${TUNINGS[S.tuning].name}`); } });
   $('#detail').addEventListener('click',e=>{ const el=$('#detail'), t=e.target;
     const bl=t.closest('[data-b]');
     if(bl){ const r=+$('#bRoot').value, q=$('#bQual').value, bv=$('#bBass').value; const nc={root:r,q,bass:bv===''||+bv===r?null:+bv};
       if(bl.dataset.b==='hear'){ playOne(nc); return; }
-      const i=chords.findIndex(x=>x.id===sel); pushHist(); chords[i]={...chords[i],...nc}; commit(); playOne(nc); toast(`${chordName(nc)} placed`); return; }
+      const i=chords.findIndex(x=>x.id===sel); pushHist(); chords[i]={...chords[i],...nc}; commit(); playOne(nc); onb.set('changed'); toast(`${chordName(nc)} placed`); return; }
     if(t.closest('[data-tunefind]')){ findEasiestTuning(); return; }
     const ut=t.closest('[data-usetune]'); if(ut){ const [id,cp]=ut.dataset.usetune.split('|'); setTuning(id); S.capo=+cp; commit(); toast(`Guitar set to ${TUNINGS[id].name}${+cp?`, capo ${cp}`:''}`); return; }
     const vb=t.closest('[data-vb]'), sh=t.closest('[data-shape]'), pv=t.closest('[data-pv]'), gf=t.closest('[data-gf]'), tw=t.closest('[data-twin]'), cp=t.closest('[data-capo]');
@@ -3114,7 +3228,7 @@ function boot(){
     if(ab){ const [gi,ii]=ab.dataset.ab.split('.').map(Number), it=el._groups[gi].items[ii], {P,N,idx}=el._ctx; abPlay(chords[idx],it,P,N,ab); return; }
     const u=e.target.closest('[data-use]'), a=e.target.closest('[data-aud]'); const k=(u||a)?.dataset[u?'use':'aud']; if(!k) return;
     const [gi,ii]=k.split('.').map(Number), it=el._groups[gi].items[ii], {P,N,idx}=el._ctx;
-    if(u){ replaceAt(idx,it.chords); toast(`Swapped in ${it.chords.map(c=>chordName(c)).join(' → ')}`); return; }
+    if(u){ replaceAt(idx,it.chords); onb.set('changed'); toast(`Swapped in ${it.chords.map(c=>chordName(c)).join(' → ')}`); return; }
     const seq=[]; if(P) seq.push([P,.9]); it.chords.forEach(c=>seq.push([c,it.chords.length>1?.6:.9])); if(N) seq.push([N,1.3]); audition(seq); };
   document.querySelector('.palette').onclick=e=>{ const b=e.target.closest('[data-pal]'), m=e.target.closest('[data-mode]');
     if(m){ pushHist(); S.mode=m.dataset.mode; commit(); return; }
