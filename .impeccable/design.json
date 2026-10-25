@@ -1,0 +1,575 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T23:23:01+00:00",
+  "title": "Design System: Chord Changes",
+  "extensions": {
+    "colorMeta": {
+      "cobalt": {
+        "role": "primary",
+        "displayName": "Cobalt",
+        "canonical": "#3355FF",
+        "oklch": "oklch(54.3% 0.252 267.5)",
+        "cssVar": "--accent",
+        "dark": "#7088FF",
+        "tonalRamp": [
+          "#020133",
+          "#0B166B",
+          "#1C31A8",
+          "#2E4DEA",
+          "#557DFE",
+          "#8BABFD",
+          "#BED0FE",
+          "#E8EEFD"
+        ]
+      },
+      "cobalt-wash": {
+        "role": "primary",
+        "displayName": "Cobalt Wash",
+        "canonical": "#E9EDFF",
+        "oklch": "oklch(94.8% 0.025 275.9)",
+        "cssVar": "--accent-soft",
+        "dark": "#1D2440",
+        "tonalRamp": [
+          "#0A0B0F",
+          "#24262D",
+          "#42444F",
+          "#626574",
+          "#858897",
+          "#ABADB9",
+          "#CED0DA",
+          "#ECEEF5"
+        ]
+      },
+      "on-cobalt": {
+        "role": "primary",
+        "displayName": "On Cobalt",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "cssVar": "--accent-ink",
+        "dark": "#0C0D10",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#AEAEAE",
+          "#D1D1D1",
+          "#EEEEEE"
+        ]
+      },
+      "playhead-amber": {
+        "role": "secondary",
+        "displayName": "Playhead Amber",
+        "canonical": "#F28A1B",
+        "oklch": "oklch(73.1% 0.166 59.3)",
+        "cssVar": "--play",
+        "dark": "#FFA040",
+        "tonalRamp": [
+          "#1A0400",
+          "#3D1D00",
+          "#673704",
+          "#975200",
+          "#C8700D",
+          "#E39C60",
+          "#FCC498",
+          "#FEEBDC"
+        ]
+      },
+      "playhead-wash": {
+        "role": "secondary",
+        "displayName": "Playhead Wash",
+        "canonical": "#FFF1E2",
+        "oklch": "oklch(96.5% 0.025 69.4)",
+        "cssVar": "--play-soft",
+        "dark": "#3A2614",
+        "tonalRamp": [
+          "#0E0A07",
+          "#2B251F",
+          "#4C433A",
+          "#6F6458",
+          "#92877B",
+          "#B5ACA3",
+          "#D7D0C8",
+          "#F3EDE8"
+        ]
+      },
+      "fn-in-key": {
+        "role": "tertiary",
+        "displayName": "In-Key Slate",
+        "canonical": "#8A93A6",
+        "oklch": "oklch(66.2% 0.030 265.3)",
+        "cssVar": "--t-dia",
+        "dark": "#7D8597",
+        "tonalRamp": [
+          "#090B10",
+          "#22262F",
+          "#3F4552",
+          "#5E6677",
+          "#81899A",
+          "#A8AEBC",
+          "#CCD1DC",
+          "#EBEEF6"
+        ]
+      },
+      "fn-borrowed": {
+        "role": "tertiary",
+        "displayName": "Borrowed Violet",
+        "canonical": "#8B5CF6",
+        "oklch": "oklch(60.6% 0.219 292.7)",
+        "cssVar": "--t-bor",
+        "dark": "#A78BFA",
+        "tonalRamp": [
+          "#0F002A",
+          "#2C105C",
+          "#4C2793",
+          "#6F41CE",
+          "#906BF1",
+          "#B19CFF",
+          "#D2C9FE",
+          "#EFECFD"
+        ]
+      },
+      "fn-secondary": {
+        "role": "tertiary",
+        "displayName": "Secondary Ember",
+        "canonical": "#EA6A2A",
+        "oklch": "oklch(67.1% 0.175 43.8)",
+        "cssVar": "--t-sec",
+        "dark": "#FF8A4C",
+        "tonalRamp": [
+          "#200000",
+          "#461400",
+          "#752A00",
+          "#A84100",
+          "#D36531",
+          "#EE946D",
+          "#FDC2A9",
+          "#FFE9E0"
+        ]
+      },
+      "fn-jazz": {
+        "role": "tertiary",
+        "displayName": "Approach Teal",
+        "canonical": "#10A38C",
+        "oklch": "oklch(64.1% 0.116 177.7)",
+        "cssVar": "--t-jazz",
+        "dark": "#2DD4B4",
+        "tonalRamp": [
+          "#00100B",
+          "#002E26",
+          "#005145",
+          "#027766",
+          "#309D89",
+          "#73BFAE",
+          "#A7DFD1",
+          "#D0F9EE"
+        ]
+      },
+      "fn-chromatic": {
+        "role": "tertiary",
+        "displayName": "Chromatic Rose",
+        "canonical": "#E0457B",
+        "oklch": "oklch(62.5% 0.195 3.5)",
+        "cssVar": "--t-chr",
+        "dark": "#FF6B9D",
+        "tonalRamp": [
+          "#210008",
+          "#4D0021",
+          "#7E0E3D",
+          "#B3225B",
+          "#D9537E",
+          "#F488A5",
+          "#FDBDCC",
+          "#FEE8ED"
+        ]
+      },
+      "desk": {
+        "role": "neutral",
+        "displayName": "Desk Grey",
+        "canonical": "#F3F4F6",
+        "oklch": "oklch(96.7% 0.003 264.5)",
+        "cssVar": "--bg",
+        "dark": "#0C0D10",
+        "tonalRamp": [
+          "#0B0B0C",
+          "#262627",
+          "#444546",
+          "#656668",
+          "#88898B",
+          "#ADAEAF",
+          "#D0D1D2",
+          "#EEEEEF"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "cssVar": "--surface",
+        "dark": "#15171B",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#AEAEAE",
+          "#D1D1D1",
+          "#EEEEEE"
+        ]
+      },
+      "tray": {
+        "role": "neutral",
+        "displayName": "Inset Tray",
+        "canonical": "#F1F2F5",
+        "oklch": "oklch(96.1% 0.004 271.4)",
+        "cssVar": "--sunk",
+        "dark": "#1C1E23",
+        "tonalRamp": [
+          "#0B0B0C",
+          "#262628",
+          "#444547",
+          "#656668",
+          "#88898B",
+          "#ADAEB0",
+          "#D0D1D2",
+          "#EEEEEF"
+        ]
+      },
+      "pencil": {
+        "role": "neutral",
+        "displayName": "Pencil Ink",
+        "canonical": "#15171C",
+        "oklch": "oklch(20.5% 0.010 268.2)",
+        "cssVar": "--ink",
+        "dark": "#EDEEF0",
+        "tonalRamp": [
+          "#0A0B0D",
+          "#252629",
+          "#434549",
+          "#64666C",
+          "#87898F",
+          "#ACAEB3",
+          "#CFD1D5",
+          "#EDEEF1"
+        ]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "#687080",
+        "oklch": "oklch(54.4% 0.027 264.3)",
+        "cssVar": "--muted",
+        "dark": "#8D93A0",
+        "tonalRamp": [
+          "#090B10",
+          "#23262E",
+          "#404550",
+          "#5F6675",
+          "#828998",
+          "#A8AEBA",
+          "#CCD1DA",
+          "#EBEFF6"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#E2E4E9",
+        "oklch": "oklch(91.9% 0.007 268.5)",
+        "cssVar": "--line",
+        "dark": "#262931",
+        "tonalRamp": [
+          "#0B0B0C",
+          "#262628",
+          "#444548",
+          "#64666A",
+          "#87898D",
+          "#ACAEB1",
+          "#D0D1D3",
+          "#EEEEF0"
+        ]
+      },
+      "faint-rule": {
+        "role": "neutral",
+        "displayName": "Faint Rule",
+        "canonical": "#ECEDF1",
+        "oklch": "oklch(94.6% 0.005 275.0)",
+        "cssVar": "--rule",
+        "dark": "#1F2228",
+        "tonalRamp": [
+          "#0B0B0C",
+          "#262628",
+          "#444547",
+          "#656669",
+          "#88898C",
+          "#ADAEB0",
+          "#D0D1D3",
+          "#EEEEF0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The Chord Changes wordmark; 26px in the top bar, 22px on phones."
+      },
+      "chord-display": {
+        "displayName": "Chord Display",
+        "purpose": "Selected chord's name in the Chord panel; largest type in the app (40px under 640px)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Panel titles like Chart; 22px on the Simple quick card."
+      },
+      "chord-name": {
+        "displayName": "Chord Name",
+        "purpose": "Chord names in timeline clips (18px under 640px) and swap-idea rows (18px)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Sidebar and in-panel section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text and controls; explanations cap at 60–70ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, hints and section pills in Graphite."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Bar numbers, beat counts, interval tags, and the text chart editor (13.5px / 1.7)."
+      }
+    },
+    "shadows": [
+      {
+        "name": "desk-lift",
+        "value": "0 1px 2px rgb(16 20 30 / .04), 0 8px 24px -12px rgb(16 20 30 / .12)",
+        "purpose": "Chart card only; dark: 0 0 0 1px #1E2026, 0 12px 32px -16px rgb(0 0 0 / .7)."
+      },
+      {
+        "name": "segment-lift",
+        "value": "0 1px 2px rgb(0 0 0 / .1), 0 0 0 1px var(--line)",
+        "purpose": "Selected tab or segment raised from its tray."
+      },
+      {
+        "name": "popover",
+        "value": "0 24px 60px -18px rgb(0 0 0 / .45)",
+        "purpose": "Library and Export menus."
+      },
+      {
+        "name": "drawer-edge",
+        "value": "24px 0 60px -30px rgb(0 0 0 / .5)",
+        "purpose": "Create drawer on medium screens."
+      },
+      {
+        "name": "playhead-glow",
+        "value": "inset 3px 0 0 var(--play), 0 0 0 2px var(--play), 0 0 24px -4px color-mix(in srgb, var(--play) 60%, transparent)",
+        "purpose": "The playing chord clip; the only glow."
+      },
+      {
+        "name": "selected-ring",
+        "value": "inset 3px 0 0 var(--k), 0 0 0 2px var(--accent)",
+        "purpose": "The selected chord clip."
+      },
+      {
+        "name": "function-stripe",
+        "value": "inset 3px 0 0 var(--k)",
+        "purpose": "Left-edge function colour on every clip."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "150ms (background, box-shadow, border-color)",
+        "purpose": "Clip and control state changes; only under prefers-reduced-motion: no-preference."
+      },
+      {
+        "name": "drawer",
+        "value": "transform 200ms ease",
+        "purpose": "Create drawer slide on medium screens."
+      },
+      {
+        "name": "text-flash",
+        "value": "background 500ms",
+        "purpose": "Chart textarea flashes Cobalt Wash when the chart writes back."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact",
+        "value": "520px"
+      },
+      {
+        "name": "phone-type",
+        "value": "640px"
+      },
+      {
+        "name": "phone-tabs",
+        "value": "759px"
+      },
+      {
+        "name": "stack",
+        "value": "860px"
+      },
+      {
+        "name": "drawer",
+        "value": "1199px"
+      },
+      {
+        "name": "max-container",
+        "value": "1680px"
+      }
+    ],
+    "themes": {
+      "strategy": "Light tokens on :root; dark via @media (prefers-color-scheme: dark) on :root:not([data-theme=light]) and :root[data-theme=dark]. Dark values in colorMeta.<token>.dark."
+    }
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Default paper key for tools: Hear, Lock, Split, Transpose.",
+      "html": "<button class=\"ds-btn\">Lock</button>",
+      "css": ":host{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#687080;--line:#E2E4E9;--accent:#3355FF;--accent-ink:#FFFFFF;--accent-soft:#E9EDFF;--play:#F28A1B;--play-soft:#FFF1E2;--t-dia:#8A93A6;--t-bor:#8B5CF6;--t-sec:#EA6A2A;--t-chr:#E0457B;--t-jazz:#10A38C} .ds-btn{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:14.5px;font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer}.ds-btn:hover{background:var(--sunk)}.ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "One per context: Generate, Put in this slot.",
+      "html": "<button class=\"ds-btn-primary\">Generate</button>",
+      "css": ":host{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#687080;--line:#E2E4E9;--accent:#3355FF;--accent-ink:#FFFFFF;--accent-soft:#E9EDFF;--play:#F28A1B;--play-soft:#FFF1E2;--t-dia:#8A93A6;--t-bor:#8B5CF6;--t-sec:#EA6A2A;--t-chr:#E0457B;--t-jazz:#10A38C} .ds-btn-primary{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:14.5px;font-weight:600;color:var(--accent-ink);background:var(--accent);border:1px solid var(--accent);border-radius:9px;height:36px;padding:0 14px;cursor:pointer}.ds-btn-primary:hover{filter:brightness(1.08)}.ds-btn-primary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Play Button",
+      "kind": "button",
+      "refersTo": "button-play",
+      "description": "The transport: the only dark pill, in the Play bar.",
+      "html": "<button class=\"ds-btn-play\">&#9654; Play</button>",
+      "css": ":host{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#687080;--line:#E2E4E9;--accent:#3355FF;--accent-ink:#FFFFFF;--accent-soft:#E9EDFF;--play:#F28A1B;--play-soft:#FFF1E2;--t-dia:#8A93A6;--t-bor:#8B5CF6;--t-sec:#EA6A2A;--t-chr:#E0457B;--t-jazz:#10A38C} .ds-btn-play{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:15px;font-weight:600;color:var(--bg);background:var(--ink);border:1px solid var(--ink);border-radius:999px;height:44px;min-width:96px;padding:0 20px;cursor:pointer}.ds-btn-play:hover{opacity:.9}.ds-btn-play:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Mood and Genre Chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Pills a beginner taps. A selected mood inverts to ink; a selected genre fills cobalt.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip\" aria-pressed=\"true\">Uplifting</button><button class=\"ds-chip\" aria-pressed=\"false\">Melancholy</button><button class=\"ds-chip ds-genre\" aria-pressed=\"true\">Jazz</button><button class=\"ds-chip ds-genre\" aria-pressed=\"false\">Lo-fi</button></div>",
+      "css": ":host{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#687080;--line:#E2E4E9;--accent:#3355FF;--accent-ink:#FFFFFF;--accent-soft:#E9EDFF;--play:#F28A1B;--play-soft:#FFF1E2;--t-dia:#8A93A6;--t-bor:#8B5CF6;--t-sec:#EA6A2A;--t-chr:#E0457B;--t-jazz:#10A38C} .ds-chips{display:flex;flex-wrap:wrap;gap:6px}.ds-chip{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:13.5px;font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 13px;cursor:pointer}.ds-chip:hover{border-color:color-mix(in srgb,var(--ink) 30%,var(--line))}.ds-chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}.ds-genre[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}.ds-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "nav",
+      "refersTo": "segmented",
+      "description": "Simple / Advanced, Chord / Swap ideas, and the phone tab bar.",
+      "html": "<div class=\"ds-seg\" role=\"tablist\"><button role=\"tab\" aria-selected=\"false\">Simple</button><button role=\"tab\" aria-selected=\"true\">Advanced</button></div>",
+      "css": ":host{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#687080;--line:#E2E4E9;--accent:#3355FF;--accent-ink:#FFFFFF;--accent-soft:#E9EDFF;--play:#F28A1B;--play-soft:#FFF1E2;--t-dia:#8A93A6;--t-bor:#8B5CF6;--t-sec:#EA6A2A;--t-chr:#E0457B;--t-jazz:#10A38C} .ds-seg{display:inline-flex;gap:2px;background:var(--sunk);border-radius:10px;padding:3px}.ds-seg button{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;border:0;background:none;border-radius:8px;padding:7px 12px;font-weight:600;font-size:13.5px;color:var(--muted);cursor:pointer}.ds-seg button:hover{color:var(--ink)}.ds-seg button[aria-selected=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .1),0 0 0 1px var(--line)}.ds-seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Select",
+      "kind": "input",
+      "refersTo": "select",
+      "description": "Recessed tray field for key, mode, sound and playing style.",
+      "html": "<label class=\"ds-field\"><span>Key</span><select class=\"ds-select\"><option>G major</option><option>A minor</option></select></label>",
+      "css": ":host{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#687080;--line:#E2E4E9;--accent:#3355FF;--accent-ink:#FFFFFF;--accent-soft:#E9EDFF;--play:#F28A1B;--play-soft:#FFF1E2;--t-dia:#8A93A6;--t-bor:#8B5CF6;--t-sec:#EA6A2A;--t-chr:#E0457B;--t-jazz:#10A38C} .ds-field{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:500;color:var(--muted)}.ds-select{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;font-size:14.5px;color:var(--ink);background:var(--sunk);border:1px solid transparent;border-radius:9px;height:36px;padding:0 10px}.ds-select:hover{border-color:var(--line)}.ds-select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Flat paper on the desk with a hairline border.",
+      "html": "<section class=\"ds-panel\"><h2>Generate a progression</h2><p>Mood sets the feeling, genre sets the style. Use either or both.</p></section>",
+      "css": ":host{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#687080;--line:#E2E4E9;--accent:#3355FF;--accent-ink:#FFFFFF;--accent-soft:#E9EDFF;--play:#F28A1B;--play-soft:#FFF1E2;--t-dia:#8A93A6;--t-bor:#8B5CF6;--t-sec:#EA6A2A;--t-chr:#E0457B;--t-jazz:#10A38C} .ds-panel{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:8px;color:var(--ink);max-width:340px}.ds-panel h2{margin:0;font-size:16px;font-weight:600;letter-spacing:-.015em}.ds-panel p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.5}"
+    },
+    {
+      "name": "Chord Clip",
+      "kind": "custom",
+      "refersTo": "chord-clip",
+      "description": "Signature: a chord as a clip on the timeline, tinted by harmonic function. Selected gets a cobalt ring; playing lights amber.",
+      "html": "<div class=\"ds-track\"><button class=\"ds-clip ds-k-dia\"><b>C</b><span>IV</span><i>4</i></button><button class=\"ds-clip ds-k-dia ds-sel\"><b>Am</b><span>ii</span><i>4</i></button><button class=\"ds-clip ds-k-bor\"><b>F</b><span>&#9837;VII</span><i>4</i></button><button class=\"ds-clip ds-k-sec ds-playing\"><b>A7</b><span>V7/V</span><i>4</i></button></div>",
+      "css": ":host{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#687080;--line:#E2E4E9;--accent:#3355FF;--accent-ink:#FFFFFF;--accent-soft:#E9EDFF;--play:#F28A1B;--play-soft:#FFF1E2;--t-dia:#8A93A6;--t-bor:#8B5CF6;--t-sec:#EA6A2A;--t-chr:#E0457B;--t-jazz:#10A38C} .ds-track{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;background:var(--sunk);border-radius:14px;padding:12px}.ds-clip{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;position:relative;text-align:left;cursor:pointer;color:var(--ink);border:1px solid color-mix(in srgb,var(--k) 28%,transparent);border-radius:10px;background:color-mix(in srgb,var(--k) 11%,var(--surface));box-shadow:inset 3px 0 0 var(--k);padding:5px 10px 6px 13px;min-height:62px;display:flex;flex-direction:column;justify-content:center;transition:background .15s,box-shadow .15s,border-color .15s}.ds-clip:hover{background:color-mix(in srgb,var(--k) 18%,var(--surface))}.ds-clip b{font-weight:600;font-size:21px;line-height:1.1;letter-spacing:-.02em}.ds-clip span{font-size:12px;font-weight:500;color:var(--muted)}.ds-clip i{position:absolute;right:10px;top:6px;font:normal 10px 'Geist Mono',ui-monospace,monospace;color:var(--muted)}.ds-sel{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--k),0 0 0 2px var(--accent)}.ds-playing{background:var(--play-soft);border-color:var(--play);box-shadow:inset 3px 0 0 var(--play),0 0 0 2px var(--play),0 0 24px -4px color-mix(in srgb,var(--play) 60%,transparent)}.ds-clip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-k-dia{--k:var(--t-dia)}.ds-k-bor{--k:var(--t-bor)}.ds-k-sec{--k:var(--t-sec)}.ds-k-chr{--k:var(--t-chr)}@media (prefers-reduced-motion:reduce){.ds-clip{transition:none}}"
+    },
+    {
+      "name": "Swap Idea Row",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "A suggested replacement with its function bar and a plain-words reason.",
+      "html": "<div class=\"ds-item\" style=\"--k:var(--t-bor)\"><div class=\"ds-names\"><b>Fm</b><span>&#8594; iv borrowed</span></div><p>Borrowed from G minor: the &#9837;6 (E&#9837;) sighs down to D.</p><button class=\"ds-mini\">Use</button></div>",
+      "css": ":host{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#687080;--line:#E2E4E9;--accent:#3355FF;--accent-ink:#FFFFFF;--accent-soft:#E9EDFF;--play:#F28A1B;--play-soft:#FFF1E2;--t-dia:#8A93A6;--t-bor:#8B5CF6;--t-sec:#EA6A2A;--t-chr:#E0457B;--t-jazz:#10A38C} .ds-item{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:9px 10px 9px 14px;border-radius:10px;color:var(--ink);max-width:380px}.ds-item::before{content:'';position:absolute;left:4px;top:10px;bottom:10px;width:3px;border-radius:2px;background:var(--k)}.ds-item:hover{background:var(--sunk)}.ds-names{display:flex;gap:8px;align-items:baseline}.ds-names b{font-size:18px;font-weight:600;letter-spacing:-.02em}.ds-names span{font-size:12.5px;color:var(--muted)}.ds-item p{margin:0;grid-column:1;font-size:13px;color:var(--muted)}.ds-mini{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;grid-column:2;grid-row:1 / span 2;height:30px;padding:0 10px;font-size:13px;font-weight:500;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer}.ds-mini:hover{background:var(--sunk)}.ds-mini:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Function Pill",
+      "kind": "chip",
+      "refersTo": null,
+      "description": "Labels a chord's harmonic job in its own colour.",
+      "html": "<span class=\"ds-pill\" style=\"--k:var(--t-dia)\">In key</span> <span class=\"ds-pill\" style=\"--k:var(--t-bor)\">Borrowed</span> <span class=\"ds-pill\" style=\"--k:var(--t-sec)\">Secondary dominant</span> <span class=\"ds-pill\" style=\"--k:var(--t-chr)\">Chromatic</span>",
+      "css": ":host{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#687080;--line:#E2E4E9;--accent:#3355FF;--accent-ink:#FFFFFF;--accent-soft:#E9EDFF;--play:#F28A1B;--play-soft:#FFF1E2;--t-dia:#8A93A6;--t-bor:#8B5CF6;--t-sec:#EA6A2A;--t-chr:#E0457B;--t-jazz:#10A38C} .ds-pill{font-family:Geist,ui-sans-serif,system-ui,-apple-system,sans-serif;display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;color:var(--k);background:color-mix(in srgb,var(--k) 14%,transparent)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Writing Desk",
+    "overview": "Chord Changes should feel like a calm, well-lit workbench next to the instrument. The chart is the page you're working on. It sits in the middle, on the brightest paper, with the most lift. Tools are laid out within reach on either side: Create on the left, the selected chord and its swap ideas on the right, the Play bar pinned along the front edge. Nothing on the desk is showy. The desk is grey, the paper is white, and colour belongs to the music.\n\nThe tone is friendly and approachable. Pill-shaped chips for moods and genres, generous rounded corners, a soft cobalt wash behind the one-tap card in Simple view and plain-language hints in muted grey all tell a newcomer they can't break anything. Beneath that warmth there's a quiet precision: tabular figures, mono bar numbers, beats snapped to a grid. It's still a real tool for working songwriters. Density stays moderate. Advanced adds more tools, but never makes them smaller or heavier.\n\nIt is deliberately **not a toy** (no cartoon, gamified or kid-app styling, even in Simple view), **not a DAW clone** (no dark, dense, knob-heavy pro-audio skin), and **not a theory textbook** (no notation-first, academic presentation; theory appears as plain words and colour).",
+    "keyCharacteristics": [
+      "Neutral grey desk, white paper surfaces, colour reserved for meaning",
+      "Chords drawn as tinted clips on a timeline, coloured by harmonic function",
+      "Cobalt means \"selected or act\", amber means \"playing now\", and nothing else uses them",
+      "One typeface (Geist) for everything, with Geist Mono for small numbers",
+      "Soft rounded forms and pill chips; one ambient lift, on the chart alone",
+      "Full light and dark themes, following the system with a manual override"
+    ],
+    "rules": [
+      {
+        "name": "The Colour Means Something Rule",
+        "body": "A colour on screen is harmonic function, selection, or playback. Don't use any of them as decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Signals Rule",
+        "body": "Cobalt is \"selected or act\". Amber is \"sounding now\". When a clip is both selected and playing, amber wins.",
+        "section": "colors"
+      },
+      {
+        "name": "The Quiet Majority Rule",
+        "body": "In-key chords are tinted slate, not a brand colour. Most of the chart should look calm, so that borrowed, secondary and chromatic chords stand out as the interesting moments.",
+        "section": "colors"
+      },
+      {
+        "name": "The Weight Not Face Rule",
+        "body": "Build hierarchy with Geist's weights and sizes. Don't add a second typeface.",
+        "section": "typography"
+      },
+      {
+        "name": "The Chord Is The Headline Rule",
+        "body": "Chord names are always the heaviest, tightest-tracked text in their context. Their Roman numeral or function sits beside or below in Graphite.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Lifted Page Rule",
+        "body": "Only the chart card carries the ambient lift. Other panels sit flat on the desk with a hairline border.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep colour for meaning: function tints on chords, Cobalt for selection or action, amber for playback.",
+      "Do put the chart on the brightest, most lifted surface. It's the page on the desk.",
+      "Do use pills for choices a beginner taps (moods, genres, families) and rounded rectangles for tools.",
+      "Do build hierarchy with Geist weights 400, 500 and 600 and tight tracking on chord names. Use Geist Mono only for small numbers and the text chart.",
+      "Do give every new chord-related element its function colour through the shared `--k` variable (`.k-dia`, `.k-bor`, `.k-sec`, `.k-chr`, `.k-jazz`).",
+      "Do design every surface for both light and dark themes using the existing tokens, and check it at phone, tablet and desktop widths.",
+      "Do keep transitions short (150–200ms) and only when reduced motion is off."
+    ],
+    "donts": [
+      "Don't make it a toy: no cartoon illustrations, mascots, confetti, badges or gamified chrome, even in Simple view.",
+      "Don't make it a DAW clone: no dark-by-default pro-audio skin, knobs, meters or dense rack layouts.",
+      "Don't make it a theory textbook: don't lead with staff notation or academic labels. Show function as colour and plain words first.",
+      "Don't use Cobalt or amber decoratively, and don't introduce a new hue unless it maps to a new harmonic category.",
+      "Don't give ambient shadows to panels other than the chart card. Stay flat on the desk.",
+      "Don't add a second typeface."
+    ]
+  }
+}
