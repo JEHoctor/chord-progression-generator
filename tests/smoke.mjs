@@ -566,10 +566,17 @@ async function simpleView() {
 async function layout() {
   const { ctx, page } = await openPage({ viewport: { width: 1440, height: 900 } });
   await page.goto(URL_);
-  const d = await page.evaluate(() => ({ left: document.querySelector('#sideLeft').checkVisibility(), center: document.querySelector('#rows').checkVisibility(), right: document.querySelector('#sideRight').checkVisibility(), xL: document.querySelector('#sideLeft').getBoundingClientRect().right, xC: document.querySelector('.chart-card').getBoundingClientRect().left, xR: document.querySelector('#sideRight').getBoundingClientRect().left }));
-  check('layout: desktop shows Create, the chart in the centre and the chord sidebar side by side', d.left && d.center && d.right && d.xL <= d.xC && d.xC < d.xR, JSON.stringify(d));
+  // one shell: the chart stays in the middle and the navigation rail picks what the side panel shows
+  const vis = s => document.querySelector(s).checkVisibility();
+  const panelState = () => page.evaluate(() => ({ chart: document.querySelector('#rows').checkVisibility(), create: document.querySelector('#sideLeft').checkVisibility(), chord: document.querySelector('#sideRight').checkVisibility(), tools: document.querySelector('#tools').checkVisibility(), chartX: document.querySelector('.chart-card').getBoundingClientRect().left, railRight: document.querySelector('#phoneTabs').getBoundingClientRect().right }));
+  const d0 = await panelState();
+  await page.click('#tab-p-create'); const d1 = await panelState();
+  await page.click('#tab-p-tools'); const d2 = await page.evaluate(() => ({ tools: document.querySelector('#finder').checkVisibility(), chart: document.querySelector('#rows').checkVisibility() }));
+  await page.click('#tab-p-chord');
+  check('layout: desktop keeps the chart in view while the rail switches the side panel between Create, Chord and Tools', d0.chart && d0.chord && !d0.create && d1.chart && d1.create && !d1.chord && d2.tools && d2.chart && d0.railRight <= d0.chartX, JSON.stringify({ d0, d1, d2 }));
+  check('layout: each screen is in the address, so it can be bookmarked', await page.evaluate(() => location.hash === '#chord'));
   await page.click('#library > summary');
-  check('layout: Library opens from the top bar with save, list and import/export', await page.evaluate(() => document.querySelector('#libSaveBtn').checkVisibility() && document.querySelector('#libExport').checkVisibility() && document.querySelector('#library').getBoundingClientRect().top < 80));
+  check('layout: Library opens from the navigation with save, list and import/export', await page.evaluate(() => document.querySelector('#libSaveBtn').checkVisibility() && document.querySelector('#libExport').checkVisibility() && !!document.querySelector('#topbar #library')));
   await page.mouse.click(700, 500);
   check('layout: clicking elsewhere closes the Library', await page.evaluate(() => !document.querySelector('#library').open));
   await page.click('#helpMenu > summary');
@@ -583,11 +590,11 @@ async function layout() {
     await p2.close();
   }
   await page.setViewportSize({ width: 1024, height: 768 });
-  const t0 = await page.evaluate(() => ({ left: document.querySelector('#sideLeft').checkVisibility({ visibilityProperty: true }), toggle: document.querySelector('#createToggle').checkVisibility(), right: document.querySelector('#sideRight').checkVisibility() }));
-  await page.click('#createToggle'); await page.waitForTimeout(300);
-  const t1 = await page.evaluate(() => document.querySelector('#gen').checkVisibility({ visibilityProperty: true }) && document.body.classList.contains('drawer-open'));
-  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-  check('layout: tablet keeps chart and chord side by side; Create opens and closes as a drawer', !t0.left && t0.toggle && t0.right && t1 && await page.evaluate(() => !document.body.classList.contains('drawer-open')), JSON.stringify(t0));
+  const t0 = await page.evaluate(() => ({ chart: document.querySelector('#rows').checkVisibility(), chord: document.querySelector('#sideRight').checkVisibility(), navTop: document.querySelector('#phoneTabs').getBoundingClientRect().top }));
+  await page.click('#tab-p-create'); await page.waitForTimeout(100);
+  const t1 = await page.evaluate(() => ({ gen: document.querySelector('#gen').checkVisibility(), chart: document.querySelector('#rows').checkVisibility(), chord: document.querySelector('#sideRight').checkVisibility() }));
+  await page.click('#tab-p-chord');
+  check('layout: tablet keeps the chart beside the panel and switches panels from the top bar', t0.chart && t0.chord && t0.navTop < 80 && t1.gen && t1.chart && !t1.chord, JSON.stringify({ t0, t1 }));
   await page.setViewportSize({ width: 390, height: 844 });
   const seen = {};
   for (const tab of ['p-create', 'p-chord', 'p-tools', 'p-chart']) { await page.click(`#phoneTabs [data-tab="${tab}"]`); seen[tab] = await page.evaluate(() => ({ gen: document.querySelector('#gen').checkVisibility(), detail: document.querySelector('#detail').checkVisibility(), finder: document.querySelector('#finder').checkVisibility(), chart: document.querySelector('#rows').checkVisibility() })); }
@@ -661,8 +668,8 @@ async function hardening() {
   await page.click('#tab-swaps'); await page.click('#subs [data-use] >> nth=0');
   check('real clicks: Swap ideas tab, then Put in this slot', await page.evaluate(b => serialize() !== b, before));
   await page.setViewportSize({ width: 1024, height: 768 });
-  await page.click('#createToggle'); await page.waitForTimeout(300); await noToast(); await page.click('#gen');
-  check('real clicks: tablet Create drawer, then Generate', await page.evaluate(() => chords.length > 0));
+  await page.click('#tab-p-create'); await page.waitForTimeout(100); await noToast(); await page.click('#gen');
+  check('real clicks: tablet Create panel, then Generate', await page.evaluate(() => chords.length > 0));
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.click('#phoneTabs [data-tab="p-chord"]'); await page.click('#tab-chord'); await noToast(); await page.click('#detail [data-act="lock"]');
@@ -707,7 +714,8 @@ async function iphone() {
     const tag = old ? 'iPhone (older iOS, no audio session API)' : 'iPhone (iOS 17+)';
     check(`${tag}: tapping Play starts the audio engine`, st.run === 'running' && st.t > 0.3, JSON.stringify(st));
     check(`${tag}: silent-switch workarounds are active (session ${old ? 'n/a' : 'playback'}, 16-bit clip playing)`, st.clip === 'playing' && st.session === (old ? 'n/a' : 'playback'), JSON.stringify(st));
-    await page.tap('#soundCheck'); await page.tap('[data-sb="web"]'); await page.waitForTimeout(500); await page.tap('[data-sb="media"]'); await page.waitForTimeout(500);
+    // Simple view opens on the one-tap card; Sound check lives on the Chart screen, one tab away
+    await page.tap('#tab-p-chart'); await page.tap('#soundCheck'); await page.tap('[data-sb="web"]'); await page.waitForTimeout(500); await page.tap('[data-sb="media"]'); await page.waitForTimeout(500);
     const sb = await page.evaluate(() => ({ open: !document.querySelector('#soundbox').hidden, rows: [...document.querySelectorAll('#soundbox dd')].map(d => d.textContent), beep: beepEl ? (beepEl.lastError || (beepEl.paused && beepEl.currentTime === 0 ? 'not played' : 'played')) : 'none' }));
     check(`${tag}: Sound check shows the audio state and both beeps play`, sb.open && /running/.test(sb.rows[2]) && sb.beep === 'played', JSON.stringify(sb));
     await page.tap('[data-sb="close"]');

@@ -1,0 +1,53 @@
+<!doctype html><html><head><meta charset="utf-8"><title>The Beat Grid</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--w:#FFFFFF;--k:#0A0A0A;--red:#E4002B;--grid:#A9C1FF;--mute:#5A5A5A}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--w);color:var(--k);font-family:'Work Sans',sans-serif;
+ background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:40px 40px;background-position:-1px -1px;
+ display:grid;grid-template-columns:240px 1fr 400px;grid-template-rows:80px 1fr 80px}
+header{grid-column:1/4;display:flex;align-items:center;gap:40px;padding:0 40px;background:var(--w);border-bottom:2px solid var(--k)}
+.brand{font:700 30px 'Archivo Narrow';text-transform:lowercase;letter-spacing:-.01em}
+nav{display:flex;gap:28px;font-weight:600;font-size:16px}nav span.on{border-bottom:4px solid var(--red);padding-bottom:4px}
+.side{background:var(--w);border-right:2px solid var(--k);padding:40px;display:flex;flex-direction:column;gap:20px}
+.side h2{font:700 20px 'Archivo Narrow';text-transform:uppercase}
+.side p{font-size:14px;color:var(--mute)}
+.opt{border:2px solid var(--k);padding:10px 12px;font-weight:600;font-size:15px}
+.opt.on{background:var(--k);color:var(--w)}
+main{padding:40px;display:flex;flex-direction:column;gap:40px}
+.ttl{background:var(--w);display:inline-block;padding:0 4px}
+.ttl h1{font:700 80px/0.9 'Archivo Narrow';letter-spacing:-.02em;text-transform:lowercase}
+.ttl p{font-size:15px;color:var(--mute);margin-top:8px}
+.track{display:grid;grid-template-columns:repeat(16,40px);grid-auto-rows:80px;gap:0}
+.c{border:2px solid var(--k);background:var(--w);padding:8px 10px;display:flex;flex-direction:column;justify-content:space-between}
+.c b{font:700 34px/0.9 'Archivo Narrow'}
+.c span{font-size:13px;font-weight:600;color:var(--mute)}
+.c.play{background:var(--red);color:var(--w);border-color:var(--red)}.c.play span{color:#FFFFFF}
+.c.sel{outline:4px solid var(--k);outline-offset:-8px}
+.lab{grid-column:span 16;font:700 16px 'Archivo Narrow';text-transform:uppercase;letter-spacing:.1em;align-self:end;padding-bottom:6px}
+aside{background:var(--w);border-left:2px solid var(--k);padding:40px;display:flex;flex-direction:column;gap:18px}
+.big{font:700 128px/0.8 'Archivo Narrow';letter-spacing:-.03em}
+.job{font-weight:600;font-size:16px}
+.sw{display:flex;justify-content:space-between;border-top:2px solid var(--k);padding-top:12px;align-items:center}
+.sw b{font:700 36px 'Archivo Narrow'}.sw span{font-size:14px;color:var(--mute);flex:1;margin-left:16px}
+footer{grid-column:1/4;background:var(--k);color:var(--w);display:flex;align-items:center;gap:28px;padding:0 40px}
+.play-b{background:var(--red);padding:12px 32px;font:700 22px 'Archivo Narrow';text-transform:uppercase}
+footer .now{font-size:13px;color:#aaa}footer .now b{display:block;font:700 26px 'Archivo Narrow';color:#fff}
+footer .pill{border:2px solid #555;padding:8px 14px;font-weight:600}footer .sp{flex:1}
+.exp{background:var(--w);color:var(--k);padding:12px 24px;font-weight:600}
+</style></head><body>
+<header><span class="brand">chord changes</span><nav><span>write</span><span class="on">chart</span><span>tools</span><span>library</span></nav></header>
+<div class="side"><h2>Write</h2><p>Mood and style</p><div class="opt on">Dreamy</div><div class="opt">Melancholy</div><div class="opt">Uplifting</div><h2>Style</h2><div class="opt on">Lo-fi</div><div class="opt">Jazz</div></div>
+<main><div class="ttl"><h1>late train home</h1><p>G major · 4/4 · 88 bpm</p></div>
+ <div class="track">
+  <div class="lab">verse</div>
+  <div class="c play" style="grid-column:span 4"><b>Cmaj7</b><span>IV</span></div><div class="c sel" style="grid-column:span 4"><b>Am9</b><span>ii</span></div><div class="c" style="grid-column:span 4"><b>A7</b><span>V/V</span></div><div class="c" style="grid-column:span 4"><b>D7sus4</b><span>V</span></div>
+  <div class="lab">chorus</div>
+  <div class="c" style="grid-column:span 8"><b>Gmaj7</b><span>I</span></div><div class="c" style="grid-column:span 4"><b>Cm6</b><span>iv borrowed</span></div><div class="c" style="grid-column:span 4"><b>B♭9</b><span>♭III</span></div>
+ </div></main>
+<aside><div class="big">Am9</div><div class="job">ii · in the key of G major</div>
+ <div class="sw"><b>E7</b><span>Pulls hard into Am</span><span class="opt">Use</span></div>
+ <div class="sw"><b>Em7</b><span>Same notes, darker</span><span class="opt">Use</span></div>
+ <div class="sw"><b>Fmaj7</b><span>Borrowed brightness</span><span class="opt">Use</span></div></aside>
+<footer><span class="play-b">▶ play</span><div class="now">Now<b>Cmaj7</b></div><span class="pill">Loop</span><span class="pill">− 88 +</span><span class="sp"></span><span class="exp">Export ▾</span></footer>
+</body></html>

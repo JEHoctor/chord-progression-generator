@@ -1,0 +1,62 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/assigned.html"
+        ],
+        "createdAt": "2026-10-25T00:38:24.133Z",
+        "reason": "decision-round sketch for a replacement visual world; DESIGN.md describes the identity being replaced"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/model-pick.html"
+        ],
+        "createdAt": "2026-10-25T00:38:24.159Z",
+        "reason": "decision-round sketch for a replacement visual world; DESIGN.md describes the identity being replaced"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/challenger-wall.html"
+        ],
+        "createdAt": "2026-10-25T00:38:24.186Z",
+        "reason": "decision-round sketch for a replacement visual world; DESIGN.md describes the identity being replaced"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/challenger-grid.html"
+        ],
+        "createdAt": "2026-10-25T00:38:24.213Z",
+        "reason": "decision-round sketch for a replacement visual world; DESIGN.md describes the identity being replaced"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/canon.html"
+        ],
+        "createdAt": "2026-10-25T00:38:24.242Z",
+        "reason": "decision-round sketch for a replacement visual world; DESIGN.md describes the identity being replaced"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "files": [
+          ".impeccable/mocks/decision/canon.html"
+        ],
+        "createdAt": "2026-10-25T00:40:11.877Z",
+        "reason": "canon card deliberately renders the category standard as shipped, which uses Inter"
+      }
+    ]
+  }
+}
