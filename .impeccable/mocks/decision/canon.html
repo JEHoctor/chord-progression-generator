@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Category standard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F3F4F6;--w:#FFFFFF;--ink:#111827;--mute:#6B7280;--line:#E5E7EB;--acc:#6D28D9}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;display:grid;grid-template-columns:240px 1fr 340px;grid-template-rows:64px 1fr 76px}
+header{grid-column:1/4;background:var(--w);border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 24px;gap:16px}
+.brand{font-weight:700;font-size:18px}header .sp{flex:1}
+.btn{border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-weight:500;font-size:14px;background:var(--w)}
+.btn.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+.side{background:var(--w);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:4px}
+.side span{padding:10px 12px;border-radius:8px;font-weight:500;font-size:15px;color:var(--mute)}.side span.on{background:#EDE9FE;color:var(--acc)}
+.side h4{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;margin:16px 12px 6px}
+main{padding:24px;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--w);border:1px solid var(--line);border-radius:12px;padding:20px}
+.card h1{font-size:24px;font-weight:700}.card p{font-size:14px;color:var(--mute);margin-top:4px}
+.row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.ch{border-radius:10px;padding:16px;height:96px;color:#fff;display:flex;flex-direction:column;justify-content:space-between}
+.ch b{font-size:24px;font-weight:700}.ch span{font-size:13px}
+.ch.sel{outline:3px solid var(--ink);outline-offset:2px}
+aside{background:var(--w);border-left:1px solid var(--line);padding:24px;display:flex;flex-direction:column;gap:12px}
+aside h2{font-size:40px;font-weight:700}
+.it{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center}
+.it b{font-size:18px}
+footer{grid-column:1/4;background:var(--w);border-top:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 24px}
+.play{background:var(--ink);color:#fff;border-radius:999px;padding:12px 24px;font-weight:600}footer .sp{flex:1}
+</style></head><body>
+<header><span class="brand">Chord Changes</span><span class="sp"></span><span class="btn">Library</span><span class="btn">Help</span><span class="btn p">Export</span></header>
+<div class="side"><span>Generate</span><span class="on">Chart</span><span>Chord finder</span><span>Harmonize</span><span>Keys &amp; modes</span><h4>Settings</h4><span>Key &amp; limits</span><span>Sound</span></div>
+<main><div class="card"><h1>Late Train Home</h1><p>G major · 4/4 · 88 bpm</p>
+ <div class="row"><div class="ch" style="background:#64748B"><b>Cmaj7</b><span>IV</span></div><div class="ch sel" style="background:#64748B"><b>Am9</b><span>ii</span></div><div class="ch" style="background:#C2410C"><b>A7</b><span>V/V</span></div><div class="ch" style="background:#64748B"><b>D7sus4</b><span>V</span></div></div>
+ <div class="row"><div class="ch" style="background:#64748B;grid-column:span 2"><b>Gmaj7</b><span>I</span></div><div class="ch" style="background:#7C3AED"><b>Cm6</b><span>iv</span></div><div class="ch" style="background:#DB2777"><b>B♭9</b><span>♭III</span></div></div></div></main>
+<aside><h2>Am9</h2><p style="color:var(--mute);font-size:14px">ii · in key</p><div class="it"><b>E7</b><span class="btn">Use</span></div><div class="it"><b>Em7</b><span class="btn">Use</span></div><div class="it"><b>Fmaj7</b><span class="btn">Use</span></div></aside>
+<footer><span class="play">▶ Play</span><span class="btn">Loop</span><span class="btn">88 bpm</span><span class="sp"></span><span class="btn">Piano</span></footer>
+</body></html>

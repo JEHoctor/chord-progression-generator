@@ -1,0 +1,93 @@
+<!doctype html><html><head><meta charset="utf-8"><title>The Setlist</title>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--stage:#141414;--stage2:#1F1F1F;--paper:#FFFFFF;--sheet:#F5F5F3;--ink:#141414;--mute:#6B6B6B;--line:#E2E2DE;
+--gaff:#D9D9D6;--yel:#FFD400;--pink:#FF3D8B;--blue:#2F7BFF;--grn:#19C37D}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--stage);font-family:'Public Sans',sans-serif;color:var(--ink);display:grid;grid-template-columns:200px 1fr 360px;grid-template-rows:1fr 84px}
+.rail{grid-row:1/3;background:var(--stage);color:#fff;padding:28px 20px;display:flex;flex-direction:column;gap:6px}
+.brand{font:900 30px/0.95 'Big Shoulders Display';letter-spacing:.01em;text-transform:uppercase;margin-bottom:28px}
+.nav a{display:block;position:relative;font:700 26px/1 'Big Shoulders Display';text-transform:uppercase;letter-spacing:.03em;color:#BDBDBD;padding:12px 10px;text-decoration:none}
+.nav a.on{color:var(--stage)}
+.nav a.on::before{content:"";position:absolute;inset:4px -6px 4px -6px;background:var(--yel);transform:rotate(-1.2deg);z-index:-1;clip-path:polygon(0 8%,3% 0,100% 0,98% 30%,100% 55%,97% 100%,0 100%,2% 60%)}
+.nav{position:relative;z-index:0}
+.nav small{display:block;font:500 13px 'Public Sans';color:#8A8A8A;text-transform:none;letter-spacing:0;margin-top:4px}
+.view{margin-top:auto;font-size:13px;color:#9A9A9A}
+.view b{display:flex;gap:0;margin-top:8px;background:var(--stage2);border-radius:8px;padding:3px}
+.view b span{flex:1;text-align:center;padding:8px 0;border-radius:6px;font-weight:600;color:#ddd}
+.view b span.on{background:#fff;color:var(--stage)}
+main{background:var(--paper);padding:28px 36px;display:flex;flex-direction:column;gap:18px;border-top-left-radius:18px}
+.head{display:flex;align-items:flex-end;justify-content:space-between}
+.head h1{font:900 64px/0.9 'Big Shoulders Display';text-transform:uppercase;letter-spacing:.005em}
+.head p{font-size:15px;color:var(--mute);margin-top:8px}
+.tools{display:flex;gap:8px}
+.btn{border:1.5px solid var(--ink);background:#fff;border-radius:999px;padding:10px 18px;font-weight:600;font-size:15px}
+.btn.go{background:var(--ink);color:#fff}
+.sheet{background:var(--sheet);border-radius:14px;padding:18px 18px 22px;display:flex;flex-direction:column;gap:22px}
+.sec{font:700 22px 'Big Shoulders Display';text-transform:uppercase;letter-spacing:.06em;display:flex;gap:12px;align-items:center}
+.sec::after{content:"";flex:1;height:2px;background:var(--line)}
+.row{display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative}
+.bar{border-left:2px solid var(--line);padding:0 8px;height:118px;position:relative}
+.bar:last-child{border-right:2px solid var(--line)}
+.bn{font:600 12px 'Public Sans';color:var(--mute)}
+.ticks{position:absolute;left:8px;right:8px;bottom:6px;display:flex;justify-content:space-between}
+.ticks i{width:4px;height:4px;border-radius:50%;background:#BDBDB8}
+.tape{position:absolute;top:24px;height:72px;background:var(--k);padding:10px 16px;display:flex;flex-direction:column;justify-content:center;
+ clip-path:polygon(0 0,100% 0,98.5% 18%,100% 36%,98.8% 55%,100% 74%,98.5% 100%,0 100%)}
+.tape b{font:900 44px/0.9 'Big Shoulders Display';letter-spacing:.005em}
+.tape span{font-size:14px;font-weight:600;margin-top:4px}
+.tape.sel{outline:4px solid var(--ink);outline-offset:3px}
+.tape.play{box-shadow:0 0 0 0 transparent}
+.tape.play::after{content:"";position:absolute;left:12px;right:12px;bottom:-12px;height:6px;background:var(--grn)}
+.key{display:flex;gap:22px;font-size:14px;color:var(--mute);font-weight:500}
+.key span{display:flex;gap:8px;align-items:center}
+.key span::before{content:"";width:22px;height:12px;background:var(--k)}
+aside{background:var(--paper);border-left:2px solid var(--line);padding:28px 26px;display:flex;flex-direction:column;gap:16px}
+.cname{font:900 104px/0.85 'Big Shoulders Display'}
+.job{display:flex;gap:10px;align-items:center;font-size:16px;font-weight:600}
+.job i{width:26px;height:14px;background:var(--gaff)}
+.why{font-size:15px;color:var(--mute);line-height:1.5}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line)}
+.tabs span{padding:10px 14px;font-weight:700;font-size:15px;color:var(--mute)}
+.tabs span.on{color:var(--ink);box-shadow:inset 0 -4px 0 var(--yel)}
+.swap{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.swap b{font:900 34px/1 'Big Shoulders Display'}
+.swap em{font-style:normal;font-size:13px;color:var(--mute);display:block;margin-top:4px}
+.swap .k{width:10px;align-self:stretch;background:var(--k);margin-right:14px}
+.swap div{flex:1}
+.dock{grid-column:2/4;background:var(--stage);color:#fff;display:flex;align-items:center;gap:28px;padding:0 36px}
+.play{background:var(--yel);color:var(--stage);font:900 30px 'Big Shoulders Display';text-transform:uppercase;padding:12px 34px;border-radius:999px}
+.now{font-size:13px;color:#9A9A9A}.now b{display:block;font:900 32px/1 'Big Shoulders Display';color:#fff}
+.dock .sp{flex:1}
+.pill{border:1.5px solid #555;border-radius:999px;padding:9px 16px;font-size:15px;font-weight:600;color:#ddd}
+.exp{background:#fff;color:var(--stage);border-radius:999px;padding:12px 26px;font-weight:700;font-size:16px}
+</style></head><body>
+<nav class="rail"><div class="brand">Chord<br>Changes</div>
+ <div class="nav"><a href="#">Write<small>Feelings, styles, generate</small></a><a class="on" href="#">Chart<small>Your progression</small></a><a href="#">Tools<small>Finder, harmonize, keys</small></a><a href="#">Library<small>3 saved</small></a></div>
+ <div class="view">Show<b><span>Essentials</span><span class="on">Everything</span></b></div></nav>
+<main>
+ <div class="head"><div><h1>Late Train Home</h1><p>G major · 4/4 · 88 bpm · 8 bars · Dreamy, Lo-fi</p></div>
+  <div class="tools"><span class="btn">Transpose</span><span class="btn">Undo</span><span class="btn go">Make another</span></div></div>
+ <div class="sheet">
+  <div class="sec">Verse</div>
+  <div class="row"><div class="bar"><span class="bn">1</span><div class="ticks"><i></i><i></i><i></i><i></i></div></div><div class="bar"><span class="bn">2</span><div class="ticks"><i></i><i></i><i></i><i></i></div></div><div class="bar"><span class="bn">3</span><div class="ticks"><i></i><i></i><i></i><i></i></div></div><div class="bar"><span class="bn">4</span><div class="ticks"><i></i><i></i><i></i><i></i></div></div>
+   <div class="tape play" style="--k:var(--gaff);left:6px;width:calc(25% - 12px)"><b>Cmaj7</b><span>IV · in key</span></div>
+   <div class="tape sel" style="--k:var(--gaff);left:calc(25% + 6px);width:calc(25% - 12px)"><b>Am9</b><span>ii · in key</span></div>
+   <div class="tape" style="--k:var(--pink);left:calc(50% + 6px);width:calc(25% - 12px)"><b>A7</b><span>V/V · secondary</span></div>
+   <div class="tape" style="--k:var(--gaff);left:calc(75% + 6px);width:calc(25% - 12px)"><b>D7sus4</b><span>V · in key</span></div></div>
+  <div class="sec">Chorus</div>
+  <div class="row"><div class="bar"><span class="bn">5</span><div class="ticks"><i></i><i></i><i></i><i></i></div></div><div class="bar"><span class="bn">6</span><div class="ticks"><i></i><i></i><i></i><i></i></div></div><div class="bar"><span class="bn">7</span><div class="ticks"><i></i><i></i><i></i><i></i></div></div><div class="bar"><span class="bn">8</span><div class="ticks"><i></i><i></i><i></i><i></i></div></div>
+   <div class="tape" style="--k:var(--gaff);left:6px;width:calc(50% - 12px)"><b>Gmaj7</b><span>I · in key</span></div>
+   <div class="tape" style="--k:var(--blue);left:calc(50% + 6px);width:calc(25% - 12px)"><b>Cm6</b><span>iv · borrowed</span></div>
+   <div class="tape" style="--k:var(--yel);left:calc(75% + 6px);width:calc(25% - 12px)"><b>B♭9</b><span>♭III · chromatic</span></div></div>
+ </div>
+ <div class="key"><span style="--k:var(--gaff)">In the key</span><span style="--k:var(--blue)">Borrowed</span><span style="--k:var(--pink)">Secondary</span><span style="--k:var(--yel)">Chromatic</span><span style="--k:var(--grn)">Playing now</span></div>
+</main>
+<aside><div class="tabs"><span class="on">Chord</span><span>Swap ideas · 12</span></div>
+ <div class="cname">Am9</div><div class="job"><i></i>ii · in the key of G major</div>
+ <p class="why">The ii chord with a 9th on top: it leans gently toward the D that follows.</p>
+ <div class="swap"><span class="k" style="--k:var(--pink)"></span><div><b>E7</b><em>V/ii · pulls hard into Am</em></div><span class="btn">Use</span></div>
+ <div class="swap"><span class="k" style="--k:var(--gaff)"></span><div><b>Em7</b><em>vi · same notes, darker</em></div><span class="btn">Use</span></div>
+ <div class="swap"><span class="k" style="--k:var(--blue)"></span><div><b>Fmaj7</b><em>♭VII · borrowed brightness</em></div><span class="btn">Use</span></div></aside>
+<footer class="dock"><span class="play">▶ Play</span><div class="now">Now<b>Cmaj7</b></div><span class="pill">Loop</span><span class="pill">− 88 bpm +</span><span class="pill">Piano · Ballad</span><span class="sp"></span><span class="exp">Export ▾</span></footer>
+</body></html>

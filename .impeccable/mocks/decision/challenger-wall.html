@@ -1,0 +1,46 @@
+<!doctype html><html><head><meta charset="utf-8"><title>The Browse Wall</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#101215;--tile:#1E2228;--ink:#F2F3F5;--mute:#A3A9B3;--acc:#FF5A36}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:'Manrope',sans-serif;display:grid;grid-template-rows:68px 1fr 80px}
+header{display:flex;align-items:center;gap:32px;padding:0 40px}
+.brand{font-weight:800;font-size:22px}
+nav{display:flex;gap:8px}nav span{padding:9px 16px;border-radius:999px;font-weight:700;font-size:15px;color:var(--mute)}nav span.on{background:var(--ink);color:var(--bg)}
+header .sp{flex:1}.search{background:var(--tile);border-radius:999px;padding:10px 20px;color:var(--mute);font-size:15px;width:300px}
+main{padding:8px 40px;display:flex;flex-direction:column;gap:26px;overflow:hidden}
+.rowh{font-size:22px;font-weight:800;margin-bottom:12px}.rowh span{font-size:14px;color:var(--mute);font-weight:600;margin-left:10px}
+.rail{display:flex;gap:14px;align-items:flex-end}
+.t{width:220px;height:124px;border-radius:12px;background:var(--tile);padding:14px;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;opacity:.55;flex:none}
+.t .strip{display:flex;gap:3px;height:34px}.t .strip i{flex:1;border-radius:4px;background:var(--c)}
+.t b{font-size:15px;font-weight:700}
+.dim .t{opacity:.35}
+.t.f{width:420px;height:236px;opacity:1;outline:3px solid var(--acc);outline-offset:3px;background:linear-gradient(160deg,#2A2F38,#1A1D22);padding:20px;gap:12px}
+.t.f .strip{height:70px;gap:5px}.t.f .strip i{display:grid;place-items:center;font-weight:800;font-size:22px;color:#111}
+.t.f b{font-size:24px;font-weight:800}
+.meta{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--mute)}
+.chip{background:#2C323B;color:var(--ink);border-radius:999px;padding:4px 12px;font-weight:700;font-size:13px}
+.playb{background:var(--acc);color:#111;border-radius:999px;padding:8px 18px;font-weight:800;font-size:15px}
+footer{background:#0A0B0D;display:flex;align-items:center;gap:24px;padding:0 40px;border-top:1px solid #23272E}
+.play{background:var(--ink);color:#111;border-radius:999px;padding:12px 28px;font-weight:800;font-size:18px}
+.now{font-size:13px;color:var(--mute)}.now b{display:block;font-size:22px;color:var(--ink);font-weight:800}
+.pill{border:1px solid #3A404A;border-radius:999px;padding:9px 16px;font-weight:600;color:#ccc}
+footer .sp{flex:1}.exp{background:var(--acc);color:#111;border-radius:999px;padding:12px 24px;font-weight:800}
+</style></head><body>
+<header><span class="brand">Chord Changes</span><nav><span class="on">Browse</span><span>Chart</span><span>Tools</span><span>Library</span></nav><span class="sp"></span><span class="search">Find a feeling, style or chord</span></header>
+<main>
+ <section><div class="rowh">Dreamy <span>in G major</span></div>
+  <div class="rail">
+   <div class="t f"><div class="strip"><i style="--c:#C9CED6">IV</i><i style="--c:#C9CED6">ii</i><i style="--c:#FF8FB8">V/V</i><i style="--c:#C9CED6">V</i></div><b>Late Train Home</b>
+    <div class="meta"><span class="chip">Lo-fi</span><span>Cmaj7 · Am9 · A7 · D7sus4</span><span class="playb">▶ Play</span></div></div>
+   <div class="t"><div class="strip"><i style="--c:#C9CED6"></i><i style="--c:#8FB3FF"></i><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i></div><b>Glass Harbour</b></div>
+   <div class="t"><div class="strip"><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i><i style="--c:#FFE066"></i><i style="--c:#C9CED6"></i></div><b>Slow Lights</b></div>
+   <div class="t"><div class="strip"><i style="--c:#8FB3FF"></i><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i></div><b>Paper Moon</b></div>
+  </div></section>
+ <section class="dim"><div class="rowh">Melancholy <span>in E minor</span></div>
+  <div class="rail"><div class="t"><div class="strip"><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i><i style="--c:#8FB3FF"></i><i style="--c:#C9CED6"></i></div><b>Rain on Brick</b></div><div class="t"><div class="strip"><i style="--c:#C9CED6"></i><i style="--c:#FF8FB8"></i><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i></div><b>Low Tide</b></div><div class="t"><div class="strip"><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i><i style="--c:#FFE066"></i></div><b>Old Coat</b></div><div class="t"><div class="strip"><i style="--c:#8FB3FF"></i><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i></div><b>Empty Station</b></div><div class="t"><div class="strip"><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i><i style="--c:#FF8FB8"></i><i style="--c:#C9CED6"></i></div><b>Last Call</b></div></div></section>
+ <section class="dim"><div class="rowh">Gospel colours <span>in D♭ major</span></div>
+  <div class="rail"><div class="t"><div class="strip"><i style="--c:#C9CED6"></i><i style="--c:#FF8FB8"></i><i style="--c:#C9CED6"></i><i style="--c:#8FB3FF"></i></div><b>Sunday Light</b></div><div class="t"><div class="strip"><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i><i style="--c:#FF8FB8"></i><i style="--c:#C9CED6"></i></div><b>Hold On</b></div><div class="t"><div class="strip"><i style="--c:#FFE066"></i><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i><i style="--c:#C9CED6"></i></div><b>Choir Loft</b></div></div></section>
+</main>
+<footer><span class="play">▶ Play</span><div class="now">Now<b>Cmaj7</b></div><span class="pill">Loop</span><span class="pill">− 88 +</span><span class="pill">Piano</span><span class="sp"></span><span class="exp">Export ▾</span></footer>
+</body></html>

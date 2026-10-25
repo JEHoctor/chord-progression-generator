@@ -31,7 +31,7 @@ Success: a newcomer gets a progression they like within one tap (the Simple view
 - People use it at the instrument or in a writing session: tap a chord to hear it, loop the chart, try swaps, play along on guitar or piano.
 - Results leave the app as MIDI, MusicXML (Finale, Sibelius, MuseScore, Dorico), a copied text chart, or a printed lead sheet, and land in a DAW or notation app.
 - Saved work lives in the in-browser Library. JSON library files can be exported and imported.
-- Layout by device: on desktop, a five-part screen (top bar, Create, Chart in the centre, Chord / Swap ideas, pinned Play bar). On a smaller laptop or tablet, Create slides out. On a phone, a tab bar switches between Create, Chart, Chord and Tools.
+- Layout by device: one shell everywhere. The chart stays in the centre, and one navigation (Create, Chord, Tools) picks what the side panel shows; Library, Help and Simple / Advanced sit with it. On desktop the navigation is a rail on the left; on tablet it becomes a top bar; on a phone, tabs along the bottom (Create, Chart, Chord, Tools) show one screen at a time. The Play bar is pinned along the bottom. Simple and Advanced share the shell: Simple shows fewer panels, starting on the one-tap card in Create. Each screen has its own address (#create, #chart, #chord, #tools).
 
 ## Capabilities and Constraints
 
