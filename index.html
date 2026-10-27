@@ -705,6 +705,41 @@ select.btn{border-radius:var(--r-pill)}
 .slot .rz::after{right:5px;top:30%;bottom:30%;width:3px;background:#141414;opacity:0}
 .slot:hover .rz::after,.slot.resizing .rz::after{opacity:.4;background:#141414}
 @container (max-width:118px){ .slot .cb{display:none} }
+/* melody lane: a row of beat cells under the chords, in the same columns; bar lines run down through it */
+.row.has-mel .bar{grid-row:1 / span 2}
+.mcell{grid-row:2;z-index:2;margin:0 2px 10px;height:34px;min-width:0;border:1.5px solid var(--line);border-radius:6px;background:var(--surface);color:var(--muted);font:600 13px/1 var(--f-ui);display:grid;place-items:center;padding:0;cursor:pointer;overflow:hidden}
+.mcell b{font-weight:700;color:var(--ink);white-space:nowrap}
+.mcell.bar0{border-left-width:3px}
+.mcell.rest span{opacity:.5}
+.mcell.hold i{display:block;width:70%;height:3px;border-radius:2px;background:currentColor;opacity:.55}
+.mcell.r-tone{background:var(--mel-tone);border-color:var(--mel-tone)} .mcell.r-tone b{color:#141414}
+.mcell.r-color{border-color:var(--mel-tone);border-style:dashed}
+.mcell.r-pass{border-style:dotted}
+.mcell.r-clash{border-color:var(--mel-clash);box-shadow:inset 0 -4px 0 var(--mel-clash)}
+.mcell.hold.r-tone{background:color-mix(in srgb,var(--mel-tone) 45%,transparent)} .mcell.hold.r-tone i{color:#141414}
+.mcell.msel{outline:2px solid var(--ink);outline-offset:1px}
+.mcell.cur{outline-width:3px}
+.mcell:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+:root{--mel-tone:#8FD3B0;--mel-clash:#E5484D}
+.mel-toggle[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.melpad{position:sticky;bottom:calc(var(--dock-h,76px) + 8px);z-index:20;margin-top:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--pop);padding:12px;display:flex;flex-direction:column;gap:10px}
+.melpad[hidden]{display:none}
+.mp-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+.mp-notes{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px}
+.mp-n{height:40px;border:1.5px solid var(--line);border-radius:8px;background:var(--sunk);color:var(--muted);font:600 14px/1 var(--f-ui);padding:0;min-width:0}
+.mp-n.sc{color:var(--ink);background:var(--surface)}
+.mp-n.r-tone{background:var(--mel-tone);border-color:var(--mel-tone);color:#141414}
+.mp-n.r-color{border-color:var(--mel-tone);border-style:dashed}
+.mp-n.on{outline:3px solid var(--ink);outline-offset:1px}
+.mp-acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.mp-oct{display:inline-flex;gap:4px}
+.mp-hint{margin:0;font-size:12.5px}
+.mp-key{display:inline-flex;gap:6px 10px;align-items:center;flex-wrap:wrap;margin-left:6px}
+.mp-key i{display:inline-block;width:12px;height:12px;border-radius:3px;border:1.5px solid var(--line);vertical-align:-2px;margin-right:3px}
+.mp-key i.r-tone{background:var(--mel-tone);border-color:var(--mel-tone)} .mp-key i.r-color{border:1.5px dashed var(--mel-tone)} .mp-key i.r-clash{border-color:var(--mel-clash);box-shadow:inset 0 -3px 0 var(--mel-clash)}
+/* on a phone the pad stays short so the lane it edits stays in view */
+@media (max-width:759px){ .melpad{bottom:calc(var(--dock-h,76px) + var(--tabs-h,58px) + 6px);padding:8px;gap:6px} .mp-notes{gap:2px} .mp-n{height:34px;font-size:12.5px;border-radius:6px} .mp-acts{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px} .mp-acts .btn{flex:none} .mp-tip{display:none} .mp-key{margin-left:0} .mp-head{font-size:13px} .mcell{font-size:12px} }
+@media (pointer:coarse){ .mcell{height:40px} }
 /* a container can't restyle itself, so narrow slots are marked by markNarrow() */
 .slot.narrow{padding:6px 12px 6px 6px}
 @container (max-width:84px){ .slot .cr{display:none} }
@@ -841,7 +876,7 @@ body{padding-bottom:0}
     <div class="sub-h"><h2>Harmonize a melody</h2><span class="hint">One note per beat. The chords follow the chart’s key and time, and <button type="button" class="linkbtn" data-goto="setkey">Chords allowed</button>.</span></div>
     <div class="mel-in"><input id="melIn" type="text" spellcheck="false" autocomplete="off" placeholder="e.g. E D C D | E E E - | D D D - | E G G -" aria-label="Melody, one note per beat">
       <select id="melRate" aria-label="Chords per bar"><option value="1">One chord per bar</option><option value="2">Two chords per bar</option></select>
-      <button class="btn" id="melPlay" type="button"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Melody</button><button class="btn primary" id="melGo" type="button">Suggest chords</button></div>
+      <button class="btn" id="melPlay" type="button"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Melody</button><button class="btn primary" id="melGo" type="button">Suggest chords</button><button class="btn" id="melToLane" type="button" title="Write this melody into the melody lane under the chart, from bar 1">Put in melody lane</button></div>
     <p class="hint">Note names like C, F♯ or F#, B♭ or Bb. A dash (-) holds the last note, a dot (.) is a rest, and | between bars is optional. Octaves are ignored; notes are matched by pitch.</p>
     <div id="melOut" aria-live="polite"></div>
   </section>
@@ -870,7 +905,7 @@ body{padding-bottom:0}
     <p class="hint cycle-note" id="cycleNote" hidden></p>
   </section>
       </div></details></div>
-      <span class="chead-acts"><button class="btn small" id="undo" type="button">Undo</button><button type="button" class="btn small ctools-toggle" id="ctoolsToggle" aria-expanded="false" aria-controls="chartTools">Chart tools</button></span>
+      <span class="chead-acts"><button class="btn small" id="undo" type="button">Undo</button><button type="button" class="btn small mel-toggle" id="melToggle" aria-pressed="false" title="Show a melody lane under the chords: one note per beat, coloured against each chord">♪ Melody</button><button type="button" class="btn small ctools-toggle" id="ctoolsToggle" aria-expanded="false" aria-controls="chartTools">Chart tools</button></span>
       <div class="transport" id="chartTools">
         <span class="xpose" role="group" aria-label="Transpose"><span class="label">Transpose</span><button class="btn small" id="tdown" type="button" aria-label="Down a half step">−½</button><button class="btn small" id="tup" type="button" aria-label="Up a half step">+½</button><select id="tto" aria-label="Transpose to key"></select></span>
         <select id="voicing" class="btn" aria-label="Playback voicing"><option value="smooth">Smooth voice leading</option><option value="fixed">Fixed root position</option></select>
@@ -883,6 +918,7 @@ body{padding-bottom:0}
     <div class="err" id="err" hidden></div>
     <div class="tension" id="tension"></div>
     <div class="rows" id="rows"></div>
+    <div class="melpad" id="melPad" hidden role="group" aria-label="Melody notes"></div>
     <div class="legend">
       <span class="k-dia">In the key</span><span class="k-bor">Borrowed from a parallel mode</span><span class="k-sec">Secondary / tritone dominant</span><span class="k-chr">Chromatic</span>
     </div>
@@ -1158,8 +1194,13 @@ const NUMS={I:0,II:2,III:4,IV:5,V:7,VI:9,VII:11};
 /* tables are plain objects, so keys that come from outside (chord text, share links, saved files) are only accepted when
    they are the table's own entries; "constructor" or "__proto__" never count */
 const ownKey=(o,k)=>typeof k==='string'&&Object.prototype.hasOwnProperty.call(o,k);
-const S={melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
+const S={showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
 let chords=[], sel=null, hist=[];
+/* the melody: one entry per beat of the chart, by absolute beat. A MIDI note number starts a note, -1 holds the note
+   before it, null is a rest. It is independent of the chords, so moving a chord changes the harmony under the tune. */
+let melody=[];
+function sanitizeMelody(list){ if(!Array.isArray(list)||list.length>4096) return null;
+  return list.map((x,i)=>Number.isInteger(x)&&x>=21&&x<=108?x:x===-1&&i>0?-1:null); }
 let _id=1; const uid=()=>'c'+(_id++);
 
 const mod=n=>((n%12)+12)%12;
@@ -1952,6 +1993,7 @@ const LOOP_AHEAD=.5;
 function playPass(t,out){
   const a=actx, unit=60/S.tempo*(4/den()), L=barLen(), acc=new Set(ACCENTS[S.meter]); let beat=0;
   if(S.drone) droneTones(t,chords.reduce((s,c)=>s+c.beats,0)*unit,out);
+  if(S.showMel&&S.melPlay) playMelLine(t,unit,out);
   chords.forEach(c=>{
     const dur=c.beats*unit, v=real(c)?playedVoicing(c):null; playStyled(c,t,c.beats,unit,out,v,beat);
     timers.push(setTimeout(()=>{ midiChord(v); $('#nowChord').innerHTML=real(c)?chordHTML(c):'rest'; document.querySelectorAll('.slot.playing').forEach(e=>e.classList.remove('playing')); document.querySelectorAll(`.slot[data-id="${c.id}"]`).forEach(e=>e.classList.add('playing')); },(t-a.currentTime)*1000));
@@ -2060,7 +2102,7 @@ function rerenderDetailKeepScroll(){ const sc=$('#detail .shapes')?.scrollLeft||
 
 /* ============ state & rendering ============ */
 const $=s=>document.querySelector(s);
-function snapshot(){ return JSON.stringify({S,chords,sel}); }
+function snapshot(){ return JSON.stringify({S,chords,sel,melody}); }
 function pushHist(){ hist.push(snapshot()); if(hist.length>60) hist.shift(); }
 function save(){ try{ localStorage.setItem('changes-v1',snapshot()); }catch(e){} }
 function commit(){ renderAll(); save(); }
@@ -2086,7 +2128,7 @@ function hearKey(){
   if(home&&turn) audition([[home,.9],[turn,.9],[home,1.4]]);
 }
 function renderControls(){
-  $('#key').value=S.tonic; $('#mode').value=S.mode; $('#meter').value=S.meter; $('#tempo').value=S.tempo; $('#symStyle').value=S.sym; $('#labelMode').value=S.labels;
+  $('#key').value=S.tonic; $('#mode').value=S.mode; $('#meter').value=S.meter; $('#tempo').value=S.tempo; $('#symStyle').value=S.sym; $('#labelMode').value=S.labels; $('#melToggle').setAttribute('aria-pressed',String(!!S.showMel));
   $('#bars').value=S.bars; $('#rhythm').value=S.rhythm; $('#lockmode').checked=S.lock; $('#loop').checked=S.loop; $('#click').setAttribute('aria-pressed',String(!!S.click));
   const vk=[...S.vocab].sort().join(); document.querySelectorAll('#presets button').forEach(b=>b.setAttribute('aria-pressed',[...PRESETS[b.dataset.p]].sort().join()===vk));
   document.querySelectorAll('#fams button.chip').forEach(b=>b.setAttribute('aria-pressed',famOn(b.dataset.f)));
@@ -2190,7 +2232,7 @@ function renderChart(){
   for(const row of rowList){
     const r0=row.start*L, r1=(row.start+row.n)*L;
     if(row.label||row.kc) html+=`<div class="sec-label">${row.label?esc(row.label):''}${row.kc?`<span class="kc-tag" title="Key change">Key: ${esc(keyLabel(row.kc))}</span>`:''}</div>`;
-    html+=`<div class="row" data-rb="${rowBeats}" style="grid-template-columns:repeat(${rowBeats},minmax(0,1fr))">`;
+    html+=`<div class="row${S.showMel?' has-mel':''}" data-rb="${rowBeats}" style="grid-template-columns:repeat(${rowBeats},minmax(0,1fr))">`;
     for(let b=0;b<row.n;b++){ const bi=row.start+b;
       html+=`<div class="bar${bi===nBars-1?' last':''}" style="grid-column:${b*L+1} / span ${L}"><span class="bn">${bi+1}</span><div class="ticks" style="grid-template-columns:repeat(${L},1fr)">${Array.from({length:L},(_,k)=>{ const cy=CYCLES[S.meter], gi=cy?cy.starts.indexOf(k):-1; return `<i class="${accents.has(k)?'g':''}"${gi>=0?` data-m="${cy.marks[gi]}"`:''}></i>`; }).join('')}</div></div>`; }
     chords.forEach((c,i)=>{
@@ -2202,6 +2244,7 @@ function renderChart(){
     });
     /* the "+ Add chord" tile sits after the last chord, in the last row if there is room */
     if(row===rowList[rowList.length-1]){ const used=Math.min(total,r1)-r0; if(rowBeats-used>=1) html+=addTile(used+1,Math.min(L,rowBeats-used)); else tileNewRow=true; }
+    if(S.showMel) html+=melLaneHTML(r0,Math.min(r1,total),starts);
     html+='</div>';
   }
   if(tileNewRow) html+=`<div class="row" data-rb="${rowBeats}" style="grid-template-columns:repeat(${rowBeats},minmax(0,1fr))">${addTile(1,L)}</div>`;
@@ -2210,6 +2253,80 @@ function renderChart(){
 /* bars per row from the chart's own width, so a beat gets about 40px wherever the panels leave it; long cycles get fewer */
 let rowsPer=0;
 function barsPerRow(){ const w=$('#rows').clientWidth||(window.innerWidth<640?340:760), L=barLen(); return Math.max(1,Math.min(L>=10?2:4,Math.floor(w/(L*40)))); }
+/* ============ melody lane ============ */
+/* One cell per beat under the chords. A note is coloured by what it is against the chord above it: a chord tone (solid),
+   a colour note, the chord's 9th/11th/13th or another note of the key (outlined), or a clash, a note outside both, on a strong
+   beat (marked). Tap a cell, then a note on the pad; the cursor moves on, so a tune goes in beat by beat. */
+let melSel=null, melLast=null; /* {a,b}: the selected beats, b is the cursor; melLast: the beat of the note just typed */
+const chordStarts=()=>{ const st=[]; let p=0; chords.forEach(c=>{ st.push(p); p+=c.beats; }); return st; };
+function chordIdxAt(b,st=chordStarts()){ for(let i=chords.length-1;i>=0;i--) if(st[i]<=b) return b<st[i]+chords[i].beats?i:-1; return -1; }
+/* the pitch sounding at a beat: the note started there, or the one being held */
+function melPitch(b){ for(let i=b;i>=0;i--){ const x=melody[i]; if(x>0) return x; if(x!==-1) return null; } return null; }
+function melRel(pc,ci,b){
+  const c=chords[ci]; if(!real(c)) return inKey(keyAt(Math.max(ci,0)),()=>scaleSet().has(pc))?'color':'pass';
+  return inKey(keyAt(ci),()=>{ if(corePcs(c).includes(pc)||(c.bass!=null&&c.bass===pc)) return 'tone'; if(pcsOf(c).includes(pc)||scaleSet().has(pc)) return 'color'; return strongBeat(b)?'clash':'pass'; });
+}
+const MEL_REL={tone:'chord tone',color:'colour note',pass:'passing note',clash:'clash on a strong beat'};
+function melLaneHTML(r0,r1,starts){
+  let h=''; const L=barLen(), lo=melSel?Math.min(melSel.a,melSel.b):-1, hi=melSel?Math.max(melSel.a,melSel.b):-1;
+  for(let b=r0;b<r1;b++){ const x=melody[b]??null, m=x===-1?melPitch(b):x, ci=chordIdxAt(b,starts);
+    const rel=m>0&&ci>=0?melRel(mod(m),ci,b):'', name=m>0?inKey(keyAt(Math.max(ci,0)),()=>prettyNote(spell(mod(m)))):'';
+    const cls=['mcell',x===-1?'hold':x>0?'note':'rest',rel&&'r-'+rel,b%L===0?'bar0':'',b>=lo&&b<=hi?'msel':'',melSel&&b===melSel.b?'cur':''].filter(Boolean).join(' ');
+    const label=`Bar ${Math.floor(b/L)+1}, beat ${b%L+1}: ${x>0?name+' ('+MEL_REL[rel]+')':x===-1?'holding '+name:'rest'}`;
+    h+=`<button type="button" class="${cls}" data-mb="${b}" style="grid-column:${b-r0+1}" aria-label="${esc(label)}" title="${esc(label)}">${x>0?`<b>${esc(name)}</b>`:x===-1?'<i></i>':'<span>·</span>'}</button>`; }
+  return h;
+}
+/* a new note goes in the octave nearest the one before it, kept in a comfortable singing range */
+function melOctave(pc,b){ let prev=null; for(let i=b-1;i>=0;i--){ const x=melody[i]; if(x>0){ prev=x; break; } } prev=prev??67; let m=prev-6; while(mod(m)!==pc) m++; return Math.min(84,Math.max(55,m)); }
+function melSet(b,val,advance=true){
+  const total=chords.reduce((a,c)=>a+c.beats,0); if(b<0||b>=total) return; pushHist();
+  while(melody.length<=b) melody.push(null); melody[b]=val; melLast=val>0?b:null;
+  /* a rest or a new note ends a hold that ran on from here */
+  if(advance&&b+1<total) melSel={a:b+1,b:b+1}; else melSel={a:b,b:b};
+  commit(); renderMelPad(); focusMelCell();
+  if(val>0) playMelNote(val,b);
+}
+function playMelNote(m,b){ const a=ac(), out=previewOut(), ci=chordIdxAt(b);
+  if(ci>=0&&real(chords[ci])) strum(chords[ci],a.currentTime+.02,.9,out,playedVoicing(chords[ci]));
+  tone(m,a.currentTime+.02,.7,.2,out); }
+const focusMelCell=()=>{ if(melSel) document.querySelector(`#rows .mcell[data-mb="${melSel.b}"]`)?.focus({preventScroll:false}); };
+function melRangeBars(){ if(!melSel) return null; const L=barLen(), total=chords.reduce((a,c)=>a+c.beats,0), lo=Math.min(melSel.a,melSel.b), hi=Math.max(melSel.a,melSel.b);
+  const s0=Math.floor(lo/L)*L, e0=Math.min(total,(Math.floor(hi/L)+1)*L); return {s0,e0,first:s0/L+1,last:Math.ceil(e0/L)}; }
+function renderMelPad(){
+  const el=$('#melPad'); if(!S.showMel||!melSel){ el.hidden=true; el.innerHTML=''; return; }
+  const b=melSel.b, L=barLen(), ci=chordIdxAt(b), c=ci>=0?chords[ci]:null, k=keyAt(Math.max(ci,0)), cur=melody[b]??null, m=cur===-1?melPitch(b):cur;
+  const notes=Array.from({length:12},(_,i)=>mod(k.t+i)), sc=inKey(k,()=>scaleSet());
+  const rg=melRangeBars(), multi=melSel.a!==melSel.b;
+  el.hidden=false;
+  el.innerHTML=`<div class="mp-head"><span><b>Bar ${Math.floor(b/L)+1}, beat ${b%L+1}</b>${c&&real(c)?` · over ${esc(chordName(c))}`:''}${m>0?` · ${esc(inKey(k,()=>prettyNote(spell(mod(m)))))}${Math.floor(m/12)-1}`:''}</span><button type="button" class="cp-x" data-mp="close" aria-label="Close the note pad">${IC.x}</button></div>
+    <div class="mp-notes">${notes.map(pc=>{ const rel=ci>=0?melRel(pc,ci,b):''; return `<button type="button" class="mp-n${sc.has(pc)?' sc':''}${rel?' r-'+rel:''}${m>0&&mod(m)===pc?' on':''}" data-mpn="${pc}" title="${esc(MEL_REL[rel]||'')}">${esc(inKey(k,()=>prettyNote(spell(pc))))}</button>`; }).join('')}</div>
+    <div class="mp-acts"><span class="mp-oct" role="group" aria-label="Octave"><button type="button" class="btn small" data-mp="down" ${m>0?'':'disabled'} aria-label="Octave down">↓ Octave</button><button type="button" class="btn small" data-mp="up" ${m>0?'':'disabled'} aria-label="Octave up">↑ Octave</button></span>
+      <button type="button" class="btn small" data-mp="hold" ${b>0?'':'disabled'} title="Hold the note before (−)">Hold –</button><button type="button" class="btn small" data-mp="rest" title="Rest (.)">Rest</button>
+      <button type="button" class="btn small" data-mp="prev" aria-label="Previous beat">${IC.left}</button><button type="button" class="btn small" data-mp="next" aria-label="Next beat">${IC.right}</button>
+      ${rg?`<button type="button" class="btn small primary" data-mp="harm">Suggest chords for ${rg.first===rg.last?'bar '+rg.first:'bars '+rg.first+'–'+rg.last}</button>`:''}</div>
+    <p class="hint mp-hint"><span class="mp-tip">${multi?'Selected beats: Delete clears them; Suggest chords harmonizes their bars.':'Type A–G for a note (then # or ] to raise it a half step, [ to lower it), – to hold, . for a rest, ↑ ↓ for the octave. Shift-click or Shift-arrow selects bars to harmonize.'}</span> <span class="mp-key"><i class="r-tone"></i>chord tone <i class="r-color"></i>colour note <i class="r-clash"></i>clash</span></p>`;
+}
+function melNudge(b,n){ let i=b; while(i>0&&melody[i]===-1) i--; const x=melody[i]; if(!(x>0)) return; const y=x+n; if(y<21||y>108) return;
+  pushHist(); melody[i]=y; commit(); renderMelPad(); focusMelCell(); playMelNote(y,i); }
+/* the melody over one pass of the chart, a little louder than the chords; a held note sounds through its holds */
+function playMelLine(t0,unit,out){ const total=chords.reduce((a,c)=>a+c.beats,0);
+  for(let b=0;b<total&&b<melody.length;b++){ const x=melody[b]; if(!(x>0)) continue; let n=1; while(b+n<total&&melody[b+n]===-1) n++;
+    tone(x,t0+b*unit,n*unit*.94,.2,out); } }
+function melClearRange(){ if(!melSel) return; const lo=Math.min(melSel.a,melSel.b), hi=Math.max(melSel.a,melSel.b); pushHist(); for(let i=lo;i<=hi&&i<melody.length;i++) melody[i]=null; melSel={a:lo,b:lo}; commit(); renderMelPad(); focusMelCell(); }
+function melMove(d,extend){ if(!melSel) return; const total=chords.reduce((a,c)=>a+c.beats,0), nb=Math.max(0,Math.min(total-1,melSel.b+d)); melSel=extend?{a:melSel.a,b:nb}:{a:nb,b:nb}; renderChart(); renderMelPad(); focusMelCell(); }
+function melShift(n){ const b=melSel?.b; if(b==null) return; let i=b; while(i>0&&melody[i]===-1) i--; const x=melody[i]; if(!(x>0)) return; const y=x+n; if(y<21||y>108) return; pushHist(); melody[i]=y; commit(); renderMelPad(); focusMelCell(); playMelNote(y,b); }
+/* the selected bars' melody, harmonized in the key in force there; the results open in Harmonize, set to replace those bars */
+function melHarmonize(){
+  const rg=melRangeBars(); if(!rg) return; const beats=[]; let prev=null;
+  for(let i=rg.s0;i<rg.e0;i++){ const x=melody[i]??null; if(x>0){ prev=mod(x); beats.push({pc:prev,onset:true}); } else if(x===-1&&prev!=null) beats.push({pc:prev,onset:false}); else { prev=null; beats.push(null); } }
+  if(!beats.some(Boolean)){ toast('Put some notes in those bars first'); return; }
+  const ci=chordIdxAt(rg.s0), k=keyAt(Math.max(ci,0));
+  const results=inKey(k,()=>harmonize(beats,S.melRate||1));
+  MEL={beats,results,target:rg};
+  revealEl($('#melOut')); selectTab('left','melody'); if(document.body.classList.contains('drawer-open')===false&&!wideLayout()) selectTab('phone','p-create');
+  renderMelody(); $('#melOut').scrollIntoView({block:'nearest'});
+  toast(`Chord ideas for ${rg.first===rg.last?'bar '+rg.first:'bars '+rg.first+'–'+rg.last} are in Harmonize`);
+}
 function markNarrow(){ document.querySelectorAll('#rows .slot').forEach(s=>s.classList.toggle('narrow',s.offsetWidth>0&&s.offsetWidth<110)); }
 const fretStr=fr=>fr.map(f=>f<0?'x':f).join(fr.some(f=>f>9)?'-':'');
 /* a chord box: frets counted from the nut, or from the capo when there is one (drawn as a gold bar labelled with its fret);
@@ -2548,7 +2665,7 @@ function renderFinder(){
   h+=`</div></div>`;
   el.innerHTML=h; el._res=res;
 }
-function renderAll(){ PLAN=null; guitarPlan.cache=null; renderControls(); renderTension(); renderChart(); renderVLX(); renderDetail(); renderSubs(); renderPalette(); renderFinder(); const pt=serialize(); $('#prog').value=pt; $('#prog').rows=Math.min(14,Math.max(3,pt.split('\n').length+1)); }
+function renderAll(){ PLAN=null; guitarPlan.cache=null; renderControls(); renderTension(); if(melSel){ const tot=chords.reduce((a,c)=>a+c.beats,0); if(!S.showMel||!tot) melSel=null; else melSel={a:Math.min(melSel.a,tot-1),b:Math.min(melSel.b,tot-1)}; } renderChart(); renderMelPad(); renderVLX(); renderDetail(); renderSubs(); renderPalette(); renderFinder(); const pt=serialize(); $('#prog').value=pt; $('#prog').rows=Math.min(14,Math.max(3,pt.split('\n').length+1)); }
 
 /* ============ edits ============ */
 function replaceAt(idx,list){
@@ -2944,21 +3061,29 @@ function harmonize(beats,rate){
 let MEL={beats:[],results:[]};
 /* where "Add to chart" puts a harmonization; nothing is replaced unless asked, and Undo is always offered */
 const MEL_PLACES={end:'At the end of the chart',before:'Before the selected chord',over:'Over the selected chord and what follows',all:'In place of the whole chart'};
+function replaceBeats(s0,e0,fresh){
+  const out=[], bare=(c,beats)=>{ const o={...c,id:uid(),beats}; delete o.br; delete o.sec; delete o.kc; delete o.lock; return o; }; let pos=0, put=false;
+  const putFresh=c=>{ if(c&&c.beats&&pos-c.beats===s0){ if(c.br) fresh[0].br=true; if(c.sec) fresh[0].sec=c.sec; if(c.kc&&s0>0) fresh[0].kc=c.kc; } out.push(...fresh); put=true; };
+  chords.forEach(c=>{ const cs=pos, ce=pos+c.beats; pos=ce;
+    if(ce<=s0){ out.push(c); return; }
+    if(cs>=e0){ if(!put) putFresh(null); out.push(c); return; }
+    if(cs<s0){ out.push({...c,beats:s0-cs}); putFresh(null); if(ce>e0) out.push(bare(c,ce-e0)); return; }
+    if(!put) putFresh(c);
+    if(ce>e0) out.push(bare(c,ce-e0)); });
+  if(!put) out.push(...fresh);
+  chords=out;
+}
 function placeHarmony(list){
   const fresh=list.map(c=>({...c,id:uid()})), L=barLen(), total=fresh.reduce((a,c)=>a+c.beats,0), idx=chords.findIndex(c=>c.id===sel);
-  let place=S.melPlace; if(!chords.length) place='all'; else if(idx<0&&place!=='all') place='end';
+  let place=MEL.target&&$('#melPlace')?.value==='bars'?'bars':S.melPlace; if(!chords.length) place='all'; else if(idx<0&&!['all','bars'].includes(place)) place='end';
   const startOf=i=>chords.slice(0,i).reduce((a,c)=>a+c.beats,0), bars=(a,b)=>{ const x=Math.floor(a/L)+1, y=Math.ceil(b/L); return y>x?`bars ${x}–${y}`:`bar ${x}`; };
   pushHist(); let msg;
   if(place==='all'){ chords=fresh; msg='Replaced the chart with the harmonization'; }
   else if(place==='end'){ const s0=startOf(chords.length); if(fresh[0]) fresh[0].br=true; chords.push(...fresh); msg=`Added it at the end, ${bars(s0,s0+total)}`; }
   else if(place==='before'){ const s0=startOf(idx), c=chords[idx]; if(c.br||c.sec){ fresh[0].br=!!c.br; if(c.sec){ fresh[0].sec=c.sec; delete c.sec; } } if(c.kc&&idx>0){ fresh[0].kc=c.kc; delete c.kc; } c.br=true; chords.splice(idx,0,...fresh); msg=`Inserted it before ${chordName(c)}, ${bars(s0,s0+total)}`; }
-  else { /* over: the same number of beats from the selected chord is replaced; a chord running past the end keeps its remainder */
-    const s0=startOf(idx), e0=s0+total, out=[]; let pos=0, put=false;
-    chords.forEach((c,i)=>{ const cs=pos, ce=pos+c.beats; pos=ce;
-      if(i===idx){ if(c.br) fresh[0].br=true; if(c.sec) fresh[0].sec=c.sec; if(c.kc&&i>0) fresh[0].kc=c.kc; out.push(...fresh); put=true; }
-      if(ce<=s0||cs>=e0){ out.push(c); return; }
-      if(ce>e0){ out.push({...c,id:uid(),beats:ce-e0,br:false,sec:undefined,kc:undefined}); } });
-    if(!put) out.push(...fresh); chords=out.map(c=>{ const o={...c}; ['sec','kc'].forEach(k=>o[k]===undefined&&delete o[k]); if(!o.br) delete o.br; return o; });
+  else { /* over the selected chord, or over the bars picked in the melody lane: that span is replaced, and chords running in or out
+     of it keep the part outside */
+    const tg=place==='bars'&&MEL.target?MEL.target:null, s0=tg?tg.s0:startOf(idx), e0=s0+total; replaceBeats(s0,e0,fresh);
     msg=`Replaced ${bars(s0,e0)} with the harmonization`; }
   sel=fresh[0].id; commit(); toast(msg,{label:'Undo',fn:undoTo(hist[hist.length-1])});
 }
@@ -2971,7 +3096,8 @@ function playMelody(beats,list){
 function renderMelody(){
   const el=$('#melOut');
   if(!MEL.results.length){ el.innerHTML=''; return; }
-  el.innerHTML=`<div class="mel-place"><label class="label" for="melPlace">Put the chords</label><select id="melPlace">${Object.entries(MEL_PLACES).map(([k,l])=>`<option value="${k}" ${k===S.melPlace?'selected':''}>${l}</option>`).join('')}</select></div>`+MEL.results.map((r,i)=>{ const L=barLen(); let pos=0; const bars=[];
+  const tg=MEL.target, places=tg?{bars:`Over ${tg.first===tg.last?'bar '+tg.first:'bars '+tg.first+'–'+tg.last} (the melody you selected)`,...MEL_PLACES}:MEL_PLACES;
+  el.innerHTML=`<div class="mel-place"><label class="label" for="melPlace">Put the chords</label><select id="melPlace">${Object.entries(places).map(([k,l])=>`<option value="${k}" ${tg?(k==='bars'?'selected':''):(k===S.melPlace?'selected':'')}>${l}</option>`).join('')}</select></div>`+MEL.results.map((r,i)=>{ const L=barLen(); let pos=0; const bars=[];
     r.list.forEach(c=>{ const b=Math.floor(pos/L); (bars[b]=bars[b]||[]).push(chordName(c)); pos+=c.beats; });
     return `<div class="mel-row"><span class="mc">${esc(bars.map(b=>b.join(' ')).join(' | '))}</span><span class="ms">${r.hits} of ${r.strong} strong-beat melody notes are chord tones</span>
       <span class="mb"><button type="button" class="btn small" data-mplay="${i}">${IC.play}With melody</button><button type="button" class="btn small primary" data-muse="${i}">Add to chart</button></span></div>`; }).join('');
@@ -3126,7 +3252,7 @@ function midiAllOff(){ midiNotesOff(); if(MIDIOUT.out) for(let c=0;c<16;c++){ mi
 /* share links: key, mode, meter, tempo and the chart text (sections and beat counts included) as base64url JSON after #s= */
 function b64url(str){ let s=''; new TextEncoder().encode(str).forEach(x=>s+=String.fromCharCode(x)); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function unb64url(code){ const s=atob(code.replace(/-/g,'+').replace(/_/g,'/')); return new TextDecoder().decode(Uint8Array.from(s,ch=>ch.charCodeAt(0))); }
-const shareCode=()=>b64url(JSON.stringify({v:1,k:S.tonic,m:S.mode,t:S.meter,b:S.tempo,c:serialize()}));
+const shareCode=()=>b64url(JSON.stringify({v:1,k:S.tonic,m:S.mode,t:S.meter,b:S.tempo,c:serialize(),...(melody.some(x=>x!=null)?{mel:melody}:{})}));
 /* inside the claude.ai viewer the page runs in a frame, so the link is built on the viewer's address when the browser shares it */
 function shareBase(){ try{ if(window.top===window) return location.href.split('#')[0]; }catch(e){} const r=document.referrer||''; return /^https:\/\/claude\.ai\//.test(r)?r.split('#')[0]:location.href.split('#')[0]; }
 const shareLinkURL=()=>shareBase()+'#s='+shareCode();
@@ -3134,7 +3260,7 @@ function readShare(text){ const m=String(text||'').trim().match(/(?:#s=|^)([A-Za
   try{ const d=JSON.parse(unb64url(m[1])); if(d&&d.v===1&&typeof d.c==='string') return d; }catch(e){} return null; }
 function applyShare(d){
   Object.assign(S,sanitizeS({tonic:d.k,mode:d.m,meter:d.t,tempo:d.b}));
-  const r=parseProg(d.c); if(!r.chords.length) return false; chords=r.chords; delete chords[0].kc; sel=chords[0].id; return true; }
+  const r=parseProg(d.c); if(!r.chords.length) return false; chords=r.chords; delete chords[0].kc; melody=sanitizeMelody(d.mel)||[]; sel=chords[0].id; return true; }
 
 /* clipboard, with an in-page copy box when the browser or frame blocks it */
 async function copyText(text,okMsg){ try{ await navigator.clipboard.writeText(text); toast(okMsg); return; }catch(e){} showCopyBox(text); }
@@ -3146,7 +3272,7 @@ let LIB={version:1,items:[]}, libCurrent=null;
 /* ============ untrusted state: one gate for settings and chords from saves, library files and share links ============ */
 const isBool=v=>typeof v==='boolean';
 const SANE={tonic:v=>Number.isInteger(v)&&v>=0&&v<12, mode:v=>ownKey(MODES,v), meter:v=>ownKey(METERS,v), tempo:v=>Number.isFinite(+v)&&+v>0&&v!==''&&v!==null&&typeof v!=='boolean',
-  voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
+  voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), showMel:isBool, melPlay:isBool, labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
   pstyle:v=>ownKey(PIANO_STYLES,v), gstyle:v=>ownKey(GUITAR_STYLES,v), mood:v=>v===''||MOODS.some(m=>m.id===v),
   genres:v=>Array.isArray(v)&&v.length<=20&&v.every(g=>GENRES.some(x=>x.id===g)), vocab:v=>Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)),
   bars:v=>[4,8,12,16].includes(v), rhythm:v=>['bar','half','mixed','slow'].includes(v), level:v=>[0,1,2].includes(v), surprise:v=>Number.isFinite(v)&&v>=0&&v<=100,
@@ -3177,7 +3303,7 @@ const pickS=src=>Object.fromEntries(SNAPKEYS.filter(k=>src&&src[k]!=null).map(k=
 const pcOk=v=>v==null||(Number.isInteger(v)&&v>=0&&v<12);
 const validItem=x=>x&&typeof x.name==='string'&&x.name.length<=200&&x.snap&&Array.isArray(x.snap.chords)&&x.snap.chords.length<=1000&&x.snap.chords.every(c=>c&&Number.isInteger(c.beats)&&c.beats>0&&c.beats<=256&&Object.prototype.hasOwnProperty.call(Q,c.q)&&pcOk(c.root)&&pcOk(c.bass)&&(c.sec==null||typeof c.sec==='string'));
 function newItem(name,snap){ const now=Date.now(); return {id:'p'+now.toString(36)+Math.random().toString(36).slice(2,7),name,created:now,updated:now,snap:JSON.parse(JSON.stringify(snap))}; }
-const curSnap=()=>({S:pickS(S),chords:chords.map(({id,...c})=>c)});
+const curSnap=()=>({S:pickS(S),chords:chords.map(({id,...c})=>c),...(melody.some(x=>x!=null)?{melody:melody.slice()}:{})});
 function libSave(){ try{ localStorage.setItem(LIBKEY,JSON.stringify(LIB)); return true; }catch(e){ toast('This browser would not store the library'); return false; } }
 function libLoad(){
   try{ const raw=localStorage.getItem(LIBKEY);
@@ -3187,7 +3313,7 @@ function libLoad(){
     libSave();
   }catch(e){}
 }
-function libOpen(it){ const list=sanitizeChords(it.snap.chords); if(!list){ toast('That saved progression is damaged and can’t be opened'); return; } pushHist(); Object.assign(S,sanitizeS(pickS(it.snap.S))); chords=list; sel=chords[0]?.id??null; libCurrent=it.id; commit(); $('#library').open=false; toast(`Opened “${it.name}”`); }
+function libOpen(it){ const list=sanitizeChords(it.snap.chords); if(!list){ toast('That saved progression is damaged and can’t be opened'); return; } pushHist(); Object.assign(S,sanitizeS(pickS(it.snap.S))); chords=list; melody=sanitizeMelody(it.snap.melody)||[]; sel=chords[0]?.id??null; libCurrent=it.id; commit(); $('#library').open=false; toast(`Opened “${it.name}”`); }
 function libSaveCurrent(){
   const typed=$('#libName').value.trim(), cur=LIB.items.find(i=>i.id===libCurrent);
   const name=typed||cur?.name||`Progression ${LIB.items.length+1}`;
@@ -3311,7 +3437,7 @@ function boot(){
   let legacyMood=null;
   try{ const raw=localStorage.getItem('changes-v1'); if(raw){ const d=JSON.parse(raw), rs=d&&typeof d.S==='object'&&d.S?d.S:{}; legacyMood=rs.mood;
     Object.assign(S,sanitizeS(rs)); if(!Array.isArray(rs.vocab)) S.vocab=[...PRESETS[['Simple','Color','Jazz'][S.level??1]]];
-    const list=sanitizeChords(d.chords); if(list){ chords=list; sel=chords[0]?.id??null; loaded=chords.length>0; } } }catch(e){}
+    const list=sanitizeChords(d.chords); if(list){ chords=list; sel=chords[0]?.id??null; loaded=chords.length>0; } melody=sanitizeMelody(d.melody)||[]; } }catch(e){}
   /* older saves had Bluesy and Smooth jazz as moods; they are genres now */
   if(!Array.isArray(S.genres)) S.genres=[];
   setTuning(S.tuning);
@@ -3355,7 +3481,7 @@ function boot(){
   $('#recipe').onclick=e=>{ const b=e.target.closest('[data-addfams]'); if(!b) return; S.vocab=[...new Set([...S.vocab,...b.dataset.addfams.split(',')])]; commit(); toast(`Vocabulary updated: ${vocabName()}`); };
   $('#gen').onclick=()=>{ generate(); stopAll(); playChart(); };
   $('#regen').onclick=regenUnlocked;
-  $('#clearChart').onclick=()=>{ if(!chords.length) return; stopAll(); pushHist(); chords=[]; sel=null; commit(); toast('Chart cleared',{label:'Undo',fn:undoTo(hist[hist.length-1])}); };
+  $('#clearChart').onclick=()=>{ if(!chords.length&&!melody.some(x=>x!=null)) return; stopAll(); pushHist(); chords=[]; melody=[]; melSel=null; sel=null; commit(); renderMelPad(); toast('Chart cleared',{label:'Undo',fn:undoTo(hist[hist.length-1])}); };
   initLayout(); fitScreen();
   $('#genreChords').addEventListener('change',e=>{ if(e.target.id==='genreVocab'){ S.genreVocab=e.target.checked; save(); renderControls(); } });
   $('#genreChords').addEventListener('click',e=>{ if(e.target.closest('[data-restyle]')){ restyleChart(); return; } const b=e.target.closest('[data-gchord]'); if(!b) return; const [r,q]=b.dataset.gchord.split('|'); playOne({root:+r,q,bass:null}); });
@@ -3386,12 +3512,15 @@ function boot(){
   $('#melIn').value=S.melText||''; $('#melRate').value=String(S.melRate||1);
   $('#melGo').onclick=melodySuggest;
   $('#melody').addEventListener('click',e=>{ if(e.target.closest('[data-goto]')) selectTab('left','setkey'); });
+  $('#melToLane').onclick=()=>{ const r=parseMelody($('#melIn').value); if(r.bad||!r.beats.some(Boolean)){ melodySuggest(); return; }
+    pushHist(); const ms=melodyMidis(r.beats); melody=ms.map((n,i)=>n?(n.onset?n.m:-1):null); while(melody.length&&melody[melody.length-1]==null) melody.pop();
+    if(melody[0]===-1) melody[0]=null; S.showMel=true; melSel={a:0,b:0}; commit(); toast('The melody is in the lane under the chart, from bar 1',{label:'Undo',fn:undoTo(hist[hist.length-1])}); };
   $('#melIn').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); melodySuggest(); } };
   $('#melPlay').onclick=()=>{ const r=parseMelody($('#melIn').value); if(r.bad||!r.beats.some(Boolean)){ toast('Type a melody first: note names, - to hold, . to rest'); return; } playMelody(r.beats,null); };
   $('#melOut').addEventListener('click',e=>{ const p=e.target.closest('[data-mplay]'), u=e.target.closest('[data-muse]');
     if(p){ const r=MEL.results[+p.dataset.mplay]; playMelody(MEL.beats,r.list.map(c=>({...c}))); }
     if(u) placeHarmony(MEL.results[+u.dataset.muse].list); });
-  $('#melOut').addEventListener('change',e=>{ if(e.target.id==='melPlace'){ S.melPlace=e.target.value; save(); } });
+  $('#melOut').addEventListener('change',e=>{ if(e.target.id==='melPlace'&&e.target.value!=='bars'){ S.melPlace=e.target.value; save(); } });
   $('#surprise').oninput=e=>{ S.surprise=+e.target.value; save(); renderControls(); };
   $('#vlToggle').onchange=e=>{ S.showVL=e.target.checked; save(); renderVLX(); };
   $('#finder').addEventListener('change',e=>{ if(e.target.id==='fCapo'){ S.capo=+e.target.value; commit(); } if(e.target.id==='fTune'){ setTuning(e.target.value); commit(); } });
@@ -3496,6 +3625,31 @@ function boot(){
   rowsEl.addEventListener('touchmove',e=>{ if(drag&&drag.on) e.preventDefault(); },{passive:false});
   rowsEl.addEventListener('contextmenu',e=>{ if(drag&&drag.touch) e.preventDefault(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&drag&&drag.on){ cleanupDrag(drag); drag=null; } });
+  /* melody lane: the switch, tapping cells (Shift extends), the pad, and typing notes */
+  $('#melToggle').onclick=()=>{ S.showMel=!S.showMel; if(S.showMel&&!melSel&&chords.length) melSel={a:0,b:0}; if(!S.showMel) melSel=null; commit(); renderMelPad(); if(S.showMel) focusMelCell(); };
+  $('#rows').addEventListener('click',e=>{ const c=e.target.closest('.mcell'); if(!c) return; e.stopPropagation(); const b=+c.dataset.mb;
+    melSel=e.shiftKey&&melSel?{a:melSel.a,b}:{a:b,b}; renderChart(); renderMelPad(); focusMelCell(); const x=melody[b]; if(x>0&&!e.shiftKey) playMelNote(x,b); },true);
+  $('#melPad').addEventListener('click',e=>{ const n=e.target.closest('[data-mpn]'), a=e.target.closest('[data-mp]'); if(!melSel) return; const b=melSel.b;
+    if(n) return melSet(b,melOctave(+n.dataset.mpn,b));
+    if(!a) return; const k=a.dataset.mp;
+    if(k==='close'){ melSel=null; renderChart(); renderMelPad(); return; }
+    if(k==='up'||k==='down') return melShift(k==='up'?12:-12);
+    if(k==='hold'){ if(melPitch(b-1)>0) melSet(b,-1); else toast('Nothing to hold: put a note before it first'); return; }
+    if(k==='rest') return melSet(b,null);
+    if(k==='prev'||k==='next') return melMove(k==='next'?1:-1,false);
+    if(k==='harm') return melHarmonize(); });
+  $('#rows').addEventListener('keydown',e=>{ const c=e.target.closest('.mcell'); if(!c||e.metaKey||e.ctrlKey) return; e.stopPropagation(); const b=+c.dataset.mb; if(!melSel||melSel.b!==b) melSel={a:b,b};
+    const key=e.key, L=/^[a-gA-G]$/.test(key)?key.toUpperCase():null;
+    if(L){ e.preventDefault(); return melSet(b,melOctave(pcOf(L),b)); }
+    /* # or ] raises the note just entered (or under the cursor) a half step, [ lowers it */
+    if(key==='#'||key===']'||key==='['){ e.preventDefault(); melNudge(melLast!=null&&melLast===b-1?melLast:b,key==='['?-1:1); return; }
+    if(key==='-'){ e.preventDefault(); if(melPitch(b-1)>0) melSet(b,-1); return; }
+    if(key==='.'){ e.preventDefault(); return melSet(b,null); }
+    if(key==='Delete'||key==='Backspace'){ e.preventDefault(); if(melSel.a!==melSel.b) return melClearRange(); melSet(b,null,false); if(key==='Backspace') melMove(-1,false); return; }
+    if(key==='ArrowLeft'||key==='ArrowRight'){ e.preventDefault(); return melMove(key==='ArrowRight'?1:-1,e.shiftKey); }
+    if(key==='ArrowUp'||key==='ArrowDown'){ e.preventDefault(); return melShift(key==='ArrowUp'?12:-12); }
+    if(key==='Escape'){ melSel=null; renderChart(); renderMelPad(); }
+    if(key===' '){ e.preventDefault(); playing?stopAll():playChart(); } },true);
   $('#rows').onclick=e=>{ if(justDragged) return;
     if(e.target.closest('.addtile')){ pushHist(); const c={id:uid(),root:null,q:'',bass:null,beats:barLen()}; chords.push(c); sel=c.id; commit(); openPicker(c.id); return; }
     const b=e.target.closest('.slot'); if(!b) return;
@@ -3602,13 +3756,13 @@ function boot(){
   if(fromLink){ save(); toast('Loaded the shared progression'); }
 }
 function transpose(n){
-  pushHist(); S.tonic=mod(S.tonic+n);
+  pushHist(); S.tonic=mod(S.tonic+n); melody=melody.map(x=>x>0?Math.min(108,Math.max(21,x+n)):x);
   chords=chords.map(c=>{ const o=real(c)?{...c,root:mod(c.root+n),bass:c.bass==null?null:mod(c.bass+n)}:{...c}; if(kcOk(c.kc)) o.kc={...c.kc,t:mod(c.kc.t+n)}; return o; });
   commit(); toast(`Transposed ${n>0?'up':'down'} ${Math.abs(n)} half step${Math.abs(n)>1?'s':''} to ${keyName()}`);
 }
 function vocabName(){ const vk=[...S.vocab].sort().join(); const p=Object.keys(PRESETS).find(k=>[...PRESETS[k]].sort().join()===vk); return p?'Chords allowed: '+p:'Chords allowed: '+['triads',...FAMS.filter(f=>!f.fixed&&famOn(f.id)).map(f=>f.name)].join(', '); }
 function undo(){ const s=hist.pop(); if(!s) return; restoreSnap(s); }
-function restoreSnap(s){ const d=JSON.parse(s); Object.assign(S,d.S); setTuning(S.tuning); chords=d.chords; sel=d.sel; commit(); }
+function restoreSnap(s){ const d=JSON.parse(s); Object.assign(S,d.S); setTuning(S.tuning); chords=d.chords; sel=d.sel; melody=d.melody||[]; commit(); }
 /* an Undo offered in a toast reverts that action, even if other edits happened since: it restores the snapshot taken just before it */
 function undoTo(snap){ return ()=>{ const i=hist.lastIndexOf(snap); if(i>=0) hist.length=i; restoreSnap(snap); }; }
 if(typeof document!=='undefined'&&document.getElementById('rows')) boot();

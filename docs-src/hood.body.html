@@ -23,6 +23,9 @@
 </ol>
 <p>Roman numerals use upper case for major and lower case for minor chords, with ♭ and ♯ for chords off the scale. The tension curve scores each chord from its category, its distance from the tonic (dominant chords score highest) and its quality (dominant, diminished, augmented and altered tones add tension).</p>
 
+<h2 id="melodymodel">How the melody is stored and coloured</h2>
+<p>The melody is a list with one entry per beat of the chart, counted from the start: a MIDI note number starts a note, a hold marker continues the note before, and an empty entry is a rest. It is kept apart from the chords, so editing chords never rewrites the tune. Each note is compared with the chord sounding on its beat, in the key in force there: a note in the chord’s triad or 7th (or its bass) is a chord tone; one of its upper extensions or another note of the key is a colour note; anything else is a clash if it falls on the downbeat or an accented beat of the meter, and a passing note otherwise. A newly entered note goes in the octave closest to the note before it, kept between G3 and C6. Harmonizing a selection runs the same harmonizer as the text box, on whole bars of the lane, and the result replaces exactly those bars, trimming any chord that runs into or out of them.</p>
+
 <h2 id="generate">How progressions are generated</h2>
 <p>Moods and genres each hold short progression <b>templates</b> written as Roman numerals, each tagged with the mode it lives in (for example Blues has <code>I7 IV7 I7 V7</code> in Mixolydian). Generate then works in stages:</p>
 <ol>

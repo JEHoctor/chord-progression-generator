@@ -743,6 +743,68 @@ async function ceilings() {
   await ctx.close();
 }
 
+// melody lane: one note per beat under the chords, coloured against them, played with them, harmonized from a selection
+async function melodyLane() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(URL_);
+  await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; S.melPlace = 'end'; chords = parseProg('C | Am | F | G').chords; melody = []; renderAll(); });
+  await page.click('#melToggle');
+  const t0 = await page.evaluate(() => ({ cells: document.querySelectorAll('#rows .mcell').length, pad: !document.querySelector('#melPad').hidden, cur: document.activeElement?.dataset?.mb }));
+  check('melody: the switch shows one lane cell per beat and opens the note pad on beat 1', t0.cells === 16 && t0.pad && t0.cur === '0', JSON.stringify(t0));
+  for (const k of ['e', 'd', 'c', 'd', 'e', 'e', 'e', '-', 'd', 'd', 'd', '-', 'e', 'g', 'g', '-']) await page.keyboard.press(k);
+  check('melody: typing A–G enters notes beat by beat, – holds', await page.evaluate(() => JSON.stringify(melody) === '[64,62,60,62,64,64,64,-1,62,62,62,-1,64,67,67,-1]'), await page.evaluate(() => JSON.stringify(melody)));
+  check('melody: E keys in the lane do not open the chord picker', await page.evaluate(() => document.querySelector('#cpick').hidden));
+  const rel = await page.evaluate(() => [...document.querySelectorAll('#rows .mcell')].slice(0, 4).map(c => (c.className.match(/r-\w+/) || [''])[0]).join(','));
+  check('melody: notes are coloured against the chord: E and C over C are chord tones, D is a colour note', rel === 'r-tone,r-color,r-tone,r-color', rel);
+  await page.click('#rows .mcell[data-mb="8"]'); await page.keyboard.press('f'); await page.keyboard.press('#');
+  const cl = await page.evaluate(() => ({ m: melody[8], cls: document.querySelector('#rows .mcell[data-mb="8"]').className }));
+  check('melody: # raises the note just typed; F♯ on the downbeat of F is marked as a clash', cl.m === 66 && /r-clash/.test(cl.cls), JSON.stringify(cl));
+  await page.click('#melPad [data-mp="prev"]'); await page.click('#melPad [data-mp="up"]');
+  check('melody: the pad moves the cursor and shifts the octave', await page.evaluate(() => melody[8] === 78));
+  await page.keyboard.press('Meta+z');
+  check('melody: ⌘Z undoes melody edits from the lane', await page.evaluate(() => melody[8] === 66), await page.evaluate(() => String(melody[8])));
+  await page.evaluate(() => { melody[8] = 62; renderAll(); });
+  await page.click('#melPad [data-mpn="0"]');
+  check('melody: tapping a note on the pad enters it in a nearby octave', await page.evaluate(() => melody.some((x, i) => x === 60 || x === 72)));
+  await page.evaluate(() => { melody = [64, 62, 60, 62, 64, 64, 64, -1, 62, 62, 62, -1, 64, 67, 67, -1]; renderAll(); });
+  // playback
+  const pb = await page.evaluate(() => { let used = 0; const om = playMelLine; window.playMelLine = (...a) => { used++; return om(...a); }; S.loop = false; playChart(); stopAll(); window.playMelLine = om; const calls = []; const orig = tone; window.tone = (m, t, d) => { calls.push([m, +d.toFixed(2)]); }; S.tempo = 88; playMelLine(0, .5, previewOut()); window.tone = orig; return { used, calls }; });
+  check('melody: it plays with the chart, a held note for its full length', pb.used === 1 && pb.calls.length === 13 && pb.calls[6][0] === 64 && pb.calls[6][1] > pb.calls[5][1] * 1.8, JSON.stringify(pb));
+  await page.click('#melPad [data-mp="close"]');
+  check('melody: the pad closes and the lane stays', await page.evaluate(() => document.querySelector('#melPad').hidden && document.querySelectorAll('#rows .mcell').length === 16));
+  // harmonize a selection
+  await page.click('#rows .mcell[data-mb="0"]'); await page.click('#rows .mcell[data-mb="6"]', { modifiers: ['Shift'] });
+  check('melody: Shift-click selects across bars and offers chords for them', await page.evaluate(() => /Suggest chords for bars 1–2/.test(document.querySelector('#melPad').textContent)));
+  await page.click('#melPad [data-mp="harm"]');
+  const hz = await page.evaluate(() => ({ n: MEL.results.length, t: MEL.target, place: document.querySelector('#melPlace')?.value, label: document.querySelector('#melPlace option[value="bars"]')?.textContent, vis: document.querySelector('#melOut').checkVisibility() }));
+  check('melody: the ideas open in Harmonize, set to go over those bars', hz.n >= 3 && hz.t.s0 === 0 && hz.t.e0 === 8 && hz.place === 'bars' && /bars 1–2/.test(hz.label) && hz.vis, JSON.stringify(hz));
+  const want = await page.evaluate(() => MEL.results[0].list.map(c => chordName(c)).join(' '));
+  await page.click('[data-muse="0"]');
+  check('melody: Add to chart replaces just those bars', await page.evaluate(w => chords.map(c => chordName(c)).join(' ') === w + ' F G', want), await page.evaluate(() => chords.map(c => chordName(c)).join(' ')));
+  check('melody: the melody itself is untouched', await page.evaluate(() => JSON.stringify(melody.slice(0, 4)) === '[64,62,60,62]'));
+  // keeping it
+  await page.reload();
+  check('melody: it is saved with the chart, lane and all', await page.evaluate(() => S.showMel && melody[0] === 64 && document.querySelectorAll('#rows .mcell.note').length > 5));
+  const kept = await page.evaluate(() => { const code = shareCode(); melody = []; applyShare(JSON.parse(atob(code.replace(/-/g, '+').replace(/_/g, '/')))); const viaShare = melody[0]; const it = newItem('m', curSnap()); melody = []; libOpen(it); return { viaShare, viaLib: melody[0] }; });
+  check('melody: share links and the Library carry it', kept.viaShare === 64 && kept.viaLib === 64, JSON.stringify(kept));
+  check('melody: transposing moves it', await page.evaluate(() => { transpose(2); return melody[0] === 66; }));
+  await page.evaluate(() => { revealEl(document.querySelector('#melIn')); document.querySelector('#melIn').value = 'G A B C'; });
+  await page.click('#melToLane');
+  check('melody: Put in melody lane writes the typed tune from bar 1', await page.evaluate(() => melody.length === 4 && mod(melody[0]) === 7 && mod(melody[3]) === 0 && /in the lane/.test(document.querySelector('#toast').textContent)));
+  await page.evaluate(() => { const c = document.querySelector('#chartTools'); revealEl(document.querySelector('#clearChart')); });
+  await page.click('#clearChart');
+  check('melody: Clear chart clears the melody too', await page.evaluate(() => !melody.some(x => x != null)));
+  check('no console errors (melody)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+  // phone
+  const ph = await openPage({ viewport: { width: 390, height: 844 } });
+  await ph.page.goto(URL_);
+  await ph.page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; S.showMel = true; chords = parseProg('C | Am | F | G').chords; melody = [64, 62, 60, 62]; melSel = { a: 4, b: 4 }; selectTab('phone', 'p-chart'); renderAll(); });
+  const pz = await ph.page.evaluate(() => ({ h: document.querySelector('#melPad').getBoundingClientRect().height, noH: document.documentElement.scrollWidth <= innerWidth, cells: document.querySelectorAll('#rows .mcell').length }));
+  check('melody: on a phone the lane fits and the pad stays short', pz.h < 200 && pz.noH && pz.cells === 16, JSON.stringify(pz));
+  await ph.ctx.close();
+}
+
 // the top-bar menus must be visible and on top at every width, not just "open"
 async function menus() {
   for (const [w, h, tag] of [[1440, 900, 'desktop'], [1280, 720, 'small laptop'], [900, 900, 'tablet'], [390, 844, 'phone']]) {
@@ -932,6 +994,7 @@ try {
   await notation();
   await polish();
   await ceilings();
+  await melodyLane();
   await menus();
   await layout();
   await hardening();
