@@ -349,8 +349,25 @@ async function phase3() {
   check('3.3 ranked by strong-beat chord tones', mel.ratios.every((r, i) => i === 0 || r <= mel.ratios[i - 1]) && mel.ratios[0] >= 0.75, mel.ratios.map(r => r.toFixed(2)).join(','));
   check('3.3 a sensible harmonization starts and ends on the tonic', /^C(maj7)? \|.*\| C(maj7|6|add9|6\/9)?$/.test(mel.rows[0].split(' :: ')[0]), mel.rows[0]);
   await tap(page, '[data-mplay="0"]'); await page.waitForTimeout(300); await page.evaluate(() => stopAll());
+  // where the chords go: never a silent replace
+  const H = () => page.evaluate(() => MEL.results[0].list.map(c => chordName(c)).join(' '));
+  const h0 = await H();
+  await page.evaluate(() => { chords = parseProg('Am | F | G | E').chords; sel = chords[1].id; renderAll(); });
+  check('3.3 the default puts the chords at the end and keeps the chart', await page.evaluate(() => S.melPlace === 'end' && document.querySelector('#melPlace').value === 'end'));
   await tap(page, '[data-muse="0"]');
-  check('3.3 Use this loads it into the chart, one chord per bar', await page.evaluate(() => chords.length === 8 && chords.every(c => c.beats === 4)));
+  const e1 = await page.evaluate(() => ({ names: chords.map(c => chordName(c)).join(' '), br: !!chords[4].br, toast: document.querySelector('#toast').textContent }));
+  check('3.3 Add to chart appends after what is there, on a new line, with Undo', e1.names === 'Am F G E ' + h0 && e1.br && /at the end, bars 5–12/.test(e1.toast) && /Undo/.test(e1.toast), JSON.stringify(e1));
+  await page.click('#toast button');
+  check('3.3 Undo takes it back out', await page.evaluate(() => serialize() === 'Am | F | G | E'));
+  await page.evaluate(() => { sel = chords[1].id; renderAll(); }); await page.selectOption('#melPlace', 'before'); await tap(page, '[data-muse="0"]');
+  check('3.3 Before the selected chord inserts it there', await page.evaluate(h => chords.map(c => chordName(c)).join(' ') === 'Am ' + h + ' F G E', h0), await page.evaluate(() => chords.map(c => chordName(c)).join(' ')));
+  await page.evaluate(() => { chords = parseProg('Am | F | G | E | Am | F | G | E | Dm | E').chords; sel = chords[1].id; renderAll(); }); await page.selectOption('#melPlace', 'over'); await tap(page, '[data-muse="0"]');
+  check('3.3 Over the selected chord replaces just that many bars', await page.evaluate(h => chords.map(c => chordName(c)).join(' ') === 'Am ' + h + ' E', h0), await page.evaluate(() => chords.map(c => chordName(c)).join(' ')));
+  await page.selectOption('#melPlace', 'all'); await tap(page, '[data-muse="0"]');
+  check('3.3 In place of the whole chart replaces it, one chord per bar', await page.evaluate(() => chords.length === 8 && chords.every(c => c.beats === 4)));
+  await page.reload(); await page.evaluate(() => revealEl(document.querySelector('#melIn')));
+  check('3.3 the placement choice is remembered', await page.evaluate(() => S.melPlace === 'all'));
+  await page.evaluate(() => { S.melPlace = 'end'; save(); });
   await page.selectOption('#melRate', '2'); await tap(page, '#melGo');
   check('3.3 two chords per bar works', await page.evaluate(() => MEL.results.length >= 3 && MEL.results[0].list.length === 16));
   await page.fill('#melIn', 'E D X9 C'); await tap(page, '#melGo');
@@ -710,6 +727,22 @@ async function polish() {
   await ctx.close();
 }
 
+// with 9ths allowed, 7ths stay common: allowed is a ceiling, not a target
+async function ceilings() {
+  const { ctx, page } = await openPage();
+  await page.goto(URL_);
+  const g = await page.evaluate(() => { S.vocab = FAMS.map(f => f.id); S.genres = []; S.tonic = 0; S.mode = 'ionian'; const n = {}; for (let k = 0; k < 200; k++) { S.mood = MOODS[k % MOODS.length].id; generate(); chords.forEach(c => { if (real(c)) n[c.q] = (n[c.q] || 0) + 1; }); } return { maj7: n.maj7 || 0, maj9: n.maj9 || 0, m7: n.m7 || 0, m9: n.m9 || 0 }; });
+  check('ceilings: Generate with Everything allowed uses maj7 and m7 about as often as maj9 and m9', g.maj7 > 0.3 * (g.maj7 + g.maj9) && g.m7 > 0.25 * (g.m7 + g.m9), JSON.stringify(g));
+  await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; chords = parseProg('C | Am | F | G').chords; sel = chords[2].id; renderAll(); openPicker(chords[2].id); });
+  const pk = await page.evaluate(() => [...document.querySelectorAll('#cpick .cp-row')].map(r => r.getAttribute('aria-label') + ':' + [...r.querySelectorAll('.chip')].map(c => c.firstChild.textContent).join(',')));
+  check('ceilings: the picker shows the key’s 7ths and its 9ths in separate rows', pk.some(r => /^Sevenths:.*Fmaj7/.test(r)) && pk.some(r => /^Ninths and beyond:.*Fmaj9/.test(r) && !/m7♭5/.test(r)), pk.join(' | '));
+  await page.evaluate(() => closePicker());
+  check('ceilings: swap ideas offer 7th chords from the key, not only 9ths', await page.evaluate(() => suggestions(2).groups.flatMap(g => g.items).some(it => it.chords.length === 1 && ['maj7', 'm7', '7'].includes(it.chords[0].q))));
+  check('ceilings: Apply chords allowed still takes the richest', await page.evaluate(() => { chords = parseProg('C | Am | F | G').chords; renderAll(); document.querySelector('#recolor').click(); return chords.every(c => Q[c.q].iv.length >= 5); }), await page.evaluate(() => chords.map(c => chordName(c)).join(' ')));
+  check('no console errors (ceilings)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
+
 // the top-bar menus must be visible and on top at every width, not just "open"
 async function menus() {
   for (const [w, h, tag] of [[1440, 900, 'desktop'], [1280, 720, 'small laptop'], [900, 900, 'tablet'], [390, 844, 'phone']]) {
@@ -898,6 +931,7 @@ try {
   await keyChanges();
   await notation();
   await polish();
+  await ceilings();
   await menus();
   await layout();
   await hardening();

@@ -588,6 +588,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
 .mel-row{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;align-items:center;padding:10px 12px;border-radius:var(--r-inset);background:var(--sunk)}
 .mel-row .mc{font-weight:600;font-size:16px;letter-spacing:-.01em;overflow-wrap:anywhere}
 /* results sit in the side panel, so the buttons go under the chords at every width */
+.mel-place{display:flex;flex-direction:column;gap:4px;margin-bottom:4px} .mel-place select{background:var(--sunk);border:1.5px solid transparent;border-radius:var(--r-xs);height:38px;padding:0 10px}
 .mel-row .ms{font-size:12.5px;color:var(--muted)}
 .mel-row .mb{display:flex;gap:6px;margin-top:4px}
 .dial .dialrow{display:flex;align-items:center;gap:10px}
@@ -1157,7 +1158,7 @@ const NUMS={I:0,II:2,III:4,IV:5,V:7,VI:9,VII:11};
 /* tables are plain objects, so keys that come from outside (chord text, share links, saved files) are only accepted when
    they are the table's own entries; "constructor" or "__proto__" never count */
 const ownKey=(o,k)=>typeof k==='string'&&Object.prototype.hasOwnProperty.call(o,k);
-const S={sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
+const S={melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
 let chords=[], sel=null, hist=[];
 let _id=1; const uid=()=>'c'+(_id++);
 
@@ -1374,9 +1375,12 @@ function serialize(name=c=>chordName(c,true)){
   return out;
 }
 /* ============ generation ============ */
-function colorize(list,L,keep7){
+/* L is a ceiling, not a target: with 9ths allowed, a chord gets its 7th about half the time and its 9th or 11th otherwise,
+   so maj7 and m7 stay as common as they are in real songs. rich=true (Apply chords allowed) always takes the richest. */
+function colorize(list,Lmax,keep7,rich=false){
   return list.map((c,i)=>{
     if(!real(c)) return c;
+    const L=Lmax===2&&!rich&&Math.random()<.5?1:Lmax;
     const nx=list[(i+1)%list.length], resolves=real(nx)&&mod(nx.root-c.root)===5;
     let q=c.q;
     if(L===0){ if(!(keep7&&Q[q].dom)) q=toTriad(q); return {...c,q}; }
@@ -1555,8 +1559,9 @@ function suggestions(idx){
   const tagOf=c=>{ const a=analyze(c); return a.kind; };
   const mk=(id,title,blurb)=>{ const g={id,title,blurb,items:[]}; groups.push(g); return g; };
   const add=(g,chs,why,extra={})=>{ if(!famOn('slash')&&chs.some(c=>c.bass!=null)) return; chs=chs.map(fitC); if(chs.length>1&&chs.every(c=>ckey(c)===ckey(chs[0]))) return; const k=chs.map(ckey).join(' '); if(seen.has(k)) return; seen.add(k); g.items.push({chords:chs,why,tag:extra.tag||tagOf(chs[0]),split:chs.length>1,outside:extra.outside}); };
-  const size=sizeFor(L);
-  const dias=[0,1,2,3,4,5,6].map(d=>diatonic(S.mode,d,size)).filter(Boolean);
+  /* with 9ths allowed the key's 7th chords are offered too, ahead of the 9ths */
+  const sizes=L===2?[4,5]:[sizeFor(L)];
+  const dias=sizes.flatMap(sz=>[0,1,2,3,4,5,6].map(d=>diatonic(S.mode,d,sz))).filter(Boolean);
 
   // 1 diatonic
   const g1=mk('dia',hasC?'Same job, different chord':'Chords from the key that fit here',hasC?'Diatonic chords that share notes with it, so the melody usually still works.':'Ranked by how smoothly they connect the chords on either side.');
@@ -1580,7 +1585,7 @@ function suggestions(idx){
   const g3=mk('bor','Borrowed from parallel modes','Same tonic, different mode. These add color you will not find in the key.');
   const cand=[];
   for(const m of BORROW_ORDER){ if(m===S.mode) continue;
-    for(let d=0;d<7;d++){ const c=diatonic(m,d,size); if(!c||corePcs(c).every(x=>sc.has(x))) continue;
+    for(let d=0;d<7;d++){ const c=diatonic(m,d,sizes[0]); if(!c||corePcs(c).every(x=>sc.has(x))) continue;
       let s=0; if(hasC){ s+=shared(c,C).length*1.2+(c.root===C.root?3:0); } else if(p) s+=shared(c,p).length*.6;
       s+=motion(c,nx).s*.8; s-=BORROW_ORDER.indexOf(m)*.15; cand.push({c,m,s}); } }
   cand.sort((a,b)=>b.s-a.s);
@@ -2650,12 +2655,13 @@ function openPicker0(id){
   const c=chords.find(x=>x.id===id); if(!c) return; cpFor=id;
   const el=$('#cpick'), size=sizeFor(lvl()), r=real(c)?c.root:S.tonic, q=real(c)?c.q:'', bb=real(c)?c.bass:null;
   const chip=x=>`<button type="button" class="chip" aria-pressed="${real(c)&&x.root===c.root&&x.q===c.q&&c.bass==null}" data-cpq="${x.root}|${esc(x.q)}">${esc(chordName(x))}<small>${esc(numeral(x))}</small></button>`;
-  const tri=[0,1,2,3,4,5,6].map(d=>diatonic(S.mode,d,3)).filter(Boolean), ext=size>3?[0,1,2,3,4,5,6].map(d=>diatonic(S.mode,d,size)).filter(Boolean).map(fitC):[];
+  const tri=[0,1,2,3,4,5,6].map(d=>diatonic(S.mode,d,3)).filter(Boolean), ext=size>3?[0,1,2,3,4,5,6].map(d=>diatonic(S.mode,d,4)).filter(Boolean).map(fitC):[], ext9=size>4?[0,1,2,3,4,5,6].map(d=>diatonic(S.mode,d,5)).filter(x=>x&&Q[x.q].iv.length>4).map(fitC):[];
   const notes=Array.from({length:12},(_,i)=>mod(S.tonic+i));
   let i0=chords.indexOf(c), start=chords.slice(0,i0).reduce((a,x)=>a+x.beats,0);
   el.innerHTML=`<div class="cp-head"><b id="cpName">${esc(real(c)?chordName(c):'Blank')}</b><span class="hint">bar ${Math.floor(start/barLen())+1}, ${c.beats} beat${c.beats>1?'s':''}</span><button type="button" class="cp-x" data-cpclose aria-label="Close">${IC.x}</button></div>
     <div class="cp-row" role="group" aria-label="Chords in ${esc(keyName())}">${tri.map(chip).join('')}</div>
-    ${ext.length?`<div class="cp-row" role="group" aria-label="With sevenths and colour">${ext.map(chip).join('')}</div>`:''}
+    ${ext.length?`<div class="cp-row" role="group" aria-label="Sevenths">${ext.map(chip).join('')}</div>`:''}
+    ${ext9.length?`<div class="cp-row" role="group" aria-label="Ninths and beyond">${ext9.map(chip).join('')}</div>`:''}
     <div class="cp-build"><select id="cpRoot" aria-label="Root">${notes.map(pc=>`<option value="${pc}" ${pc===r?'selected':''}>${esc(prettyNote(spell(pc)))}</option>`).join('')}</select>
       <select id="cpQual" aria-label="Chord type">${FAMS.map(f=>`<optgroup label="${f.name}${famOn(f.id)?'':' (not in Chords allowed)'}">${(f.id==='triad'?['','m','dim','aug']:f.qs).map(x=>`<option value="${esc(x)}" ${x===q?'selected':''}>${esc(prettySfx(Q[x].d)||'major')}</option>`).join('')}</optgroup>`).filter(g=>!g.includes('<optgroup label="Slash')).join('')}</select>
       <select id="cpBass" aria-label="Bass note"><option value="">root bass</option>${notes.map(pc=>`<option value="${pc}" ${pc===bb?'selected':''}>/${esc(prettyNote(spell(pc)))}</option>`).join('')}</select></div>
@@ -2907,7 +2913,7 @@ const strongBeat=i=>new Set(ACCENTS[S.meter]||[0]).has(i%barLen());
 function harmonize(beats,rate){
   const segs=melodySegments(beats.length,rate), size=sizeFor(lvl()), sc=scaleSet(), seen=new Set(), pool=[];
   const addC=(c,cost)=>{ c=fitC({...c,bass:null}); const k=ckey(c); if(!seen.has(k)){ seen.add(k); pool.push({c,cost}); } };
-  for(let d=0;d<7;d++){ const c=diatonic(S.mode,d,size)||diatonic(S.mode,d,3); if(c) addC(c,Q[c.q].tri==='dim'?.6:0);
+  for(let d=0;d<7;d++){ for(const sz of size===5?[4,5]:[size]){ const c=diatonic(S.mode,d,sz)||diatonic(S.mode,d,3); if(c) addC(c,(Q[c.q].tri==='dim'?.6:0)+(sz===5?.05:0)); }
     const t=diatonic(S.mode,d,3); if(t&&Q[t.q].tri!=='dim'&&d) addC({root:mod(t.root+7),q:'7'},.7); }
   for(const m of [modeFam(S.mode)==='major'?'aeolian':'ionian']) for(let d=0;d<7;d++){ const c=diatonic(m,d,3); if(c&&!corePcs(c).every(p=>sc.has(p))) addC(c,.8); }
   /* triad tones fit best, a 7th a little less, upper extensions only slightly; weak-beat passing notes cost less */
@@ -2936,6 +2942,26 @@ function harmonize(beats,rate){
   return results.sort((a,b)=>(b.hits/(b.strong||1))-(a.hits/(a.strong||1))||b.raw-a.raw).slice(0,5);
 }
 let MEL={beats:[],results:[]};
+/* where "Add to chart" puts a harmonization; nothing is replaced unless asked, and Undo is always offered */
+const MEL_PLACES={end:'At the end of the chart',before:'Before the selected chord',over:'Over the selected chord and what follows',all:'In place of the whole chart'};
+function placeHarmony(list){
+  const fresh=list.map(c=>({...c,id:uid()})), L=barLen(), total=fresh.reduce((a,c)=>a+c.beats,0), idx=chords.findIndex(c=>c.id===sel);
+  let place=S.melPlace; if(!chords.length) place='all'; else if(idx<0&&place!=='all') place='end';
+  const startOf=i=>chords.slice(0,i).reduce((a,c)=>a+c.beats,0), bars=(a,b)=>{ const x=Math.floor(a/L)+1, y=Math.ceil(b/L); return y>x?`bars ${x}–${y}`:`bar ${x}`; };
+  pushHist(); let msg;
+  if(place==='all'){ chords=fresh; msg='Replaced the chart with the harmonization'; }
+  else if(place==='end'){ const s0=startOf(chords.length); if(fresh[0]) fresh[0].br=true; chords.push(...fresh); msg=`Added it at the end, ${bars(s0,s0+total)}`; }
+  else if(place==='before'){ const s0=startOf(idx), c=chords[idx]; if(c.br||c.sec){ fresh[0].br=!!c.br; if(c.sec){ fresh[0].sec=c.sec; delete c.sec; } } if(c.kc&&idx>0){ fresh[0].kc=c.kc; delete c.kc; } c.br=true; chords.splice(idx,0,...fresh); msg=`Inserted it before ${chordName(c)}, ${bars(s0,s0+total)}`; }
+  else { /* over: the same number of beats from the selected chord is replaced; a chord running past the end keeps its remainder */
+    const s0=startOf(idx), e0=s0+total, out=[]; let pos=0, put=false;
+    chords.forEach((c,i)=>{ const cs=pos, ce=pos+c.beats; pos=ce;
+      if(i===idx){ if(c.br) fresh[0].br=true; if(c.sec) fresh[0].sec=c.sec; if(c.kc&&i>0) fresh[0].kc=c.kc; out.push(...fresh); put=true; }
+      if(ce<=s0||cs>=e0){ out.push(c); return; }
+      if(ce>e0){ out.push({...c,id:uid(),beats:ce-e0,br:false,sec:undefined,kc:undefined}); } });
+    if(!put) out.push(...fresh); chords=out.map(c=>{ const o={...c}; ['sec','kc'].forEach(k=>o[k]===undefined&&delete o[k]); if(!o.br) delete o.br; return o; });
+    msg=`Replaced ${bars(s0,e0)} with the harmonization`; }
+  sel=fresh[0].id; commit(); toast(msg,{label:'Undo',fn:undoTo(hist[hist.length-1])});
+}
 function melodyMidis(beats){ let prev=71; return beats.map(b=>{ if(!b) return null; let m=60+b.pc; while(m<prev-6) m+=12; while(m>prev+6) m-=12; if(m<64) m+=12; if(m>81) m-=12; if(b.onset) prev=m; return {m,onset:b.onset}; }); }
 function playMelody(beats,list){
   stopAll(); const a=ac(), out=newSession(), unit=60/S.tempo*(4/den()); let t=a.currentTime+.06;
@@ -2945,10 +2971,10 @@ function playMelody(beats,list){
 function renderMelody(){
   const el=$('#melOut');
   if(!MEL.results.length){ el.innerHTML=''; return; }
-  el.innerHTML=MEL.results.map((r,i)=>{ const L=barLen(); let pos=0; const bars=[];
+  el.innerHTML=`<div class="mel-place"><label class="label" for="melPlace">Put the chords</label><select id="melPlace">${Object.entries(MEL_PLACES).map(([k,l])=>`<option value="${k}" ${k===S.melPlace?'selected':''}>${l}</option>`).join('')}</select></div>`+MEL.results.map((r,i)=>{ const L=barLen(); let pos=0; const bars=[];
     r.list.forEach(c=>{ const b=Math.floor(pos/L); (bars[b]=bars[b]||[]).push(chordName(c)); pos+=c.beats; });
     return `<div class="mel-row"><span class="mc">${esc(bars.map(b=>b.join(' ')).join(' | '))}</span><span class="ms">${r.hits} of ${r.strong} strong-beat melody notes are chord tones</span>
-      <span class="mb"><button type="button" class="btn small" data-mplay="${i}">${IC.play}With melody</button><button type="button" class="btn small primary" data-muse="${i}">Use this</button></span></div>`; }).join('');
+      <span class="mb"><button type="button" class="btn small" data-mplay="${i}">${IC.play}With melody</button><button type="button" class="btn small primary" data-muse="${i}">Add to chart</button></span></div>`; }).join('');
 }
 function melodySuggest(){
   const r=parseMelody($('#melIn').value); S.melText=$('#melIn').value; S.melRate=+$('#melRate').value; save();
@@ -3120,7 +3146,7 @@ let LIB={version:1,items:[]}, libCurrent=null;
 /* ============ untrusted state: one gate for settings and chords from saves, library files and share links ============ */
 const isBool=v=>typeof v==='boolean';
 const SANE={tonic:v=>Number.isInteger(v)&&v>=0&&v<12, mode:v=>ownKey(MODES,v), meter:v=>ownKey(METERS,v), tempo:v=>Number.isFinite(+v)&&+v>0&&v!==''&&v!==null&&typeof v!=='boolean',
-  voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
+  voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
   pstyle:v=>ownKey(PIANO_STYLES,v), gstyle:v=>ownKey(GUITAR_STYLES,v), mood:v=>v===''||MOODS.some(m=>m.id===v),
   genres:v=>Array.isArray(v)&&v.length<=20&&v.every(g=>GENRES.some(x=>x.id===g)), vocab:v=>Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)),
   bars:v=>[4,8,12,16].includes(v), rhythm:v=>['bar','half','mixed','slow'].includes(v), level:v=>[0,1,2].includes(v), surprise:v=>Number.isFinite(v)&&v>=0&&v<=100,
@@ -3364,7 +3390,8 @@ function boot(){
   $('#melPlay').onclick=()=>{ const r=parseMelody($('#melIn').value); if(r.bad||!r.beats.some(Boolean)){ toast('Type a melody first: note names, - to hold, . to rest'); return; } playMelody(r.beats,null); };
   $('#melOut').addEventListener('click',e=>{ const p=e.target.closest('[data-mplay]'), u=e.target.closest('[data-muse]');
     if(p){ const r=MEL.results[+p.dataset.mplay]; playMelody(MEL.beats,r.list.map(c=>({...c}))); }
-    if(u){ const r=MEL.results[+u.dataset.muse]; pushHist(); chords=r.list.map(c=>({...c,id:uid()})); sel=chords[0].id; commit(); toast('Loaded the harmonization into the chart'); } });
+    if(u) placeHarmony(MEL.results[+u.dataset.muse].list); });
+  $('#melOut').addEventListener('change',e=>{ if(e.target.id==='melPlace'){ S.melPlace=e.target.value; save(); } });
   $('#surprise').oninput=e=>{ S.surprise=+e.target.value; save(); renderControls(); };
   $('#vlToggle').onchange=e=>{ S.showVL=e.target.checked; save(); renderVLX(); };
   $('#finder').addEventListener('change',e=>{ if(e.target.id==='fCapo'){ S.capo=+e.target.value; commit(); } if(e.target.id==='fTune'){ setTuning(e.target.value); commit(); } });
@@ -3395,7 +3422,7 @@ function boot(){
     toast(`${n} chord${n>1?'s':''} brought inside ${vocabName()}`,{label:'Undo',fn:()=>$('#undo').click()}); };
   try{ if(localStorage.getItem('changes-finetune-v1')==='open') $('#fineTune').open=true; }catch(e){}
   $('#fineTune').addEventListener('toggle',()=>{ try{ localStorage.setItem('changes-finetune-v1',$('#fineTune').open?'open':'closed'); }catch(e){} });
-  $('#recolor').onclick=()=>{ pushHist(); chords=bySegments(chords,seg=>colorize(seg,lvl(),false).map(fitC)); commit(); toast(`Chart rewritten with ${vocabName()}`); };
+  $('#recolor').onclick=()=>{ pushHist(); chords=bySegments(chords,seg=>colorize(seg,lvl(),false,true).map(fitC)); commit(); toast(`Chart rewritten with ${vocabName()}`); };
   $('#copy').onclick=()=>{ const txt=`${keyName()} · ${meterText()} · ♩=${S.tempo}\n`+serialize(S.labels==='numerals'?c=>real(c)?analyze(c).num:'?':c=>chordName(c,'sym')).split('\n').map(l=>l.startsWith('[')?l:`| ${l} |`).join('\n'); copyText(txt,'Chart copied'); };
   const load=()=>{ const r=parseProg($('#prog').value); const err=$('#err');
     if(r.bad.length){ err.hidden=false; err.textContent=`Couldn't read ${r.bad.map(b=>`“${b}”`).join(', ')}. Try names like Am7, D/F#, Bbmaj7, F#m7b5.`; }
