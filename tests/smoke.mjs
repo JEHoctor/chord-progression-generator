@@ -1051,6 +1051,76 @@ async function orchestra() {
   await ctx.close();
 }
 
+async function songForm() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  const song = '[Verse 1]\nC | Am | F | G\n[Chorus]\nF | G | C | C\n[Verse 2]\nC | Am | F | G\n[Chorus]\nF | G | C | C\n[Bridge]\nAm | F | C | G\n[Chorus]\nF | G | C | C';
+  const load = (txt, tune) => page.evaluate(([txt, tune]) => { S.tonic = 0; S.mode = 'ionian'; S.showMel = !!tune; S.arrShow = false; S.pstyle = 'block'; S.foldForm = true; S.linkForm = true; chords = parseProg(txt).chords; melody = tune || []; hist = []; sel = chords[0].id; unfolded.clear(); formEdit = null; renderAll(); }, [txt, tune]);
+  await load(song);
+  const f = await page.evaluate(() => ({ chips: [...document.querySelectorAll('#formBar .fchip')].map(c => c.querySelector('b').textContent + (c.classList.contains('rep') ? '*' : '')).join(','), slots: document.querySelectorAll('#rows .slot').length, folds: [...document.querySelectorAll('#rows .fold-row')].map(r => r.textContent.trim().split(' · ')[0]).join('|') }));
+  check('form: the strip lists the sections in order and marks the repeats', f.chips === 'Verse 1,Chorus,Verse 2*,Chorus*,Bridge,Chorus*', f.chips);
+  check('form: repeats fold to one line each, so 24 bars show as 12', f.slots === 12 && f.folds === 'Same as bar 1 (Verse 1)|Same as bar 5|Same as bar 5', JSON.stringify(f));
+  await page.click('#rows .fold-row [data-unfold]');
+  check('form: Show opens a folded repeat', await page.evaluate(() => document.querySelectorAll('#rows .slot').length === 16 && document.querySelectorAll('#rows .fold-row').length === 2));
+  await page.click('#foldForm');
+  check('form: turning Fold repeats off shows every bar', await page.evaluate(() => document.querySelectorAll('#rows .slot').length === 24 && !document.querySelector('#rows .fold-row')));
+  await page.click('#foldForm');
+  // linked repeats
+  const lk = await page.evaluate(() => { const s = sectionsOf()[1]; pushHist(); chords[s.i0].root = 2; chords[s.i0].q = 'm'; commit(); return sectionsOf().map(x => chords[x.i0] && chordName(chords[x.i0])).join(' '); });
+  await page.waitForTimeout(30);
+  check('form: changing a chord in one Chorus changes every Chorus that matched it, and says so', lk === 'C Dm C Dm Am Dm' && await page.evaluate(() => /Also changed the other 2 Choruses/.test(document.querySelector('#toast').textContent)), lk);
+  await page.evaluate(() => undo());
+  check('form: one Undo puts them all back', await page.evaluate(() => sectionsOf().map(x => chordName(chords[x.i0])).join(' ') === 'C F C F Am F'));
+  const verse = await page.evaluate(() => { const s = sectionsOf()[4]; pushHist(); chords[s.i0].root = 9; chords[s.i0].q = '7'; commit(); return serialize(); });
+  check('form: a section with no copies changes alone', /\[Bridge\]\nA7 \| F \| C \| G/.test(verse) && (verse.match(/F \| G \| C \| C/g) || []).length === 3, verse);
+  const off = await page.evaluate(() => { S.linkForm = false; const s = sectionsOf()[1]; pushHist(); chords[s.i0 + 1].q = '7'; commit(); S.linkForm = true; return (serialize().match(/F \| G7 \| C \| C/g) || []).length; });
+  check('form: with Link repeats off, only the one you change changes', off === 1, String(off));
+  // with a tune, a change of length stays local so the melody never shifts
+  await load(song, Array.from({ length: 96 }, (_, i) => i % 4 === 0 ? 60 + (i / 4) % 5 : -1));
+  const ln = await page.evaluate(() => { const s = sectionsOf()[1]; pushHist(); chords.splice(s.i0 + 1, 0, { id: uid(), root: 7, q: '7', bass: null, beats: 4 }); commit(); return (serialize().match(/G7/g) || []).length; });
+  await page.waitForTimeout(30);
+  check('form: with a tune, a section that changes length doesn’t drag its copies along', ln === 1 && await page.evaluate(() => /Only this Chorus changed/.test(document.querySelector('#toast').textContent)), String(ln));
+  // repeating sections
+  await load('[Verse]\nC | G\n[Chorus]\nF | C', [60, -1, -1, -1, 62, -1, -1, -1, 64, -1, -1, -1, 65, -1, -1, -1]);
+  await page.click('#formBar [data-fk="1"]'); await page.click('#formBar [data-fa="end"]');
+  const re = await page.evaluate(() => ({ txt: serialize(), mel: melody.slice(16, 24).join(), folds: document.querySelectorAll('#rows .fold-row').length }));
+  check('form: Repeat at the end copies the section, its tune too, and folds the copy', /\[Chorus\]\nF \| C\n\[Chorus\]\nF \| C$/.test(re.txt) && re.mel === '64,-1,-1,-1,65,-1,-1,-1' && re.folds === 1, JSON.stringify(re));
+  await page.click('#formBar [data-fk="0"]'); await page.click('#formBar [data-fa="after"]');
+  const ra = await page.evaluate(() => ({ txt: serialize().replace(/\n/g, ' / '), mel: melody.slice(8, 20).join() }));
+  check('form: Repeat after it inserts the copy and moves the rest of the tune along', ra.txt === '[Verse] / C | G / [Verse] / C | G / [Chorus] / F | C / [Chorus] / F | C' && ra.mel === '60,-1,-1,-1,62,-1,-1,-1,64,-1,-1,-1', JSON.stringify(ra));
+  // naming sections
+  await load('C | Am | F | G | C | Am | F | G');
+  await page.evaluate(() => { sel = chords[4].id; renderAll(); });
+  await page.click('#formBar [data-fa="mark"]');
+  check('form: + Name a section offers common names for the selected bar', await page.evaluate(() => /Start a section at bar 5/.test(document.querySelector('#formBar').textContent) && !!document.querySelector('#formBar [data-fm="Chorus"]')));
+  await page.click('#formBar [data-fm="Chorus"]');
+  check('form: naming it splits the form', await page.evaluate(() => sectionsOf().map(s => s.name || '-').join() === '-,Chorus' && /\[Chorus\]\nC \| Am \| F \| G/.test(serialize())));
+  await page.click('#formBar [data-fk="1"]');
+  await page.fill('#formBar [data-fn="1"]', 'Verse 2'); await page.keyboard.press('Enter');
+  check('form: a section can be renamed', await page.evaluate(() => sectionsOf()[1].name === 'Verse 2'));
+  await page.click('#formBar [data-fa="unmark"]');
+  check('form: and its label removed', await page.evaluate(() => sectionsOf().length === 1));
+  const mid = await page.evaluate(() => { chords = parseProg('C D | G').chords; sel = chords[1].id; hist = []; renderAll(); markSection('Hook'); return { secs: sectionsOf().length, toast: document.querySelector('#toast').textContent }; });
+  check('form: a section starts at a bar line: naming from mid-bar names that bar', mid.secs === 1 || /beginning of a bar/.test(mid.toast), JSON.stringify(mid));
+  // the melody cursor opens a folded repeat
+  await load(song, []);
+  await page.evaluate(() => { S.showMel = true; melSel = { a: 36, b: 36 }; renderAll(); });
+  check('form: moving the melody cursor into a folded repeat opens it', await page.evaluate(() => !!document.querySelector('#rows .mcell[data-mb="36"]') && document.querySelectorAll('#rows .fold-row').length === 2));
+  // saved and played
+  await page.evaluate(() => { melSel = null; S.showMel = false; S.foldForm = false; commit(); });
+  await page.reload();
+  check('form: the fold and link switches are kept', await page.evaluate(() => S.foldForm === false && S.linkForm === true && !document.querySelector('#rows .fold-row')));
+  check('no console errors (song form)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+  const ph = await openPage({ viewport: { width: 390, height: 844 } });
+  await ph.page.goto(URL_);
+  await ph.page.evaluate(txt => { S.tonic = 0; S.mode = 'ionian'; S.showMel = false; S.foldForm = true; chords = parseProg(txt).chords; selectTab('phone', 'p-chart'); renderAll(); }, song);
+  const pz = await ph.page.evaluate(() => ({ noH: document.documentElement.scrollWidth <= innerWidth, chips: document.querySelectorAll('#formBar .fchip').length, folds: document.querySelectorAll('#rows .fold-row').length }));
+  check('form: on a phone the strip scrolls sideways and the folds fit', pz.noH && pz.chips === 6 && pz.folds === 3, JSON.stringify(pz));
+  await ph.page.screenshot({ path: path.join(OUT, 'form-phone.png') });
+  await ph.ctx.close();
+}
+
 // the top-bar menus must be visible and on top at every width, not just "open"
 async function menus() {
   for (const [w, h, tag] of [[1440, 900, 'desktop'], [1280, 720, 'small laptop'], [900, 900, 'tablet'], [390, 844, 'phone']]) {
@@ -1245,6 +1315,7 @@ try {
   await voicesExplained();
   await pianoParts();
   await orchestra();
+  await songForm();
   await menus();
   await layout();
   await hardening();

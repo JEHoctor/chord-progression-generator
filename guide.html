@@ -61,7 +61,7 @@ footer{max-width:1180px;margin:56px auto 0;color:var(--muted);font-size:14px;bor
 @media (max-width:860px){ .page{display:block} .toc{position:static;max-height:none;padding-top:8px} .toc ol{flex-direction:row;flex-wrap:wrap;gap:4px} .toc a{background:var(--surface);border:1px solid var(--line)} .map{grid-template-columns:1fr} }
 </style></head><body>
 <header class="top"><a class="name" href="./">Chord Changes</a><nav aria-label="Pages"><a class="btn" href="guide.html" aria-current=page>How to use</a><a class="btn" href="how-it-works.html">Under the hood</a><a class="btn primary" href="./">Open the app</a></nav></header>
-<div class="page"><nav class="toc" aria-label="On this page"><b>On this page</b><ol><li><a href="#quick">Quick start</a></li><li><a href="#screen">Finding your way around</a></li><li><a href="#make">Making a progression</a></li><li><a href="#edit">Editing the chart</a></li><li><a href="#melody">Melody</a></li><li><a href="#swaps">Swap ideas</a></li><li><a href="#play">Playing and hearing</a></li><li><a href="#export">Export, share and save</a></li><li><a href="#tools">More tools</a></li><li><a href="#keys">Keyboard shortcuts</a></li><li><a href="#sound">If you hear nothing</a></li><li><a href="#privacy">Your data</a></li></ol></nav>
+<div class="page"><nav class="toc" aria-label="On this page"><b>On this page</b><ol><li><a href="#quick">Quick start</a></li><li><a href="#screen">Finding your way around</a></li><li><a href="#make">Making a progression</a></li><li><a href="#edit">Editing the chart</a></li><li><a href="#form">Song form: verses, choruses and repeats</a></li><li><a href="#melody">Melody</a></li><li><a href="#swaps">Swap ideas</a></li><li><a href="#play">Playing and hearing</a></li><li><a href="#export">Export, share and save</a></li><li><a href="#tools">More tools</a></li><li><a href="#keys">Keyboard shortcuts</a></li><li><a href="#sound">If you hear nothing</a></li><li><a href="#privacy">Your data</a></li></ol></nav>
 <main><h1>How to use Chord Changes</h1>
 <p class="lede">Chord Changes helps you find chord progressions, hear them, understand why they work and take them into your music app. You don’t need to know music theory to start; the theory is there when you want it.</p>
 
@@ -135,6 +135,16 @@ D | E | F#m | E</pre>
   <li><code>?</code> is an empty slot you want ideas for; <code>%</code> repeats the previous chord; an empty bar <code>| |</code> holds the chord for another bar.</li>
   <li>Chord names are read flexibly: <code>Cmaj7</code>, <code>CΔ7</code>, <code>C-7</code>, <code>Cø</code>, <code>F#m7b5</code>, <code>Bbsus4</code>, <code>Gmaj7(9)</code>, <code>D/F#</code> and many more.</li>
 </ul>
+
+<h2 id="form">Song form: verses, choruses and repeats</h2>
+<p>The <b>Song form</b> strip above the chart shows the sections in order, for example Verse 1 · Chorus · Verse 2 · Chorus · Bridge · Chorus. Tap one to jump to it and see what you can do with it.</p>
+<ul>
+  <li><b>+ Name a section</b>: select a chord at the start of a bar, then choose Intro, Verse, Pre-chorus, Chorus, Bridge or Outro, or type a name. A section runs until the next one starts. In Edit as text, the same thing is a line like <span class="mono">[Chorus]</span>.</li>
+  <li><b>Repeat after it</b> or <b>Repeat at the end</b> copies a section, with its stretch of the tune. Write a chorus once, then repeat it.</li>
+  <li><b>Fold repeats</b>: a section that matches an earlier one of the same name note for note (its chords, and its tune when the melody lane is showing) folds to one line, “Same as bar 5”, so a long song fits on screen. <b>Show</b> opens it, and it opens by itself when the melody cursor moves into it. “Verse 1” and “Verse 2” count as the same name.</li>
+  <li><b>Link repeats</b>: change a chord in one Chorus and every Chorus that matched it changes too; one Undo puts them all back. With a tune in the melody lane, a change that makes the section longer or shorter stays in that one section, so the tune under the others doesn’t move. Turn Link repeats off to change just one.</li>
+</ul>
+<p>The chart is still played, exported and printed in full, repeats included; folding only changes what you see.</p>
 
 <h2 id="melody">Melody</h2>
 <p>Press <b>♪ Melody</b> beside Chart tools to show a melody lane: a row of beat boxes under each line of chords, one per beat, lined up with the chords above. Press it again to hide the lane; the melody is kept.</p>
