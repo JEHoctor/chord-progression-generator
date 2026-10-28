@@ -493,7 +493,7 @@ async function phase3() {
   const pOpts = await page.evaluate(() => [...document.querySelectorAll('#pstyle option')].map(o => o.value).join());
   await page.selectOption('#instrument', 'guitar');
   const gOpts = await page.evaluate(() => [...document.querySelectorAll('#pstyle option')].map(o => o.value).join());
-  check('styles: the style picker offers piano and guitar styles to match the sound', pOpts === 'block,ballad,pulse,arp' && gOpts === 'strum1,strum,pick', `${pOpts} / ${gOpts}`);
+  check('styles: the style picker offers piano and guitar styles to match the sound', pOpts === 'block,ballad,pulse,arp,stride,evans' && gOpts === 'strum1,strum,pick', `${pOpts} / ${gOpts}`);
   await page.selectOption('#pstyle', 'strum');
   const sm = parseMidi(Buffer.from(await page.evaluate(() => [...buildMidi(false)]))), onsTicks = [...new Set(sm.tracks[1].filter(e => e.st === 0x90).map(e => e.tick % (480 * 4)))].sort((a, b) => a - b);
   check('styles: guitar strum pattern exports D DU UDU on the eighth-note grid', JSON.stringify(onsTicks) === JSON.stringify([0, 480, 720, 1200, 1440, 1680]), onsTicks.join(','));
@@ -949,6 +949,71 @@ async function voicesExplained() {
   await ph.ctx.close();
 }
 
+async function pianoParts() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  const tune = [64, -1, -1, -1, 65, 64, 62, -1, 62, -1, -1, -1, 64, 67, 72, -1, -1, -1, 69, -1, 67, -1, 65, -1, 64, -1, -1, -1];
+  const setup = (st, t) => page.evaluate(([st, t]) => { S.tonic = 0; S.mode = 'ionian'; S.meter = '4/4'; S.instrument = 'piano'; S.pstyle = st; S.arrShow = false; S.showMel = !!t; chords = parseProg('C | Dm7 | G7 | Am | F | G7 | C').chords; melody = t ? t.slice() : []; partAt = null; renderAll(); }, [st, t]);
+  await setup('stride', tune);
+  const sd = await page.evaluate(() => { const p = pianoPart(), first = p.ev.filter(e => e.at < 3); const dv = p.dev.L.map(d => d.kind + (d.label ? ':' + d.label : '')).join(' ');
+    return { pat: first.filter(e => e.h !== 'R').map(e => e.h + Math.round(e.at)).join(' '), dv, rh: p.dev.R.map(d => d.kind).join(' ') }; });
+  check('piano: Broadway stride puts the bass on beats 1 and 3 and a chord on 2 and 4', sd.pat === 'B0 L1 B2', JSON.stringify(sd));
+  check('piano: between chords it adds a passing C♯°7 (C to Dm7), walk-ups, an approach C7 (into F) and a big finish', /pass:C♯°7/.test(sd.dv) && /walk/.test(sd.dv) && /approach:C7/.test(sd.dv) && /finish$/.test(sd.dv), sd.dv);
+  const rh = await page.evaluate(() => { const p = pianoPart(); const clash = p.ev.filter(e => e.h === 'R' && e.dev !== 'trem').filter(e => { const b = Math.floor(e.at + 1e-6); return melody[b] > 0 && Math.abs(e.at - b) < 1e-6 && e.dur > .5; });
+    const runs = p.dev.R.filter(d => d.kind === 'run'), lands = runs.map(d => { const land = p.ev.find(e => e.h === 'R' && Math.abs(e.at - (d.b + d.n - 1)) < 1e-6); const ci = chordIdxAt(d.b + d.n - 1); return land && mod(land.notes[0]) === mod(chords[ci].root + (Q[chords[ci].q].iv.includes(3) ? 3 : 4)); });
+    const pass = p.dev.L.filter(d => d.kind === 'pass').every(d => { const m = melPitch(d.b); return m == null || [0, 3, 6, 9].map(x => mod(d.root + x)).includes(mod(m)); });
+    return { clash: clash.length, runs: runs.length, lands, pass, trem: p.dev.R.some(d => d.kind === 'tremolo' && d.tune === 72) }; });
+  check('piano: the right hand stays out of the singer’s way, filling the gaps with runs that land on the next chord’s 3rd', rh.clash === 0 && rh.runs >= 2 && rh.lands.every(Boolean), JSON.stringify(rh));
+  check('piano: a passing chord is only used where the tune fits it; the tune’s top note gets a tremolo', rh.pass && rh.trem, JSON.stringify(rh));
+  const w34 = await page.evaluate(() => { S.meter = '3/4'; chords = parseProg('C | G7 | C').chords; melody = []; renderAll(); const p = pianoPart(); const r = p.ev.filter(e => e.at < 3 && e.h !== 'R').map(e => e.h + Math.round(e.at)).join(' '); S.meter = '4/4'; return r; });
+  check('piano: in 3/4 the stride becomes a waltz: bass, chord, chord', w34 === 'B0 L1 L2', w34);
+  const noTune = await page.evaluate(() => { chords = parseProg('C | Dm7 | G7 | Am | F | G7 | C | C').chords; melody = []; renderAll(); return pianoPart().dev.R.map(d => d.kind + '@' + d.b).join(' '); });
+  check('piano: with no tune, fills come at the ends of two-bar phrases', /run@6/.test(noTune) && /run@14/.test(noTune), noTune);
+  // jazz ballad
+  await setup('evans', tune);
+  const jz = await page.evaluate(() => { const p = pianoPart(), L = p.dev.L, rootless = L.filter(d => d.kind === 'rootless');
+    const noRoot = rootless.every(d => !d.notes.some(m => mod(m) === mod(d.croot)));
+    let move = 0; for (let k = 1; k < rootless.length; k++) move += vlMove(rootless[k - 1].notes, rootless[k].notes); move /= Math.max(1, rootless.length - 1);
+    const types = new Set(rootless.map(d => d.type)), sub = L.find(d => d.kind === 'tritone'), end = L.find(d => d.kind === 'jend');
+    const lines = p.dev.R.filter(d => d.kind === 'line').every(d => { const n = d.notes, t = d.target; return n[n.length - 1] === t - 1 && n[n.length - 2] > t && n[n.length - 2] - t <= 2; });
+    return { noRoot, move: +move.toFixed(2), types: [...types].join(), sub: sub && sub.label, end: end && end.sharp11 && end.notes.some(m => mod(m) === 6), lines }; });
+  check('piano: jazz ballad leaves the root out of the left hand, mixing A and B forms that move by small steps (total half steps per change)', jz.noRoot && jz.move <= 6 && jz.types.includes('A') && jz.types.includes('B'), JSON.stringify(jz));
+  check('piano: G7 to C gets a tritone substitute (D♭7); the ending adds a ♯11; lines enclose the next chord’s 3rd', jz.sub === 'D♭7' && jz.end && jz.lines, JSON.stringify(jz));
+  // hearing it, and the lanes
+  const pb = await page.evaluate(() => { let part = 0, styled = 0; const op = playPart, os = playStyled; window.playPart = (...a) => { part++; }; window.playStyled = () => { styled++; }; S.loop = false; playChart(); stopAll(); window.playPart = op; window.playStyled = os; return { part, styled }; });
+  check('piano: Play uses the whole-chart part instead of chord-by-chord styles', pb.part === 1 && pb.styled === 0, JSON.stringify(pb));
+  const lanes = await page.evaluate(() => ({ lh: document.querySelectorAll('#rows .pcell[data-ph="L"]').length, rh: document.querySelectorAll('#rows .pcell[data-ph="R"]').length, tags: [...document.querySelectorAll('#rows .pcell')].map(c => c.textContent).join('|') }));
+  check('piano: two lanes under the chart name what each hand does', lanes.lh >= 7 && lanes.rh >= 2 && /Rootless/.test(lanes.tags) && /D♭7/.test(lanes.tags) && /Line/.test(lanes.tags), JSON.stringify(lanes));
+  await page.click('#rows .pcell[data-ph="L"][data-pb="22"]');
+  const card = await page.evaluate(() => ({ vis: !document.querySelector('#partWhy').hidden, t: document.querySelector('#partWhy').textContent }));
+  check('piano: tapping a tag explains it in plain words', card.vis && /Tritone substitution · D♭7/.test(card.t) && /share the same two guide tones/.test(card.t), card.t.slice(0, 200));
+  const hear = await page.evaluate(() => { const ot = tone, os = strum; let tones = 0, strums = 0; window.tone = () => { tones++; }; window.strum = () => { strums++; };
+    document.querySelector('#partWhy [data-pw="hear"]').click(); const a = tones; tones = 0; document.querySelector('#partWhy [data-pw="plain"]').click(); window.tone = ot; window.strum = os; return { a, plainStrums: strums, plainTune: tones }; });
+  check('piano: Hear it plays that stretch with the tune; Hear it plain plays block chords to compare', hear.a > 4 && hear.plainStrums >= 1 && hear.plainTune >= 1, JSON.stringify(hear));
+  await page.click('#partWhy [data-pw="next"]');
+  check('piano: the arrows step to the next thing that hand does', await page.evaluate(() => /Ending · C/.test(document.querySelector('#partWhy').textContent)));
+  await page.click('#rows .pcell[data-ph="R"]');
+  check('piano: a right-hand fill explains when and why it plays', await page.evaluate(() => /While the singer holds E4/.test(document.querySelector('#partWhy').textContent) && /encloses/.test(document.querySelector('#partWhy').textContent)));
+  await page.click('#rows .mcell[data-mb="5"]');
+  check('piano: opening the note pad closes the card', await page.evaluate(() => document.querySelector('#partWhy').hidden));
+  await page.click('#rows .pcell[data-ph="L"][data-pb="0"]'); await page.keyboard.press('Escape');
+  check('piano: Escape closes the card', await page.evaluate(() => document.querySelector('#partWhy').hidden));
+  // MIDI follows the part
+  const md = await page.evaluate(() => { S.pstyle = 'stride'; renderAll(); return [...buildMidi(true)]; });
+  const mid = parseMidi(Uint8Array.from(md)), notesOn = t => mid.tracks[t].filter(e => e.st === 0x90 && e.d[1] > 0).map(e => e.d[0]);
+  check('piano: MIDI writes the part as planned, the stride bass on its own track', notesOn(2).includes(37) && notesOn(2).includes(36) && notesOn(1).length > 20, JSON.stringify({ ch: notesOn(1).slice(0, 12), bass: notesOn(2).slice(0, 8) }));
+  const gt = await page.evaluate(() => { S.instrument = 'guitar'; renderAll(); const n = document.querySelectorAll('#rows .pcell').length; S.instrument = 'piano'; renderAll(); return n; });
+  check('piano: the lanes are only there for the piano parts', gt === 0);
+  check('no console errors (piano parts)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+  const ph = await openPage({ viewport: { width: 390, height: 844 } });
+  await ph.page.goto(URL_);
+  await ph.page.evaluate(t => { S.tonic = 0; S.mode = 'ionian'; S.instrument = 'piano'; S.pstyle = 'stride'; S.showMel = true; S.arrShow = false; chords = parseProg('C | Dm7 | G7 | Am').chords; melody = t.slice(0, 16); selectTab('phone', 'p-chart'); renderAll(); }, tune);
+  const pz = await ph.page.evaluate(() => ({ noH: document.documentElement.scrollWidth <= innerWidth, cells: document.querySelectorAll('#rows .pcell').length }));
+  check('piano: on a phone the lanes fit the width', pz.noH && pz.cells > 4, JSON.stringify(pz));
+  await ph.ctx.close();
+}
+
 // the top-bar menus must be visible and on top at every width, not just "open"
 async function menus() {
   for (const [w, h, tag] of [[1440, 900, 'desktop'], [1280, 720, 'small laptop'], [900, 900, 'tablet'], [390, 844, 'phone']]) {
@@ -1141,6 +1206,7 @@ try {
   await melodyLane();
   await arranging();
   await voicesExplained();
+  await pianoParts();
   await menus();
   await layout();
   await hardening();

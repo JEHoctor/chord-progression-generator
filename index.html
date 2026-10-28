@@ -757,6 +757,17 @@ select.btn{border-radius:var(--r-pill)}
 .mcell.oor{position:relative}
 .acell.awhy,.mcell.awhy{outline:2px solid var(--ink);outline-offset:1px}
 .acell:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+/* the piano part's lanes: a tag for each technique, spanning the beats it covers */
+.pcell{z-index:2;margin:0 2px 6px;height:26px;min-width:0;padding:0 6px;border:1px solid var(--line);border-radius:13px;background:var(--surface);color:var(--ink);font:600 11.5px/1 var(--f-ui);cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pcell span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcell.rh{background:color-mix(in srgb,var(--spike) 22%,var(--surface));border-color:color-mix(in srgb,var(--spike) 55%,var(--line))}
+.pcell.p-pass,.pcell.p-walk,.pcell.p-approach,.pcell.p-tritone,.pcell.p-altered{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pcell.p-finish,.pcell.p-jend{border-style:dashed}
+.pcell[data-v]{padding-left:22px}
+.pcell[data-v]::before{content:attr(data-v);position:absolute;left:7px;top:50%;transform:translateY(-50%);font:700 8px/1 var(--f-ui);letter-spacing:.04em;opacity:.6}
+.pcell.awhy{outline:2px solid var(--accent);outline-offset:1px}
+.row.has-part .pcell:last-child{margin-bottom:14px}
+.pw-p{margin:0;font-size:13.5px;line-height:1.5}
 .ab-groups{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
 .ab-groups .seg button{padding:4px 11px;font-size:13px;white-space:nowrap}
 .ab-range{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:13px}
@@ -979,6 +990,7 @@ body{padding-bottom:0}
     <div class="rows" id="rows"></div>
     <div class="melpad" id="melPad" hidden role="group" aria-label="Melody notes"></div>
     <div class="melpad arrwhy" id="arrWhy" hidden role="region" aria-label="Why this voicing" aria-live="polite"></div>
+    <div class="melpad arrwhy" id="partWhy" hidden role="region" aria-label="What the piano is doing" aria-live="polite"></div>
     <div class="legend">
       <span class="k-dia">In the key</span><span class="k-bor">Borrowed from a parallel mode</span><span class="k-sec">Secondary / tritone dominant</span><span class="k-chr">Chromatic</span>
     </div>
@@ -2056,8 +2068,9 @@ function playPass(t,out){
   if(S.drone) droneTones(t,chords.reduce((s,c)=>s+c.beats,0)*unit,out);
   const ar=arrOn()?arrange():null, withChords=!ar||!arrMuted(ar.voices.length);
   if(ar) playArr(ar,t,unit,out); else if(S.showMel&&S.melPlay) playMelLine(t,unit,out);
+  const part=isPart()&&chords.some(real); if(part&&withChords) playPart(t,unit,out);
   chords.forEach(c=>{
-    const dur=c.beats*unit, v=real(c)?playedVoicing(c):null; if(withChords) playStyled(c,t,c.beats,unit,out,v,beat);
+    const dur=c.beats*unit, v=real(c)?playedVoicing(c):null; if(withChords&&!part) playStyled(c,t,c.beats,unit,out,v,beat);
     timers.push(setTimeout(()=>{ midiChord(v); $('#nowChord').innerHTML=real(c)?chordHTML(c):'rest'; document.querySelectorAll('.slot.playing').forEach(e=>e.classList.remove('playing')); document.querySelectorAll(`.slot[data-id="${c.id}"]`).forEach(e=>e.classList.add('playing')); },(t-a.currentTime)*1000));
     if(S.click) for(let b=0;b<c.beats;b++){ const bb=(beat+b)%L; blip(t+b*unit,bb===0?2:acc.has(bb)?1:0,out); }
     beat+=c.beats; t+=dur;
@@ -2120,6 +2133,207 @@ function playStyled(c,t,beats,unit,out,v,abs){
 }
 function renderStyleSelect(){ const sel=$('#pstyle'), gtr=S.instrument==='guitar', opts=gtr?GUITAR_STYLES:PIANO_STYLES, cur=gtr?(GUITAR_STYLES[S.gstyle]?S.gstyle:'strum1'):(PIANO_STYLES[S.pstyle]?S.pstyle:'block');
   sel.innerHTML=Object.entries(opts).map(([k,l])=>`<option value="${k}" ${k===cur?'selected':''}>${l}</option>`).join(''); }
+/* ============ piano parts that listen to the tune: Broadway stride and jazz ballad ============ */
+/* Two whole-chart piano styles, planned across the chart rather than chord by chord, because what they do depends on what is
+   around them: the chord coming next, and what the melody lane (the singer) is doing.
+   Broadway: a stride left hand (bass on the strong beats, a chord in the middle of the keyboard between), the right hand
+   kept out of the singer's way and answering in the gaps with runs up to the next chord, passing diminished chords,
+   walk-ups and approach dominants between chords, a tremolo under the tune's top note and a rolled final chord.
+   Jazz ballad: a soft root, then a rootless voicing (3rd, 7th, 9th, 5th or 13th) in the left hand, chosen for the
+   smoothest motion; swung right-hand lines in the gaps that close in on the next chord's 3rd; tritone substitutions and
+   altered dominants; an ending with a raised 11th. Each technique is recorded as a device with its reason, for the lanes. */
+const PIANO_PARTS={stride:'Broadway: stride and fills',evans:'Jazz ballad: rootless voicings'};
+Object.assign(PIANO_STYLES,PIANO_PARTS);
+const isPart=()=>S.instrument!=='guitar'&&ownKey(PIANO_PARTS,S.pstyle);
+let partCache=null, partAt=null; /* partAt: {hand,b} of the device being explained */
+/* the notes a style plays for a chord, as intervals from the root: 3rd, 5th, 7th (a major triad gets a 6th in Broadway, a
+   major 7th in jazz; a minor triad a 7th), the 9th, and the 13th on a dominant */
+function colourOf(c,jazz){
+  const r=c.root, iv=new Set(reduceIv(Q[c.q]).map(i=>mod(i))), has=i=>iv.has(i);
+  const t=has(4)?4:has(3)?3:has(5)?5:has(2)?2:4, f=has(7)?7:has(6)?6:has(8)?8:7;
+  let s=has(11)?11:has(10)?10:(has(9)&&t===3&&f===6)?9:null, added=null;
+  if(s==null){ s=t===4&&f===7?(jazz?11:9):t===3&&f===7?10:t===4&&f===8?10:(t===5||t===2)?10:10; added=s; }
+  const dom=t===4&&s===10, nine=has(1)?1:(has(3)&&t===4)?3:2, thirteen=dom?(has(8)?8:9):null;
+  return {r,t,f,s,nine,thirteen,dom,added};
+}
+/* notes with the given pitch classes stacked closely upward, lowest in [lo,hi], nearest the previous stack; any of them may
+   go at the bottom, unless `fixed` keeps them in the order given */
+function stackNear(pcs,lo,hi,prev,target,fixed=false){
+  let best=null, bv=Infinity;
+  (fixed?[0]:pcs.map((_,k)=>k)).forEach(k=>{ const rot=pcs.slice(k).concat(pcs.slice(0,k));
+    for(let b=lo;b<=hi;b++){ if(mod(b)!==mod(rot[0])) continue; const n=[b]; for(const pc of rot.slice(1)){ let m=n[n.length-1]+1; while(mod(m)!==mod(pc)) m++; n.push(m); }
+      const avg=n.reduce((a,x)=>a+x,0)/n.length, v=Math.abs(avg-target)*.4+(prev?vlMove(prev,n):0); if(v<bv){ bv=v; best=n; } } });
+  /* a window narrower than an octave can miss a note class; widen it to an octave */
+  if(!best&&hi-lo<11) return stackNear(pcs,lo,lo+11,prev,target,fixed);
+  return best;
+}
+const lowIn=(pc,lo,hi)=>{ for(let m=lo;m<=hi;m++) if(mod(m)===mod(pc)) return m; return lo; };
+const nm7=(root,q)=>chordName({root:mod(root),q,bass:null});
+function pianoPart(){
+  const style=S.pstyle, jazz=style==='evans', key=JSON.stringify([style,S.tonic,S.mode,S.meter,chords.map(c=>[c.root,c.q,c.bass,c.beats,c.kc]),melody]);
+  if(partCache&&partCache.key===key) return partCache.val;
+  const L=barLen(), acc=new Set(ACCENTS[S.meter]||[0]), st=chordStarts(), total=chords.reduce((a,c)=>a+c.beats,0), ev=[], dev={L:[],R:[]};
+  const sw=jazz?.17:.08, swing=x=>Math.abs(x-Math.floor(x)-.5)<1e-6?x+sw:x;
+  const tuneAt=b=>melPitch(b), onsets=[]; for(let b=0;b<total;b++) if(melody[b]>0) onsets.push(b);
+  const hasTune=onsets.length>0, last=chords.length-1;
+  const realIdx=chords.map((c,i)=>real(c)?i:-1).filter(i=>i>=0);
+  const nextReal=i=>{ for(let j=i+1;j<chords.length;j++) if(real(chords[j])) return j; return realIdx[0]??-1; };
+  let prevStack=null;
+  /* ---- left hand, chord by chord, with what happens on the way to the next chord ---- */
+  chords.forEach((c,i)=>{ if(!real(c)) return;
+    inKey(keyAt(i),()=>{
+      const b0=st[i], n=c.beats, col=colourOf(c,jazz), name=chordName(c), j=nextReal(i), Y=j>=0?chords[j]:null, isLast=i===realIdx[realIdx.length-1];
+      const d=Y?mod(Y.root-c.root):null, tuneOn=b=>{ const m=tuneAt(b); return m==null?null:mod(m); };
+      let body=n, tail=null; /* tail: a device over the end of the chord */
+      if(isLast){
+        /* the ending */
+        const pcs=jazz?[col.t,col.s,col.nine,col.t===4?6:col.f]:[col.f,col.t,col.s,col.nine,col.f];
+        if(jazz){ const lh=stackNear([col.t,col.s,col.nine].map(x=>c.root+x),50,60,prevStack,57), top=col.t===4?lowIn(c.root+6,lh[lh.length-1]+1,lh[lh.length-1]+12):null;
+          ev.push({at:b0,notes:[lowIn(c.bass??c.root,36,47)],dur:n,vel:.8,h:'B'},{at:b0+.04,notes:lh,dur:n,vel:.7,h:'L'}); if(top!=null) ev.push({at:b0+.5,notes:[top],dur:n-.5,vel:.75,h:'R'});
+          dev.L.push({b:b0,n,kind:'jend',chord:name,notes:[...lh,...(top!=null?[top]:[])],sharp11:top!=null}); }
+        else { const bass=lowIn(c.bass??c.root,36,47), notes=[bass,bass+7]; let m=bass+7; pcs.slice(1).forEach(pc=>{ m++; while(mod(m)!==mod(c.root+pc)) m++; notes.push(m); }); while(notes[notes.length-1]<76){ m++; while(mod(m)!==mod(c.root+col.t)&&mod(m)!==mod(c.root+col.f)) m++; notes.push(m); }
+          notes.forEach((x,k)=>ev.push({at:b0+k*.12,notes:[x],dur:n-k*.12,vel:k?.75:.95,h:k<2?'B':'R'}));
+          dev.L.push({b:b0,n,kind:'finish',chord:name,notes}); }
+        prevStack=null; return;
+      }
+      /* Broadway: what joins this chord to the next, over its last beat (or two) */
+      if(!jazz&&Y&&n>=4){
+        const lb=b0+n-1, mel=tuneOn(lb);
+        const fits=pcs=>mel==null||pcs.includes(mel);
+        if(d===2){ const dr=mod(Y.root-1), pcs=[0,3,6,9].map(x=>mod(dr+x)); if(fits(pcs)) tail={kind:'pass',b:lb,n:1,root:dr,pcs,spellAt:Y.root,label:inKey({t:Y.root,m:'ionian'},()=>nm7(dr,'dim7'))}; }
+        if(!tail&&[3,4,5].includes(d)) tail={kind:'walk',b:b0+n-2,n:2};
+        if(!tail&&!(col.dom&&d===5)&&mod(c.root-Y.root)!==7){ const vr=mod(Y.root+7), pcs=[0,4,7,10,2,9].map(x=>mod(vr+x)); if(fits(pcs)) tail={kind:'approach',b:lb,n:1,root:vr,pcs:pcs.slice(0,4),label:nm7(vr,'7')}; }
+      }
+      /* jazz: a dominant falling a fifth gets a tritone substitute over its second half, or altered tensions */
+      if(jazz&&Y&&col.dom&&d===5){
+        if(n>=4){ const half=Math.floor(n/2), sr=mod(c.root+6), mel=tuneOn(b0+half); if(mel!==mod(c.root+7)) tail={kind:'tritone',b:b0+half,n:n-half,root:sr,label:nm7(sr,'7')}; }
+        else { const mel=tuneOn(b0); if(mel!==mod(c.root+2)) tail={kind:'altered',b:b0,n}; }
+      }
+      if(tail&&tail.kind!=='altered') body=tail.b-b0;
+      /* the body of the chord */
+      if(!jazz){
+        const stack=stackNear([col.t,col.f,col.s].map(x=>c.root+x),52,59,prevStack,58); prevStack=stack;
+        const root=lowIn(c.bass??c.root,36,47); let alt=0, bassNotes=[];
+        for(let k=0;k<body;k++){ const p=(b0+k)%L;
+          if(acc.has(p)||k===0){ const bn=alt++%2===0?root:(lowIn(c.root+7,36,47)); ev.push({at:b0+k,notes:[bn],dur:1,vel:p===0?1:.9,h:'B'}); bassNotes.push(bn); }
+          else ev.push({at:b0+k,notes:stack,dur:.8,vel:.75,h:'L'}); }
+        if(body>0) dev.L.push({b:b0,n:body,kind:'stride',chord:name,croot:c.root,bass:bassNotes,notes:stack,added:col.added,minor:col.t===3});
+      } else {
+        /* rootless: type A (3rd at the bottom) or type B (7th at the bottom), whichever moves least from the last one */
+        const up=col.dom?col.thirteen:col.f, altered=tail&&tail.kind==='altered';
+        const A=stackNear([col.t,up,col.s,col.nine].map(x=>c.root+x),50,58,prevStack,57,true);
+        const Bv=stackNear((altered?[col.s,1,col.t,8]:[col.s,col.nine,col.t,up]).map(x=>c.root+x),50,58,prevStack,57,true);
+        const pick=altered?Bv:(!prevStack||vlMove(prevStack,A)<=vlMove(prevStack,Bv)?A:Bv), type=altered?'B':pick===A?'A':'B'; prevStack=pick;
+        const root=lowIn(c.bass??c.root,36,47);
+        ev.push({at:b0,notes:[root],dur:body,vel:.75,h:'B'},{at:b0+.04,notes:pick,dur:Math.min(body,2)-.1,vel:.7,h:'L'});
+        if(body>=4) ev.push({at:b0+2,notes:pick,dur:body-2-.1,vel:.55,h:'L'});
+        if(body>0) dev.L.push({b:b0,n:body,kind:altered?'altered':'rootless',chord:name,next:Y?chordName(Y):null,croot:c.root,root,notes:pick,type,added:col.added});
+      }
+      if(tail&&tail.kind!=='altered'){
+        if(tail.kind==='pass'||tail.kind==='approach'){ const stack=stackNear(tail.pcs.slice(0,3),52,60,prevStack,58), bn=lowIn(tail.root,36,47);
+          ev.push({at:tail.b,notes:[bn],dur:.5,vel:.9,h:'B'},{at:tail.b+.5,notes:stack,dur:.45,vel:.75,h:'L'});
+          dev.L.push({...tail,chord:name,next:chordName(Y),notes:[bn,...stack],from:lowIn(c.root,36,47),to:lowIn(Y.root,36,47)}); }
+        else if(tail.kind==='walk'){ const to=lowIn(Y.bass??Y.root,36,47), w=[to-2,to-1]; ev.push({at:tail.b,notes:[w[0]],dur:1,vel:.9,h:'B'},{at:tail.b+1,notes:[w[1]],dur:1,vel:.9,h:'B'});
+          dev.L.push({...tail,chord:name,next:chordName(Y),notes:w,to}); }
+        else if(tail.kind==='tritone'){ const sc=colourOf({root:tail.root,q:'7'},true), stack=stackNear([sc.s,sc.nine,sc.t,sc.thirteen].map(x=>tail.root+x),50,58,prevStack,57); prevStack=stack;
+          ev.push({at:tail.b,notes:[lowIn(tail.root,36,47)],dur:tail.n,vel:.75,h:'B'},{at:tail.b+.04,notes:stack,dur:tail.n-.1,vel:.7,h:'L'});
+          dev.L.push({...tail,chord:name,next:chordName(Y),notes:stack,from:c.root}); }
+      }
+    });
+  });
+  /* ---- right hand: out of the singer's way; it answers in the gaps ---- */
+  const gaps=[];
+  if(hasTune){ onsets.forEach((b,k)=>{ const nx=onsets[k+1]??total, s=b+1; if(nx-s>=2) gaps.push({s,e:nx,tune:melody[b],held:melody[s]===-1}); }); }
+  else { for(let bar=1;bar*L<=total;bar+=2){ const e=bar*L+L; if(e<=total) gaps.push({s:e-2,e,tune:null,phrase:true}); } }
+  const lastStart=realIdx.length?st[realIdx[realIdx.length-1]]:total;
+  /* Broadway: the tune's highest long note gets a tremolo under it */
+  let trem=null;
+  if(!jazz&&hasTune){ const top=Math.max(...onsets.map(b=>melody[b])); const b=onsets.find(x=>melody[x]===top), nx=onsets[onsets.indexOf(b)+1]??total;
+    if(nx-b>=2&&b<lastStart){ trem={b,n:Math.min(4,nx-b,lastStart-b),m:top}; } }
+  if(trem){ const ci=chordIdxAt(trem.b,st), c=chords[ci];
+    if(c&&real(c)) inKey(keyAt(ci),()=>{ const col=colourOf(c,false), tones=[col.t,col.f,col.s,0].map(x=>mod(c.root+x)); let y=trem.m-3; while(!tones.includes(mod(y))) y--; let x=y-3; while(!tones.includes(mod(x))) x--;
+      for(let k=0;k<trem.n*4;k++) ev.push({at:trem.b+k/4,notes:[k%2?y:x],dur:.3,vel:.45+(k/(trem.n*4))*.35,h:'R'});
+      dev.R.push({b:trem.b,n:trem.n,kind:'tremolo',chord:chordName(c),tune:trem.m,notes:[x,y]}); }); }
+  gaps.forEach(g=>{
+    const e=Math.min(g.e,lastStart), len=Math.min(2,e-g.s); if(len<1) return;
+    if(trem&&g.s<trem.b+trem.n&&e>trem.b) return;
+    const s=e-len, ci=chordIdxAt(Math.floor(s),st), j=chordIdxAt(e,st)>=0?chordIdxAt(e,st):nextReal(ci), c=chords[ci], Y=chords[j];
+    if(!c||!real(c)||!Y||!real(Y)) return;
+    inKey(keyAt(ci),()=>{
+      const ycol=colourOf(Y,jazz), col=colourOf(c,jazz), above=g.tune?Math.max(g.tune+3,jazz?67:72):(jazz?67:72);
+      let target=above; while(mod(target)!==mod(Y.root+ycol.t)) target++;
+      const tg=inKey(keyAt(j),()=>prettyNote(spell(mod(target))));
+      let line;
+      if(!jazz){ const pre=target-1, tones=[0,col.t,col.f,col.s].map(x=>mod(c.root+x)), run=[]; let m=pre-1;
+        while(run.length<len*2-1){ while(!tones.includes(mod(m))) m--; run.unshift(m); m--; }
+        line=[...run,pre]; }
+      else { const sc=scaleSet(); let up=target+1; while(!sc.has(mod(up))) up++; const pre=[]; let m=up+1; while(pre.length<len*2-2){ while(!sc.has(mod(m))) m++; pre.unshift(m); m++; }
+        line=[...pre,up,target-1]; }
+      line.forEach((m,k)=>ev.push({at:swing(s+k*.5),notes:[m],dur:.45,vel:.8,h:'R'}));
+      /* the landing note is short when the singer comes back in on it */
+      ev.push({at:e,notes:[target],dur:Math.min(melody[e]>0?.5:1.5,total-e),vel:melody[e]>0?.65:.85,h:'R'});
+      dev.R.push({b:s,n:Math.min(e+1,total)-s,kind:jazz?'line':'run',chord:chordName(c),next:chordName(Y),notes:line,target,tg,tune:g.tune,held:g.held,phrase:g.phrase,gapLen:g.e-g.s+1});
+    });
+  });
+  const val={style,ev:ev.sort((a,b)=>a.at-b.at),dev};
+  partCache={key,val}; return val;
+}
+function playPart(t0,unit,out){ const p=pianoPart(); if(!p) return;
+  const base={B:.2,L:.12,R:.15};
+  p.ev.forEach(e=>e.notes.forEach(m=>tone(m,t0+e.at*unit,Math.max(.08,e.dur*unit),base[e.h]*(e.vel??1),out))); }
+/* ---- the piano part's lanes: what each hand is doing, and why ---- */
+const PART_TAGS={stride:'Stride',pass:'Passing',walk:'Walk-up',approach:'Approach',finish:'Big finish',rootless:'Rootless',altered:'Altered',tritone:'Tritone sub',jend:'♯11 ending',run:'Run-up fill',line:'Line',tremolo:'Tremolo'};
+const partTag=d=>PART_TAGS[d.kind]+(d.label?' '+d.label:'');
+function partLanesHTML(pp,r0,r1,row){ let h='';
+  ['L','R'].forEach((hand,k)=>{ let first=true;
+    pp.dev[hand].forEach(d=>{ const s=Math.max(d.b,r0), e=Math.min(d.b+d.n,r1); if(e<=s) return;
+      const on=partAt&&partAt.h===hand&&partAt.b===d.b, full=partTag(d), tag=e-s<=1&&d.label?d.label:full, label=`${hand==='L'?'Left hand':'Right hand'}: ${tag}${d.chord?' over '+d.chord:''}. Tap to see why.`;
+      h+=`<button type="button" class="pcell p-${d.kind}${hand==='R'?' rh':''}${on?' awhy':''}" data-ph="${hand}" data-pb="${d.b}" style="grid-column:${s-r0+1} / span ${e-s};grid-row:${row+k}"${first?` data-v="${hand}H"`:''} title="${esc(label)}" aria-label="${esc(label)}"><span>${esc(tag)}</span></button>`; first=false; }); });
+  return h; }
+/* the job of each note of a voicing, from the chord's root */
+const JOBS={0:'root',1:'♭9',2:'9th',3:'3rd',4:'3rd',5:'11th',6:'♯11',7:'5th',8:'♭13',9:'13th',10:'7th',11:'7th'};
+function partWhy(d){
+  const ci=chordIdxAt(d.b), nn=a=>a.map(midiName).join(' '), arrow=a=>a.map(midiName).join(' → ');
+  return inKey(keyAt(Math.max(ci,0)),()=>{ const tn=d.tune?midiName(d.tune):'';
+    switch(d.kind){
+      case 'stride': return {title:`Stride left hand · ${d.chord}`,p:[`The left hand plays the bass and the chord on its own: ${joinList([...new Set(d.bass.map(midiName))])} low on the strong beats${new Set(d.bass.map(mod)).size>1?' (root, then fifth)':''}, and ${nn(d.notes)} in the middle of the keyboard on the beats between. It is the “oom-pah” under Broadway, ragtime and old-school piano, and it leaves the right hand free.`,
+        d.added===9?`${d.chord} is written as a plain triad, so it gets an added 6th (${noteNm(d.croot+9)}): the warm, show-tune sound.`:'',
+        melody.some(x=>x>0)?'While the singer sings, the right hand stays out of their way; it plays in the gaps.':''].filter(Boolean)};
+      case 'pass': return {title:`Passing chord · ${d.label}`,p:[`On the last beat of ${d.chord} comes ${d.label} (${inKey({t:d.spellAt,m:'ionian'},()=>nn(d.notes.slice(1)))}). ${d.next}’s root is a whole step above ${d.chord}’s, so the bass climbs by half steps, ${inKey({t:d.spellAt,m:'ionian'},()=>arrow([d.from,d.notes[0],d.to]))}, and each note of the diminished chord leans a half step into a note of ${d.next}.`]};
+      case 'walk': return {title:`Walk-up into ${d.next}`,p:[`Rather than jumping to ${d.next}, the bass walks up one step a beat: ${arrow([...d.notes,d.to])}. The change arrives, rather than just happening.`]};
+      case 'approach': return {title:`Approach chord · ${d.label}`,p:[`On the last beat of ${d.chord} comes ${d.label} (${nn(d.notes.slice(1))}), the dominant 7th of ${d.next}. It tugs the ear toward ${d.next} a beat early: a preview of where the music is going.`]};
+      case 'finish': return {title:`Big finish · ${d.chord}`,p:[`The last chord is rolled from the bottom up, ${nn(d.notes)}, with the 6th and 9th added: the classic show-tune final chord, spread across the whole keyboard.`]};
+      case 'tremolo': return {title:'Tremolo under the high note',p:[`The tune’s highest note, ${tn}, is held, so the right hand shakes quickly between ${nn(d.notes)} underneath it, growing louder: a stage-piano way to build to the big moment.`]};
+      case 'run': return {title:`Fill: run up to ${d.next}`,p:[`${d.phrase?'The phrase ends here':`The singer ${d.held?'holds':'leaves a gap after'} ${tn}`}, so the right hand answers: a run up through ${d.chord}’s notes, ${nn(d.notes)}, the last one a half step under ${d.tg}, which it lands on, the 3rd of ${d.next}, as the chord changes.`,'Fills go in the gaps, never over the words: the piano and the singer take turns.']};
+      case 'rootless': case 'altered': { const jobs=d.notes.map(m=>JOBS[mod(m-d.croot)]);
+        const p=[`The left hand plays ${nn(d.notes)}: the ${joinList(jobs)} of ${d.chord}, with no root. The root (${midiName(d.root)}) is played low and soft on the first beat, the way a bass player would take it, so the hand is free to keep the notes that give the chord its colour.`];
+        if(d.kind==='altered') p.push(`${d.chord} resolves down a fifth to ${d.next}, so it takes “altered” tensions, the ♭9 and ♭13. The extra rub makes arriving on ${d.next} feel stronger.`);
+        else p.push(`This is the ${d.type==='A'?'“A” form, with the 3rd at the bottom':'“B” form, with the 7th at the bottom'}. The app takes whichever form moves least from the voicing before, so the hand barely moves from chord to chord: the smooth sound of Bill Evans.`);
+        if(d.added===11||d.added===10) p.push(`${d.chord} is written as a triad; a jazz pianist adds the ${d.added===11?'major 7th':'7th'} and 9th as a matter of course.`);
+        return {title:`${d.kind==='altered'?'Altered dominant':'Rootless voicing'} · ${d.chord}`,p}; }
+      case 'tritone': return {title:`Tritone substitution · ${d.label}`,p:[`For the second half of ${d.chord}, the bass slides to ${d.label} (${nn(d.notes)}), whose root is a tritone away. ${d.chord} and ${d.label} share the same two guide tones, the 3rd and 7th, swapped. So it still leads to ${d.next}, but the bass now falls by half steps into it.`]};
+      case 'jend': return {title:`Ending · ${d.chord}`,p:[`The last chord, ${nn(d.notes)}${d.sharp11?`, with the ♯11 (${midiName(d.notes[d.notes.length-1])}) on top: a bright, open “Lydian” ending jazz pianists love`:''}.`]};
+      case 'line': return {title:`Line into ${d.next}`,p:[`${d.phrase?'At the end of the phrase':`While the singer ${d.held?'holds':'rests after'} ${tn}`}, the right hand plays a swung line down the scale, ${nn(d.notes.slice(0,-2))}, then “encloses” ${d.tg}, the 3rd of ${d.next}: the note above it (${midiName(d.notes[d.notes.length-2])}), the half step below (${midiName(d.notes[d.notes.length-1])}), then ${d.tg} itself as the chord changes.`]};
+    }
+    return {title:PART_TAGS[d.kind]||'',p:[]};
+  });
+}
+const partDev=()=>{ if(!partAt||!isPart()) return null; return pianoPart().dev[partAt.h].find(d=>d.b===partAt.b)||null; };
+function renderPartWhy(){
+  const el=$('#partWhy'), d=partDev(); if(!d){ partAt=null; el.hidden=true; el.innerHTML=''; return; }
+  const w=partWhy(d), L=barLen();
+  el.hidden=false;
+  el.innerHTML=`<div class="mp-head"><span><b>${esc(w.title)}</b> · ${partAt.h==='L'?'left hand':'right hand'}, bar ${Math.floor(d.b/L)+1}${d.b%L?`, beat ${d.b%L+1}`:''}</span><span class="aw-nav"><button type="button" class="btn small" data-pw="prev" aria-label="Previous">${IC.left}</button><button type="button" class="btn small" data-pw="next" aria-label="Next">${IC.right}</button><button type="button" class="cp-x" data-pw="close" aria-label="Close">${IC.x}</button></span></div>
+    ${w.p.map(x=>`<p class="pw-p">${esc(x)}</p>`).join('')}
+    <div class="mp-acts"><button type="button" class="btn small" data-pw="hear">${IC.play}Hear it</button><button type="button" class="btn small" data-pw="plain">${IC.play}Hear it plain</button><span class="hint">Plain: the same bars as block chords, to compare.</span></div>`;
+}
+/* a stretch of the chart, as the piano part plays it or as plain block chords, with the tune */
+function partHear(d,plain){
+  const a=ac(), out=previewOut(), unit=60/S.tempo*(4/den()), b0=d.b, b1=Math.min(d.b+Math.max(d.n,1)+1,chords.reduce((x,c)=>x+c.beats,0)), t0=a.currentTime+.05, st=chordStarts();
+  if(plain) chords.forEach((c,i)=>{ const s=Math.max(st[i],b0), e=Math.min(st[i]+c.beats,b1); if(e>s&&real(c)) strum(c,t0+(s-b0)*unit,(e-s)*unit,out,chartPlan().get(c.id)); });
+  else { const base={B:.2,L:.12,R:.15}; pianoPart().ev.forEach(e=>{ if(e.at>=b0-1e-6&&e.at<b1) e.notes.forEach(m=>tone(m,t0+(e.at-b0)*unit,Math.max(.08,Math.min(e.dur,b1-e.at)*unit),base[e.h]*(e.vel??1),out)); }); }
+  for(let b=b0;b<b1&&b<melody.length;b++){ const x=melody[b]; if(!(x>0)) continue; let n=1; while(b+n<b1&&melody[b+n]===-1) n++; tone(x,t0+(b-b0)*unit,n*unit*.94,.16,out); }
+}
 
 /* ============ what you hear: instrument, pinned shapes, in-context preview ============ */
 /* A chord can pin a guitar shape (for one tuning and capo) or a piano voicing; the smoothest-path planners keep pins fixed
@@ -2291,13 +2505,15 @@ function renderChart(){
   chords.forEach((c,i)=>{ if(starts[i]%L===0){ const b=starts[i]/L; if(c.br&&i>0) brBars.add(b); if(c.sec) secAt[b]=c.sec; if(i>0&&kcOk(c.kc)) kcAt[b]=c.kc; } });
   const rowList=[]; let cur=null;
   for(let b=0;b<nBars;b++){ if(!cur||cur.n>=per||brBars.has(b)||(secAt[b]&&b>0)||kcAt[b]){ cur={start:b,n:0,label:secAt[b],kc:kcAt[b]}; rowList.push(cur); } cur.n++; }
-  const ar=arrOn()?arrange():null, tuneOor=ar?new Set(arrOutOfRange(ar).filter(x=>x.k===ar.mel).map(x=>x.b)):null, mrow=ar?2+ar.mel:2, span=S.showMel?(ar?1+ar.voices.length:2):1;
+  const ar=arrOn()?arrange():null, tuneOor=ar?new Set(arrOutOfRange(ar).filter(x=>x.k===ar.mel).map(x=>x.b)):null, mrow=ar?2+ar.mel:2, lanes=S.showMel?(ar?1+ar.voices.length:2):1;
+  /* the piano part's two lanes go under everything else */
+  const pp=isPart()&&chords.some(real)?pianoPart():null, prow=lanes+1, span=lanes+(pp?2:0);
   for(const row of rowList){
     const r0=row.start*L, r1=(row.start+row.n)*L;
     if(row.label||row.kc) html+=`<div class="sec-label">${row.label?esc(row.label):''}${row.kc?`<span class="kc-tag" title="Key change">Key: ${esc(keyLabel(row.kc))}</span>`:''}</div>`;
-    html+=`<div class="row${S.showMel?' has-mel':''}${ar?' has-arr':''}" data-rb="${rowBeats}" style="grid-template-columns:repeat(${rowBeats},minmax(0,1fr))">`;
+    html+=`<div class="row${S.showMel?' has-mel':''}${ar?' has-arr':''}${pp?' has-part':''}" data-rb="${rowBeats}" style="grid-template-columns:repeat(${rowBeats},minmax(0,1fr))">`;
     for(let b=0;b<row.n;b++){ const bi=row.start+b;
-      html+=`<div class="bar${bi===nBars-1?' last':''}" style="grid-column:${b*L+1} / span ${L}${ar?`;grid-row:1 / span ${span}`:''}"><span class="bn">${bi+1}</span><div class="ticks" style="grid-template-columns:repeat(${L},1fr)">${Array.from({length:L},(_,k)=>{ const cy=CYCLES[S.meter], gi=cy?cy.starts.indexOf(k):-1; return `<i class="${accents.has(k)?'g':''}"${gi>=0?` data-m="${cy.marks[gi]}"`:''}></i>`; }).join('')}</div></div>`; }
+      html+=`<div class="bar${bi===nBars-1?' last':''}" style="grid-column:${b*L+1} / span ${L}${ar||pp?`;grid-row:1 / span ${span}`:''}"><span class="bn">${bi+1}</span><div class="ticks" style="grid-template-columns:repeat(${L},1fr)">${Array.from({length:L},(_,k)=>{ const cy=CYCLES[S.meter], gi=cy?cy.starts.indexOf(k):-1; return `<i class="${accents.has(k)?'g':''}"${gi>=0?` data-m="${cy.marks[gi]}"`:''}></i>`; }).join('')}</div></div>`; }
     chords.forEach((c,i)=>{
       const s=Math.max(starts[i],r0), e=Math.min(starts[i]+c.beats,r1); if(e<=s) return;
       const tie=s>starts[i], a=analyze(c);
@@ -2309,6 +2525,7 @@ function renderChart(){
     if(row===rowList[rowList.length-1]){ const used=Math.min(total,r1)-r0; if(rowBeats-used>=1) html+=addTile(used+1,Math.min(L,rowBeats-used)); else tileNewRow=true; }
     if(S.showMel) html+=melLaneHTML(r0,Math.min(r1,total),starts,mrow,ar&&ar.voices[ar.mel].short,tuneOor);
     if(ar) html+=arrLanesHTML(ar,r0,Math.min(r1,total));
+    if(pp) html+=partLanesHTML(pp,r0,Math.min(r1,total),prow);
     html+='</div>';
   }
   if(tileNewRow) html+=`<div class="row" data-rb="${rowBeats}" style="grid-template-columns:repeat(${rowBeats},minmax(0,1fr))">${addTile(1,L)}</div>`;
@@ -2359,6 +2576,7 @@ function melRangeBars(){ if(!melSel) return null; const L=barLen(), total=chords
 function renderMelPad(){
   /* the note pad and the why card share the bottom of the chart: opening the pad closes the card */
   if(melSel&&arrAt!=null){ arrAt=null; renderArrWhy(); }
+  if(melSel&&partAt!=null){ partAt=null; renderPartWhy(); }
   const el=$('#melPad'); if(!S.showMel||!melSel){ el.hidden=true; el.innerHTML=''; return; }
   const b=melSel.b, L=barLen(), ci=chordIdxAt(b), c=ci>=0?chords[ci]:null, k=keyAt(Math.max(ci,0)), cur=melody[b]??null, m=cur===-1?melPitch(b):cur;
   const notes=Array.from({length:12},(_,i)=>mod(k.t+i)), sc=inKey(k,()=>scaleSet());
@@ -3058,7 +3276,7 @@ function renderFinder(){
   h+=`</div></div>`;
   el.innerHTML=h; el._res=res;
 }
-function renderAll(){ PLAN=null; guitarPlan.cache=null; renderControls(); renderTension(); if(melSel){ const tot=chords.reduce((a,c)=>a+c.beats,0); if(!S.showMel||!tot) melSel=null; else melSel={a:Math.min(melSel.a,tot-1),b:Math.min(melSel.b,tot-1)}; } renderChart(); renderArrBar(); renderMelPad(); renderArrWhy(); renderVLX(); renderDetail(); renderSubs(); renderPalette(); renderFinder(); const pt=serialize(); $('#prog').value=pt; $('#prog').rows=Math.min(14,Math.max(3,pt.split('\n').length+1)); }
+function renderAll(){ PLAN=null; guitarPlan.cache=null; renderControls(); renderTension(); if(melSel){ const tot=chords.reduce((a,c)=>a+c.beats,0); if(!S.showMel||!tot) melSel=null; else melSel={a:Math.min(melSel.a,tot-1),b:Math.min(melSel.b,tot-1)}; } renderChart(); renderArrBar(); renderMelPad(); renderArrWhy(); renderPartWhy(); renderVLX(); renderDetail(); renderSubs(); renderPalette(); renderFinder(); const pt=serialize(); $('#prog').value=pt; $('#prog').rows=Math.min(14,Math.max(3,pt.split('\n').length+1)); }
 
 /* ============ edits ============ */
 function replaceAt(idx,list){
@@ -3667,10 +3885,13 @@ function buildMidi(withBass){
     notes.forEach(n=>{ if(n.e>n.s) evs.push({t:n.s,o:1,d:[0x90|chan,n.m,n.vel]},{t:n.e,o:0,d:[0x80|chan,n.m,0]}); }); };
   chords.forEach(c=>{ const dur=Math.round(c.beats*tpb);
     if(c.sec){ const tx=enc.encode(c.sec); cond.push({t,o:1,d:[0xFF,0x06,...vlq(tx.length),...tx]}); }
-    const v=real(c)?playedVoicing(c):null;
+    const v=real(c)&&!isPart()?playedVoicing(c):null;
     if(v) for(const e of styleEvents(v,c.beats,t/tpb)){ const at=t+Math.round(e.at*tpb), end=Math.min(t+dur,at+Math.max(1,Math.round(e.dur*tpb))), vel=Math.max(1,Math.min(127,Math.round(88*(e.vel??1))));
       e.notes.forEach(m=>{ if(withBass&&m===v.bass) bsN.push({s:at,e:end,m,vel:Math.min(127,vel+12)}); else chN.push({s:at,e:end,m,vel}); }); }
     t+=dur; });
+  /* a whole-chart piano part: its events as planned, the bass hand on its own track when asked */
+  if(isPart()) pianoPart().ev.forEach(e=>{ const at=Math.round(e.at*tpb), end=at+Math.max(1,Math.round(e.dur*tpb)), vel=Math.max(1,Math.min(127,Math.round(88*(e.vel??1)*(e.h==='R'?1.05:1))));
+    e.notes.forEach(m=>{ if(withBass&&e.h==='B') bsN.push({s:at,e:end,m,vel:Math.min(127,vel+12)}); else chN.push({s:at,e:end,m,vel}); }); });
   emit(chN,ch,0); emit(bsN,bs,1);
   const tracks=[midiTrack('Chord Changes',cond),midiTrack('Chords',ch)]; if(withBass) tracks.push(midiTrack('Bass',bs));
   /* the melody, or every part of the arrangement when it is showing, each on a track and channel of its own (from 3) */
@@ -4092,13 +4313,23 @@ function boot(){
   });
   $('#melToggle').onclick=()=>{ S.showMel=!S.showMel; if(S.showMel&&!melSel&&chords.length) melSel={a:0,b:0}; if(!S.showMel) melSel=null; commit(); renderMelPad(); if(S.showMel) focusMelCell(); };
   $('#rows').addEventListener('click',e=>{ const a=e.target.closest('.acell'); if(!a) return; e.stopPropagation();
-    arrAt=+a.dataset.ab; melSel=null; renderChart(); renderMelPad(); renderArrWhy(); document.querySelector(`#rows .acell[data-ab="${arrAt}"][data-av="${a.dataset.av}"]`)?.focus({preventScroll:true}); },true);
+    arrAt=+a.dataset.ab; melSel=null; partAt=null; renderPartWhy(); renderChart(); renderMelPad(); renderArrWhy(); document.querySelector(`#rows .acell[data-ab="${arrAt}"][data-av="${a.dataset.av}"]`)?.focus({preventScroll:true}); },true);
   $('#arrWhy').addEventListener('click',e=>{ const b=e.target.closest('[data-aw]'); if(!b||arrAt==null) return; const ar=arrange(), k=arrEventAt(ar,arrAt), w=b.dataset.aw;
     if(w==='close'){ arrAt=null; renderArrWhy(); return; }
     if(w==='prev'||w==='next'){ const n=ar.events[k+(w==='prev'?-1:1)]; if(n){ arrAt=n.b; renderArrWhy(); $('#arrWhy').querySelector(`[data-aw="${w}"]`)?.focus(); } return; }
     if(w==='hear') arrHear([ar.picks[k]]); else if(w==='move') arrHear([ar.picks[k-1],ar.picks[k]]); else if(w==='alt'){ const x=arrWhy(ar,k).alt; if(x) arrHear([ar.picks[k-1],x.v].filter(Boolean)); } });
+  $('#rows').addEventListener('click',e=>{ const p=e.target.closest('.pcell'); if(!p) return; e.stopPropagation();
+    partAt={h:p.dataset.ph,b:+p.dataset.pb}; melSel=null; arrAt=null; renderChart(); renderMelPad(); renderArrWhy(); renderPartWhy();
+    document.querySelector(`#rows .pcell[data-ph="${partAt.h}"][data-pb="${partAt.b}"]`)?.focus({preventScroll:true}); },true);
+  $('#partWhy').addEventListener('click',e=>{ const b=e.target.closest('[data-pw]'), d=partDev(); if(!b||!d) return; const w=b.dataset.pw;
+    if(w==='close'){ partAt=null; renderPartWhy(); renderChart(); return; }
+    if(w==='prev'||w==='next'){ const list=pianoPart().dev[partAt.h], i=list.indexOf(d), n=list[i+(w==='prev'?-1:1)]; if(n){ partAt={h:partAt.h,b:n.b}; renderChart(); renderPartWhy(); $('#partWhy').querySelector(`[data-pw="${w}"]`)?.focus(); } return; }
+    if(w==='hear') partHear(d,false); else if(w==='plain') partHear(d,true); });
+  $('#partWhy').addEventListener('keydown',e=>{ if(e.key==='Escape'){ partAt=null; renderPartWhy(); renderChart(); } });
   $('#arrWhy').addEventListener('keydown',e=>{ if(e.key==='Escape'){ arrAt=null; renderArrWhy(); } });
-  $('#rows').addEventListener('keydown',e=>{ if(e.key==='Escape'&&arrAt!=null&&e.target.closest('.acell')){ arrAt=null; renderArrWhy(); } });
+  $('#rows').addEventListener('keydown',e=>{ if(e.key!=='Escape') return;
+    if(arrAt!=null&&e.target.closest('.acell')){ arrAt=null; renderArrWhy(); }
+    if(partAt!=null&&e.target.closest('.pcell')){ partAt=null; renderPartWhy(); renderChart(); } });
   $('#rows').addEventListener('click',e=>{ const c=e.target.closest('.mcell'); if(!c) return; e.stopPropagation(); const b=+c.dataset.mb;
     melSel=e.shiftKey&&melSel?{a:melSel.a,b}:{a:b,b}; renderChart(); renderMelPad(); focusMelCell(); const x=melody[b]; if(x>0&&!e.shiftKey) playMelNote(x,b); },true);
   $('#melPad').addEventListener('click',e=>{ const n=e.target.closest('[data-mpn]'), a=e.target.closest('[data-mp]'); if(!melSel) return; const b=melSel.b;
