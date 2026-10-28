@@ -153,8 +153,19 @@ D | E | F#m | E</pre>
   <li><b>Colours</b> show each note against the chord above it: filled green is a <b>chord tone</b>, dashed green a <b>colour note</b> (the chord’s 9th, 11th or 13th, or another note of the key), and a red underline a <b>clash</b>, a note outside both on a strong beat. Clashes aren’t mistakes; they are worth hearing on purpose.</li>
   <li><b>Hearing it</b>: the melody plays with the chart whenever the lane is showing. Tapping a note plays it over its chord.</li>
   <li><b>Chords for a melody</b>: Shift-click (or Shift-arrow) to select some beats, then <b>Suggest chords for bars …</b> on the pad. The ideas open in Create → Harmonize, set to go over just those bars; press <b>Add to chart</b> to use one. The melody itself is never changed.</li>
+  <li><b>Two notes in a beat</b>: press <kbd>/</kbd> (or <b>Split the beat</b> on the pad) to split a beat in half, eighth notes in 4/4. The cell shows both notes; tap either half to change it, and <kbd>Delete</kbd> on the second half joins the beat again. Arrows step through the halves.</li>
   <li>In Harmonize, <b>Put in melody lane</b> writes a typed melody into the lane from bar 1.</li>
 </ul>
+<h3 id="fitting">Typing a tune with any number of notes per bar</h3>
+<p>In Harmonize, put <span class="mono">|</span> between bars and each bar’s notes are fitted into the bar, whatever their number. The result won’t be the rhythm in your head, but every note lands in its own bar and the chords line up:</p>
+<ul>
+  <li><b>More notes than beats</b>: the weakest beats are split in two first, from the end of the bar back (in 4/4: beat 4, then 2, then 3, then 1), so the strong beats keep one note each. Up to two notes fit in a beat.</li>
+  <li><b>Fewer notes than beats</b>: the notes go on the strongest beats and are held over the rest.</li>
+  <li><b>Your own grouping</b>: brackets put two notes in one beat where you want them, for example <span class="mono">(G# A) C# B A</span>. A bar written with brackets is taken one beat per item, as written.</li>
+  <li>Without any bar lines, it is one note per beat as before.</li>
+</ul>
+<p>For example, <span class="mono">G# G# G# G# | G# A C# B A | A G# F# E C# E | A B A G# F#</span> becomes four quarter notes; then G♯ A C♯ and B–A as two eighths; then A, G♯–F♯, E, C♯–E; then A B A and G♯–F♯.</p>
+
 <p>The melody is saved with the chart and in the Library, travels in share links, and moves when you transpose. It follows time, not chords: if you move a chord, the tune stays where it is and the harmony under it changes. Clear chart clears both. MIDI and MusicXML exports include it on a track or staff of its own.</p>
 
 <h3 id="arrange">Arranging the melody for voices or strings</h3>
@@ -281,7 +292,7 @@ D | E | F#m | E</pre>
   <tr><td><kbd>E</kbd></td><td>Pick a chord for the selected slot</td></tr>
   <tr><td><kbd>⌘Z</kbd> / <kbd>Ctrl+Z</kbd></td><td>Undo</td></tr>
   <tr><td><kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd></td><td>Load the text chart</td></tr>
-  <tr><td><kbd>A</kbd>–<kbd>G</kbd>, <kbd>#</kbd>, <kbd>-</kbd>, <kbd>.</kbd></td><td>In the melody lane: a note, raise it, hold, rest</td></tr>
+  <tr><td><kbd>A</kbd>–<kbd>G</kbd>, <kbd>#</kbd>, <kbd>-</kbd>, <kbd>.</kbd>, <kbd>/</kbd></td><td>In the melody lane: a note, raise it, hold, rest, split the beat into two notes</td></tr>
   <tr><td><kbd>Esc</kbd></td><td>Close a picker, menu or drawer</td></tr>
 </table>
 

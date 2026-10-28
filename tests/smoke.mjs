@@ -1121,6 +1121,63 @@ async function songForm() {
   await ph.ctx.close();
 }
 
+async function eighthNotes() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  await page.evaluate(() => { S.tonic = 9; S.mode = 'ionian'; S.meter = '4/4'; S.arrShow = false; S.pstyle = 'block'; S.showMel = false; chords = parseProg('A | D | A | E').chords; melody = []; melAnd = []; hist = []; renderAll(); });
+  const fit = await page.evaluate(() => { const r = parseMelody('G# G# G# G# | G# A C# B A | A G# F# E C# E | A B A G# F#'), nm = pc => pc == null ? '' : prettyNote(spell(pc));
+    return r.beats.map((b, i) => nm(b && b.pc) + (r.ands[i] != null ? '+' + nm(r.ands[i]) : '')).join(' '); });
+  check('eighths: a bar with more notes than beats splits the weak beats, from beat 4 back (bar 2: beat 4; bar 3: beats 4 and 2)', fit === 'G♯ G♯ G♯ G♯ G♯ A C♯ B+A A G♯+F♯ E C♯+E A B A G♯+F♯', fit);
+  const few = await page.evaluate(() => { const r = parseMelody('C E G | C'); return r.beats.map(b => b ? (b.onset ? prettyNote(spell(b.pc)) : '-') : '.').join(' '); });
+  check('eighths: a bar with fewer notes puts them on the strong beats and holds them', few === 'C E G - C - - -', few);
+  const grp = await page.evaluate(() => { const r = parseMelody('(C D) E F G | (E F) (G A) B C'); return r.beats.map((b, i) => prettyNote(spell(b.pc)) + (r.ands[i] != null ? '+' + prettyNote(spell(r.ands[i])) : '')).join(' '); });
+  check('eighths: (A B) puts two notes in a beat where you say', grp === 'C+D E F G E+F G+A B C', grp);
+  const legacy = await page.evaluate(() => parseMelody('C D E F G').beats.length);
+  check('eighths: without bar lines it is still one note per beat', legacy === 5, String(legacy));
+  await page.evaluate(() => { revealEl(document.querySelector('#melIn')); document.querySelector('#melIn').value = 'C D E F G A B C D | C'; });
+  await page.click('#melGo');
+  check('eighths: a bar with too many notes says which and how many fit', await page.evaluate(() => /Bar 1 has 9 notes; at most 8 fit in a bar of 4\/4/.test(document.querySelector('#melOut').textContent)));
+  await page.evaluate(() => { document.querySelector('#melIn').value = 'G# G# G# G# | G# A C# B A | A G# F# E C# E | A B A G# F#'; });
+  await page.click('#melToLane');
+  const lane = await page.evaluate(() => ({ split: [...document.querySelectorAll('#rows .mcell.split')].map(c => c.dataset.mb).join(), notes: melNotes().length, halves: melNotes().filter(n => n.n === .5).length, top: Math.max(...melNotes().map(n => n.m)) }));
+  check('eighths: Put in melody lane writes the split beats as split cells, all 20 notes, in a singable range', lane.split === '7,9,11,15' && lane.notes === 20 && lane.halves === 8 && lane.top <= 79, JSON.stringify(lane));
+  // editing in the lane
+  await page.click('#rows .mcell[data-mb="7"] [data-mh="1"]');
+  check('eighths: tapping the second half of a split beat edits its “and”', await page.evaluate(() => melSel.h === 1 && /beat 4, the “and”/.test(document.querySelector('#melPad .mp-head').textContent)));
+  await page.keyboard.press('g'); await page.keyboard.press('#');
+  check('eighths: typing there sets that note (and # raises it)', await page.evaluate(() => mod(melAnd[7]) === 8 && melSel.b === 8 && melSel.h === 0));
+  await page.click('#rows .mcell[data-mb="0"]'); await page.keyboard.press('/');
+  check('eighths: / splits a beat, ready for its second note', await page.evaluate(() => melAnd[0] === melody[0] && melSel.h === 1 && !!document.querySelector('#rows .mcell[data-mb="0"].split')));
+  await page.keyboard.press('b');
+  check('eighths: the cursor then moves on to the next beat', await page.evaluate(() => mod(melAnd[0]) === 11 && melSel.b === 1));
+  await page.keyboard.press('ArrowLeft');
+  check('eighths: arrows step through the halves', await page.evaluate(() => melSel.b === 0 && melSel.h === 1));
+  await page.keyboard.press('Delete');
+  check('eighths: Delete on the “and” joins the beat again', await page.evaluate(() => !(melAnd[0] > 0) && !document.querySelector('#rows .mcell[data-mb="0"].split')));
+  for (let i = 0; i < 5; i++) await page.keyboard.press('Meta+z');
+  check('eighths: undo puts edits back, one step at a time', await page.evaluate(() => !(melAnd[0] > 0) && mod(melAnd[7]) === 9), await page.evaluate(() => JSON.stringify([melAnd[0], melAnd[7]])));
+  // hearing it, harmonizing it, arranging it
+  const pb = await page.evaluate(() => { const calls = []; const ot = tone; window.tone = (m, t, d) => calls.push(+d.toFixed(3)); playMelLine(0, .5, previewOut()); window.tone = ot; return { n: calls.length, short: calls.filter(d => d < .3).length }; });
+  check('eighths: the melody plays its eighth notes at half a beat each', pb.n === 20 && pb.short === 8, JSON.stringify(pb));
+  const ar = await page.evaluate(() => { S.showMel = true; S.arrShow = true; S.arr = 'strings'; renderAll(); const a = arrange(); return { tune: a.lines[a.mel].length, others: a.lines.every((l, k) => k === a.mel || l.every(n => Number.isInteger(n.b))) }; });
+  check('eighths: in an arrangement the tune keeps its eighths and the other parts move on the beats', ar.tune === 20 && ar.others, JSON.stringify(ar));
+  const xr = await page.evaluate(() => { S.arrShow = false; renderAll(); const d = new DOMParser().parseFromString(buildMusicXML(), 'application/xml'), mel = d.querySelector('part'); return { eighths: [...mel.querySelectorAll('note type')].filter(t => t.textContent === 'eighth').length, full: [...mel.querySelectorAll('measure')].every(m => [...m.querySelectorAll('note')].reduce((a, n) => a + +n.querySelector('duration').textContent, 0) === 16) }; });
+  check('eighths: MusicXML writes real eighth notes in full bars', xr.eighths === 8 && xr.full, JSON.stringify(xr));
+  const mid = parseMidi(Uint8Array.from(await page.evaluate(() => [...buildMidi(false)])));
+  const mt = mid.tracks.find(t => t.some(e => e.meta === 3 && Buffer.from(e.data).toString() === 'Melody'));
+  const offs = mt.filter(e => e.st === 0x90 && e.d[1] > 0).map(e => e.tick % 480);
+  check('eighths: MIDI puts the second notes half a beat in', offs.filter(x => x === 240).length === 4 && offs.length === 20, JSON.stringify(offs));
+  // keeping it
+  await page.evaluate(() => { commit(); });
+  await page.reload();
+  check('eighths: split beats are saved with the chart', await page.evaluate(() => mod(melAnd[7]) === 9 && melNotes().length === 20));
+  const kept = await page.evaluate(() => { const code = shareCode(); melAnd = []; applyShare(JSON.parse(atob(code.replace(/-/g, '+').replace(/_/g, '/')))); const viaShare = melNotes().length; const it = newItem('e', curSnap()); melAnd = []; libOpen(it); return { viaShare, viaLib: melNotes().length }; });
+  check('eighths: share links and the Library carry them', kept.viaShare === 20 && kept.viaLib === 20, JSON.stringify(kept));
+  check('eighths: transposing moves them', await page.evaluate(() => { const a = melAnd[7]; transpose(2); return melAnd[7] === a + 2; }));
+  check('no console errors (eighth notes)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
+
 // the top-bar menus must be visible and on top at every width, not just "open"
 async function menus() {
   for (const [w, h, tag] of [[1440, 900, 'desktop'], [1280, 720, 'small laptop'], [900, 900, 'tablet'], [390, 844, 'phone']]) {
@@ -1316,6 +1373,7 @@ try {
   await pianoParts();
   await orchestra();
   await songForm();
+  await eighthNotes();
   await menus();
   await layout();
   await hardening();
