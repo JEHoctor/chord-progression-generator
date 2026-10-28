@@ -46,6 +46,12 @@
   <li><b>a voice-leading line</b> computed by voicing the previous chord and the idea with the same planner playback uses, then pairing the voices and listing held notes and semitone moves, compared with the original chord.</li>
 </ul>
 
+<h2 id="arranging">How the arrangements are voiced</h2>
+<p>The chart is cut into moments: wherever a chord starts, a tune note starts, or the tune rests. For each moment the arranger lists the chord sets a style allows, each with a cost. String quartet uses the chord as written. Barbershop uses the chord cut to four notes; a plain triad may also ring as a dominant 7th, and a tune note outside the chord brings in the four dominant 7ths that contain it, plus a diminished 7th. The cheapest of those is the chord’s own 7th, then its dominant, then the dominant of the next chord.</p>
+<p>Every voicing of each set is then listed within the parts’ ranges: relative to the tune (violin 2 within an octave under it, the tenor up to a sixth above), and absolute for the cello and bass. Each voicing is costed for a missing 3rd, 7th or bass note, doubled notes, gaps wider than an octave between upper parts, minor 9ths between parts, and, for barbershop, a bass off the root or fifth or a stack wider than an octave and a fifth. Each move between moments is costed for how far every part moves (the bass is allowed bigger leaps) and for parallel fifths and octaves. As for the piano, a Viterbi search picks the cheapest path through the whole chart.</p>
+<p>The two jazz styles are built rather than searched. The chord is cut to four notes keeping the 3rd and 7th, and a triad gets its 6th (major) or 7th (minor). A tune note that is a tension replaces the chord tone a whole step below it (a 9th replaces the root, a 13th the fifth). A tune note a half step above a chord tone is an avoid note, and is harmonized with the diminished 7th chord built on it. The other three notes are stacked straight down from the tune within its octave; drop 2 takes the second note from the top down an octave. <b>Try another</b> reruns the search with seeded random noise added to the costs (and, for the jazz styles, swaps between 6ths and 7ths), so each version can be heard again.</p>
+<p>Each part becomes a line of notes: the tune keeps its own rhythm; the strings join a repeated note into one held note, and the singers re-sing it with each new tune syllable. Playback uses one tone with a different envelope per style: a slow swell and long release for strings, a short decay and early release for close harmony.</p>
+
 <h2 id="voicing">How piano voicings are chosen</h2>
 <p>For each chord the planner lists candidate right-hand voicings: every rotation of the chord tones (dropping optional tones on big chords) starting from several octaves, plus drop-2 versions. Each candidate has a cost for sitting too high or too low, and each move between chords costs the total distance the voices travel. A <b>Viterbi</b> search (dynamic programming over the whole chart) picks the cheapest sequence; because the chart loops, it also accounts for the move from the last chord back to the first. The bass line takes the octave of each bass note closest to the previous one, near the middle of the bass range. A pinned voicing becomes the only candidate for its chord, and the planner works around it.</p>
 
@@ -69,8 +75,8 @@
 
 <h2 id="files">How the files are written</h2>
 <ul>
-  <li><b>MIDI</b>: written byte by byte as a format-1 file at 480 ticks per quarter note. Track 1 holds the tempo, time signature and section markers; the chords follow (piano, or acoustic guitar when that sound is chosen), with the bass on its own track on request.</li>
-  <li><b>MusicXML</b> (chord symbols in the chosen style, plus Roman numerals as text under the staff when the chart shows numerals only): a piano grand staff in MusicXML 4.0 with the played voicings (notes from middle C up on the treble staff), chord symbols, key and time signatures, tempo, rehearsal marks for sections, and ties where a chord crosses a bar line.</li>
+  <li><b>MIDI</b>: written byte by byte as a format-1 file at 480 ticks per quarter note. Track 1 holds the tempo, time signature and section markers; the chords follow (piano, or acoustic guitar when that sound is chosen), with the bass on its own track on request. The melody follows on its own track, or, while Arrange is on, each part of the arrangement on its own track and channel (violin, viola, cello, or voice oohs for the singers).</li>
+  <li><b>MusicXML</b> (chord symbols in the chosen style, plus Roman numerals as text under the staff when the chart shows numerals only): a piano grand staff in MusicXML 4.0 with the played voicings (notes from middle C up on the treble staff), chord symbols, key and time signatures, tempo, rehearsal marks for sections, and ties where a chord crosses a bar line. The melody lane goes on a staff of its own above. An arrangement is written one part per staff: notes are cut at bar lines (and at chord changes on the top staff, which carries the chord symbols), tied across the cuts, spelled in the key in force, and a key change gets a new key signature in every part. The clef comes from the part: violins treble, viola alto, cello and bass in bass clef, others by their range.</li>
   <li><b>Share links</b>: the key, mode, meter, tempo and chart text as JSON, base64url-encoded after <code>#s=</code> in the address.</li>
   <li><b>Library backups</b>: a versioned JSON file; imports are checked chord by chord before they are accepted.</li>
   <li><b>Lead sheet</b>: a print stylesheet that hides the app and lays the bars out four to a line.</li>
@@ -85,13 +91,15 @@
   <li>share-link round trips and every explanation on every swap idea;</li>
   <li>locks, resizing and the in-chart picker;</li>
   <li>guitar shapes in every tuning, and the easiest-tuning picks on charts with clear musical answers;</li>
+  <li>arrangements: parts never cross, the strings avoid parallel fifths and octaves, barbershop keeps the bass on root or fifth, and the exported parts have full bars and the right clefs;</li>
   <li>deleting chords, gapless looping, phone widths and dark mode.</li>
 </ul>
-<p>The MusicXML output was also read back with the music21 library to confirm bar lengths, chord symbols, keys, meters and pitches.</p>
+<p>The MusicXML output, piano and arrangement scores alike, was also read back with the music21 library to confirm bar lengths, chord symbols, keys (including key changes), clefs, meters and pitches.</p>
 
 <h2 id="limits">Honest limits</h2>
 <ul>
   <li>The sounds are simple synthesis meant for hearing harmony, not finished production; export MIDI for real instruments.</li>
+  <li>Arrangements are homophonic: the parts move with the tune or hold, one note per beat at most. There are no counter-melodies, walking lines or rhythmic backing figures, and the parts are not checked against real instrument ranges beyond rough limits.</li>
   <li>Generation and swap ideas are rule-based heuristics. They know common practice well but don’t know your melody unless you use the harmonizer.</li>
   <li>The talam, taal and drone options are sketching aids built on Western chord thinking, not representations of Carnatic or Hindustani music.</li>
   <li>Guitar shapes assume six strings and at most four fingers; very wide stretches are left out.</li>

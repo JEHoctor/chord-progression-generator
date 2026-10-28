@@ -805,6 +805,89 @@ async function melodyLane() {
   await ph.ctx.close();
 }
 
+async function arranging() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(URL_);
+  await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; S.showMel = false; S.arrShow = false; S.arr = 'strings'; S.arrSeed = 0; chords = parseProg('C | Am | Dm7 G7 | C').chords; melody = [64, 62, 60, 62, 64, 64, 64, -1, 65, 65, 62, 62, 60, -1, -1, -1]; renderAll(); });
+  await page.click('#arrToggle');
+  const on = await page.evaluate(() => ({ mel: S.showMel, bar: !document.querySelector('#arrBar').hidden, lanes: document.querySelectorAll('#rows .acell').length, mcells: document.querySelectorAll('#rows .mcell').length, pressed: document.querySelector('#arrToggle').getAttribute('aria-pressed') }));
+  check('arrange: the switch shows the melody lane, the Arrange bar and three more lanes of parts', on.mel && on.bar && on.lanes === 48 && on.mcells === 16 && on.pressed === 'true', JSON.stringify(on));
+  // every style: parts stay in order top to bottom, and the tune is the melody lane
+  const order = await page.evaluate(() => Object.keys(ARR_STYLES).map(k => { S.arr = k; const ar = arrange(); const ok = ar.picks.every((v, i) => !v || (v[ar.mel] === ar.events[i].m && v.filter(x => x != null).every((x, j, a) => j === 0 || a[j - 1] > x))); return k + ':' + ok; }));
+  check('arrange: in every style the parts never cross and the tune stays the tune', order.every(x => /true$/.test(x)), order.join(' '));
+  const strings = await page.evaluate(() => { S.arr = 'strings'; const ar = arrange(), st = chordStarts(); let par = 0;
+    const bassOk = ar.events.every((e, i) => !st.includes(e.b) || mod(ar.picks[i][3]) === (chords[e.ci].bass ?? chords[e.ci].root));
+    for (let k = 1; k < ar.picks.length; k++) { const a = ar.picks[k - 1], b = ar.picks[k]; for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) { const mi = b[i] - a[i], mj = b[j] - a[j], ia = mod(a[i] - a[j]), ib = mod(b[i] - b[j]); if (mi && mj && Math.sign(mi) === Math.sign(mj) && ia === ib && (ia === 7 || ia === 0)) par++; } }
+    const held = ar.lines[1].some(n => n.n > 1); return { bassOk, par, held }; });
+  check('arrange: strings put the cello on each chord’s bass, hold inner notes, and avoid parallel fifths and octaves', strings.bassOk && strings.par === 0 && strings.held, JSON.stringify(strings));
+  const barber = await page.evaluate(() => { S.arr = 'barber'; const ar = arrange(), last = ar.picks[ar.picks.length - 1], c = chords[chords.length - 1];
+    const tenorUp = ar.picks.every(v => !v || v[0] > v[1]);
+    /* where the tune is a chord tone, the bass sings the chord's root or fifth */
+    const rootFifth = ar.picks.every((v, i) => { const ch = chords[ar.events[i].ci]; return !v || !corePcs(ch).includes(mod(ar.events[i].m)) || [ch.root, mod(ch.root + 7)].includes(mod(v[3])); });
+    return { lead: ar.mel, tenorUp, rootFifth, end: mod(last[3]) === c.root, full: ar.picks.every(v => !v || v.every(x => x != null)) }; });
+  check('arrange: barbershop has the tune second from the top, the tenor above it, the bass on root or fifth, and ends on the root', barber.lead === 1 && barber.tenorUp && barber.rootFifth && barber.end && barber.full, JSON.stringify(barber));
+  const jazz = await page.evaluate(() => { S.arr = 'close'; const a = arrange(); const close = a.picks.every(v => v[0] - v[3] < 12 && new Set(v.map(mod)).size === 4);
+    S.arr = 'drop2'; const d = arrange(); const drop = d.picks.every((v, i) => v[3] === a.picks[i][1] - 12 && v[1] === a.picks[i][2]);
+    const avoid = jazzSet(chords[0], 5, () => 1); const ten = jazzSet(chords[0], 2, () => 1).pcs.map(p => mod(p)).sort((x, y) => x - y).join(',');
+    return { close, drop, avoid: !!avoid.dim && avoid.pcs.includes(5), ten }; });
+  check('arrange: close harmony packs four different notes inside the octave; drop 2 moves the second voice down an octave', jazz.close && jazz.drop, JSON.stringify(jazz));
+  check('arrange: an avoid note gets a passing diminished chord, a 9th replaces the root (C6/9 without C)', jazz.avoid && jazz.ten === '2,4,7,9', JSON.stringify(jazz));
+  // Try another and back
+  await page.click('#arrBar [data-astyle="strings"]');
+  const v0 = await page.evaluate(() => JSON.stringify(arrange().picks));
+  let changed = false; for (let i = 0; i < 4 && !changed; i++) { await page.click('#arrBar [data-aact="again"]'); changed = await page.evaluate(v => JSON.stringify(arrange().picks) !== v, v0); }
+  check('arrange: Try another gives a different arrangement and says which version it is', changed && await page.evaluate(() => /Version \d/.test(document.querySelector('#arrBar').textContent)));
+  await page.click('#arrBar [data-aact="first"]');
+  check('arrange: First version brings the first one back exactly', await page.evaluate(v => JSON.stringify(arrange().picks) === v && S.arrSeed === 0, v0));
+  // hearing it
+  const pb = await page.evaluate(() => { const calls = []; const ov = voiceNote, os = playStyled, ot = playMelLine; let styled = 0, mel = 0;
+    window.voiceNote = (m, t, d, vel) => calls.push(m); window.playStyled = () => { styled++; }; window.playMelLine = () => { mel++; };
+    S.loop = false; playChart(); stopAll(); const all = calls.length, ch1 = styled; calls.length = 0; styled = 0;
+    S.arrMute = [false, false, false, false, true]; playChart(); stopAll(); const noCh = styled;
+    arrSolo = 3; calls.length = 0; playChart(); stopAll(); const solo = calls.slice(); arrSolo = null; S.arrMute = [false, false, false, false, false];
+    window.voiceNote = ov; window.playStyled = os; window.playMelLine = ot;
+    const ar = arrange(); return { all, n: ar.lines.reduce((a, l) => a + l.length, 0), ch1, noCh, mel, solo: solo.length === ar.lines[3].length && solo.every((m, i) => m === ar.lines[3][i].m) }; });
+  check('arrange: Play sounds every part with the chords; muting the chords or soloing a part leaves just the rest', pb.all === pb.n && pb.ch1 > 0 && pb.noCh === 0 && pb.mel === 0 && pb.solo, JSON.stringify(pb));
+  await page.click('#arrBar [data-amute="1"]');
+  check('arrange: tapping a part mutes it and greys its lane', await page.evaluate(() => S.arrMute[1] && document.querySelectorAll('#rows .acell.muted').length === 16 && document.querySelector('#arrBar .vchip.off')));
+  await page.click('#arrBar [data-amute="1"]');
+  // the arrangement follows the tune as it is written
+  await page.evaluate(() => { melSel = { a: 0, b: 0 }; renderAll(); focusMelCell(); });
+  const before = await page.evaluate(() => JSON.stringify(arrange().picks[0]));
+  await page.keyboard.press('a');
+  check('arrange: changing a tune note re-voices the parts under it', await page.evaluate(b => melody[0] === 69 && JSON.stringify(arrange().picks[0]) !== b && arrange().picks[0][0] === 69, before), await page.evaluate(() => JSON.stringify([melody[0], arrange().picks[0]])));
+  // exports
+  await page.click('#exportBtn');
+  check('arrange: the Export menu offers the arrangement', await page.evaluate(() => !document.querySelector('#arrExport').hidden));
+  const xdlP = page.waitForEvent('download'); await page.click('#arrExport'); const xdl = await xdlP, xpath = path.join(OUT, xdl.suggestedFilename()); await xdl.saveAs(xpath);
+  const xml = fs.readFileSync(xpath, 'utf8');
+  const xr = await page.evaluate(x => { const d = new DOMParser().parseFromString(x, 'application/xml'); const parts = [...d.querySelectorAll('part')];
+    const len = p => [...p.querySelectorAll('measure')].map(m => [...m.querySelectorAll('note')].filter(n => !n.querySelector('chord')).reduce((a, n) => a + +n.querySelector('duration').textContent, 0));
+    return { err: !!d.querySelector('parsererror'), names: [...d.querySelectorAll('part-name')].map(n => n.textContent), bars: parts.map(p => len(p).every(v => v === 16)), clefs: parts.map(p => p.querySelector('clef sign').textContent + p.querySelector('clef line').textContent), harm: parts[0].querySelectorAll('harmony').length }; }, xml);
+  check('arrange: the arrangement MusicXML has one staff per part, full bars, violin, alto and bass clefs, chord symbols on top', !xr.err && /strings\.musicxml$/.test(xdl.suggestedFilename()) && xr.names.join() === 'Violin 1,Violin 2,Viola,Cello' && xr.bars.every(Boolean) && xr.clefs.join() === 'G2,G2,C3,F4' && xr.harm === 5, JSON.stringify(xr));
+  const md = await page.evaluate(() => [...buildMidi(false)]);
+  const mid = parseMidi(Uint8Array.from(md));
+  const names = mid.tracks.map(t => { const e = t.find(e => e.meta === 3); return e ? Buffer.from(e.data).toString() : ''; });
+  check('arrange: MIDI gets a track for each part', names.join() === 'Chord Changes,Chords,Violin 1,Violin 2,Viola,Cello', names.join());
+  const md2 = await page.evaluate(() => { S.arrShow = false; renderAll(); return [...buildMidi(false)]; });
+  const names2 = parseMidi(Uint8Array.from(md2)).tracks.map(t => { const e = t.find(e => e.meta === 3); return e ? Buffer.from(e.data).toString() : ''; });
+  check('melody: MIDI and MusicXML now carry the melody lane', names2.join() === 'Chord Changes,Chords,Melody' && await page.evaluate(() => /<part-name>Melody<\/part-name>/.test(buildMusicXML())), names2.join());
+  await page.evaluate(() => { S.arrShow = true; S.arr = 'barber'; commit(); });
+  await page.reload();
+  check('arrange: the style and the switch are kept with the chart', await page.evaluate(() => arrOn() && S.arr === 'barber' && document.querySelectorAll('#rows .acell').length === 48));
+  await page.click('#arrBar [data-aact="close"]');
+  check('arrange: closing it leaves the melody lane', await page.evaluate(() => !arrOn() && S.showMel && !document.querySelector('#rows .acell') && document.querySelector('#arrBar').hidden));
+  check('no console errors (arrange)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+  const ph = await openPage({ viewport: { width: 390, height: 844 } });
+  await ph.page.goto(URL_);
+  await ph.page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; S.showMel = true; S.arrShow = true; S.arr = 'close'; chords = parseProg('C | Am | F | G').chords; melody = [64, 62, 60, 62, 64, -1, 65, 64, 62, 60, 59, 60, 62, -1, -1, -1]; selectTab('phone', 'p-chart'); renderAll(); });
+  const pz = await ph.page.evaluate(() => ({ noH: document.documentElement.scrollWidth <= innerWidth, bar: document.querySelector('#arrBar').getBoundingClientRect().width <= innerWidth, lanes: document.querySelectorAll('#rows .acell').length }));
+  check('arrange: on a phone the bar and lanes fit the width', pz.noH && pz.bar && pz.lanes === 48, JSON.stringify(pz));
+  await ph.page.screenshot({ path: path.join(OUT, 'arrange-phone.png'), fullPage: false });
+  await ph.ctx.close();
+}
+
 // the top-bar menus must be visible and on top at every width, not just "open"
 async function menus() {
   for (const [w, h, tag] of [[1440, 900, 'desktop'], [1280, 720, 'small laptop'], [900, 900, 'tablet'], [390, 844, 'phone']]) {
@@ -995,6 +1078,7 @@ try {
   await polish();
   await ceilings();
   await melodyLane();
+  await arranging();
   await menus();
   await layout();
   await hardening();
