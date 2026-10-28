@@ -1122,6 +1122,18 @@ async function songForm() {
 }
 
 /* the app's name lives in one constant: the page, the exports, the messages and the help pages all follow it */
+/* slash basses and chord tones are spelled up from the chord's root, so E7/G♯ never comes out as E7/A♭ */
+async function spelling() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  const names = await page.evaluate(() => [['C','ionian','E7/G# C/E D7/F# Ab/C Bb7/D C/Bb Gaug F#m7b5 B7/D#'],['F','ionian','A7/C# Bb/D'],['E','aeolian','B7/D# Am/C'],['Eb','ionian','Cm/Eb G7/B']].map(([k, m, list]) => { const kk = parseKeyName(k + ' ' + (m === 'ionian' ? 'major' : 'minor')); S.tonic = kk.t; S.mode = kk.m;
+    return list.split(' ').map(t => chordName(parseChord(t))).join(' '); }));
+  check('spelling: slash basses follow the chord, not the key', names.join(' | ') === 'E7/G♯ C/E D7/F♯ A♭/C B♭7/D C/B♭ G+ F♯m7♭5 B7/D♯ | A7/C♯ B♭/D | B7/D♯ Am/C | Cm/E♭ G7/B', names.join(' | '));
+  await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; chords = parseProg('C | E7 | Am | Am').chords; sel = chords[1].id; commit(); });
+  const tones = await page.evaluate(() => [...document.querySelectorAll('.tones .tone')].map(t => t.firstChild.textContent).join(' '));
+  check('spelling: the Chord panel spells E7 in C as E G♯ B D', tones === 'E G♯ B D', tones);
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1392,6 +1404,7 @@ try {
   await songForm();
   await eighthNotes();
   await appName();
+  await spelling();
   await menus();
   await layout();
   await hardening();
