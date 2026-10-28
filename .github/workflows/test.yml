@@ -1,0 +1,52 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # the help pages are built from docs-src; a stale guide.html or how-it-works.html fails here
+      - name: Help pages match their sources
+        run: |
+          python3 docs-src/build.py . docs-src
+          git diff --exit-code -- guide.html how-it-works.html
+
+      - name: Install test dependencies
+        working-directory: tests
+        run: npm ci
+
+      # Chromium for most checks, WebKit for the iPhone check
+      - name: Install browsers
+        working-directory: tests
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Smoke tests
+        working-directory: tests
+        run: npm test
+
+      - name: Keep screenshots and exports from a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: tests/out/
+          retention-days: 7

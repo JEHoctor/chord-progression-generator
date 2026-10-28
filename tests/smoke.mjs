@@ -1121,6 +1121,23 @@ async function songForm() {
   await ph.ctx.close();
 }
 
+/* the app's name lives in one constant: the page, the exports, the messages and the help pages all follow it */
+async function appName() {
+  const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  const got = await page.evaluate(() => ({ title: document.title, h1: document.querySelector('.brand h1').textContent, about: document.querySelector('#aboutRepo b').textContent, midi: APP_NAME, slug: APP_SLUG, xml: /<software>[^<]*<\/software>/.exec(buildMusicXML())?.[0] }));
+  check('name: one constant names the page, header, About link and MusicXML', !!name && got.title === name + ' Workbench' && got.h1 === name && got.about === name + ' on GitHub' && got.xml === `<software>${name} Workbench</software>` && got.slug === name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), JSON.stringify(got));
+  /* the text in the HTML before the script runs must match too, or a rename would flash the old name */
+  const fallback = [src.match(/<title>([^<]*)<\/title>/)[1], src.match(/<h1 data-app-name>([^<]*)</)[1], ...[...src.matchAll(/<span data-app-name>([^<]*)</g)].map(m => m[1])];
+  const stray = (src.match(new RegExp(name, 'g')) || []).length - 1 - fallback.length;
+  check('name: the HTML fallbacks match the constant, and the name is written nowhere else', fallback[0] === name + ' Workbench' && fallback.slice(1).every(f => f === name) && stray === 0, JSON.stringify({ fallback, stray }));
+  const midiNames = await page.evaluate(() => { const b = buildMidi(false); const out = []; for (let i = 14; i < b.length - 3; i++) if (b[i] === 0xFF && b[i + 1] === 0x03) { out.push(new TextDecoder().decode(b.slice(i + 3, i + 3 + b[i + 2]))); break; } return out; });
+  check('name: the MIDI file\'s first track carries the name', midiNames[0] === name, midiNames.join());
+  for (const f of ['guide.html', 'how-it-works.html']) { const h = fs.readFileSync(path.join(ROOT, f), 'utf8'); check(`name: ${f} is built with the name and has no {APP} left`, h.includes(`<a class="name" href="./">${name}</a>`) && !h.includes('{APP}')); }
+  await ctx.close();
+}
 async function eighthNotes() {
   const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
   await page.goto(URL_);
@@ -1374,6 +1391,7 @@ try {
   await orchestra();
   await songForm();
   await eighthNotes();
+  await appName();
   await menus();
   await layout();
   await hardening();

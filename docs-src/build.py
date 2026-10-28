@@ -1,5 +1,7 @@
 import re, sys, pathlib
 OUT = pathlib.Path(sys.argv[1])
+# the app's name comes from index.html (const APP_NAME), so a rename is one line there; {APP} in the page bodies stands for it
+APP = re.search(r"const APP_NAME='([^']+)'", (OUT / 'index.html').read_text()).group(1)
 
 CSS = r"""
 :root{--bg:#F3F4F6;--surface:#FFFFFF;--sunk:#F1F2F5;--ink:#15171C;--muted:#5F6676;--line:#E2E4E9;--accent:#3355FF;--accent-soft:#E9EDFF;
@@ -69,16 +71,16 @@ def page(fname, title, desc, current, body):
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>{CSS}</style></head><body>
-<header class="top"><a class="name" href="./">Chord Changes</a><nav aria-label="Pages">{nav}<a class="btn primary" href="./">Open the app</a></nav></header>
+<header class="top"><a class="name" href="./">{APP}</a><nav aria-label="Pages">{nav}<a class="btn primary" href="./">Open the app</a></nav></header>
 <div class="page"><nav class="toc" aria-label="On this page"><b>On this page</b><ol>{toc}</ol></nav>
 <main>{body}</main></div>
-<footer>Chord Changes runs entirely in your browser. Nothing you make is sent anywhere unless you share or export it. Made by <a href="https://github.com/ssk0011">ssk0011</a>; the source code is <a href="https://github.com/ssk0011/chord-progression-generator">on GitHub</a>.</footer>
+<footer>{APP} runs entirely in your browser. Nothing you make is sent anywhere unless you share or export it. Made by <a href="https://github.com/ssk0011">ssk0011</a>; the source code is <a href="https://github.com/ssk0011/chord-progression-generator">on GitHub</a>.</footer>
 </body></html>
 """
-    (OUT / fname).write_text(html)
+    (OUT / fname).write_text(html.replace('{APP}', APP))
 
-page('guide.html', 'How to use Chord Changes', 'A tour of Chord Changes: making, editing, hearing, exporting and saving chord progressions.', 'guide.html',
+page('guide.html', 'How to use {APP}', 'A tour of {APP}: making, editing, hearing, exporting and saving chord progressions.', 'guide.html',
 (pathlib.Path(sys.argv[2]) / 'guide.body.html').read_text())
-page('how-it-works.html', 'How Chord Changes works', 'The music theory and code behind Chord Changes: analysis, generation, voice leading, guitar shapes, sound and file formats.', 'how-it-works.html',
+page('how-it-works.html', 'How {APP} works', 'The music theory and code behind {APP}: analysis, generation, voice leading, guitar shapes, sound and file formats.', 'how-it-works.html',
 (pathlib.Path(sys.argv[2]) / 'hood.body.html').read_text())
 print('built')

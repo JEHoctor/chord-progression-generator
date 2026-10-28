@@ -915,7 +915,7 @@ body{padding-bottom:0}
 <div class="wrap">
   <header class="topbar" id="topbar">
     <div class="brand">
-      <h1>Chord Changes</h1>
+      <h1 data-app-name>Chord Changes</h1>
       <p>Write, generate or harmonize a progression, and every swap idea explains why it works, down to how each voice moves; then export MIDI or notation, share a link, or print a lead sheet.</p>
     </div>
     <div class="tabs phonetabs" id="phoneTabs" role="tablist" aria-label="Screens" data-tabs="phone"><button type="button" role="tab" id="tab-p-create" aria-controls="sideLeft" data-tab="p-create">Create<small>Generate or harmonize</small></button><button type="button" role="tab" id="tab-p-chart" aria-controls="center" data-tab="p-chart">Chart<small>Your progression</small></button><button type="button" role="tab" id="tab-p-chord" aria-controls="sideRight" data-tab="p-chord">Chord<small>Shapes and swap ideas</small></button><button type="button" role="tab" id="tab-p-tools" aria-controls="tools" data-tab="p-tools">Tools<small>Chord finder, keys and modes</small></button></div>
@@ -937,7 +937,7 @@ body{padding-bottom:0}
       </details>
       <details class="libmenu helpmenu" id="helpMenu">
         <summary class="btn">Help</summary>
-        <div class="libpop helppop"><a href="guide.html"><b>How to use it</b><small>A tour of every part of the app</small></a><a href="how-it-works.html"><b>How it works under the hood</b><small>The music theory and code behind it</small></a><button type="button" data-help="sound"><b>Sound check</b><small>No sound? Test what this device can play</small></button><div class="help-about" role="group" aria-label="About"><span class="label">About</span><a href="https://github.com/ssk0011/chord-progression-generator" target="_blank" rel="noopener" id="aboutRepo"><b>Chord Changes on GitHub</b><small>Source code, issues and updates</small></a><a href="https://github.com/ssk0011" target="_blank" rel="noopener"><b>Made by ssk0011</b><small>github.com/ssk0011</small></a></div></div>
+        <div class="libpop helppop"><a href="guide.html"><b>How to use it</b><small>A tour of every part of the app</small></a><a href="how-it-works.html"><b>How it works under the hood</b><small>The music theory and code behind it</small></a><button type="button" data-help="sound"><b>Sound check</b><small>No sound? Test what this device can play</small></button><div class="help-about" role="group" aria-label="About"><span class="label">About</span><a href="https://github.com/ssk0011/chord-progression-generator" target="_blank" rel="noopener" id="aboutRepo"><b><span data-app-name>Chord Changes</span> on GitHub</b><small>Source code, issues and updates</small></a><a href="https://github.com/ssk0011" target="_blank" rel="noopener"><b>Made by ssk0011</b><small>github.com/ssk0011</small></a></div></div>
       </details>
     </nav>
   </header>
@@ -1098,6 +1098,9 @@ body{padding-bottom:0}
 <div class="copybox soundbox" id="soundbox" role="dialog" aria-label="Sound check" hidden></div>
 
 <script>
+/* the app's name, in one place: the page title, header, MIDI, MusicXML, messages, file names and the help pages (docs-src/build.py reads it from here).
+   Saved-data keys (changes-v1, …) deliberately don't follow it, so a rename keeps everyone's work. */
+const APP_NAME='Chord Changes', APP_TITLE=APP_NAME+' Workbench', APP_SLUG=APP_NAME.toLowerCase().replace(/[^a-z0-9]+/g,'-');
 /* ============ theory core ============ */
 const Q={
   '':{iv:[0,4,7],d:'',tri:'maj',lvl:0},
@@ -4089,7 +4092,7 @@ function scoreXML(parts){
   const title=esc(sheetTitle()), date=new Date().toISOString().slice(0,10);
   return `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 4.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
-<score-partwise version="4.0"><work><work-title>${title}</work-title></work><identification><encoding><software>Chord Changes Workbench</software><encoding-date>${date}</encoding-date></encoding></identification>
+<score-partwise version="4.0"><work><work-title>${title}</work-title></work><identification><encoding><software>${esc(APP_TITLE)}</software><encoding-date>${date}</encoding-date></encoding></identification>
 <part-list>${parts.map((p,i)=>`<score-part id="P${i+1}"><part-name>${esc(p.name)}</part-name><score-instrument id="P${i+1}-I1"><instrument-name>${esc(p.name)}</instrument-name></score-instrument><midi-instrument id="P${i+1}-I1"><midi-channel>${i+1}</midi-channel><midi-program>${p.program+1}</midi-program></midi-instrument></score-part>`).join('')}</part-list>
 ${parts.map((p,i)=>`<part id="P${i+1}">${p.xml}</part>`).join('\n')}</score-partwise>
 `;
@@ -4163,7 +4166,7 @@ function buildMidi(withBass){
   if(isPart()) pianoPart().ev.forEach(e=>{ const at=Math.round(e.at*tpb), end=at+Math.max(1,Math.round(e.dur*tpb)), vel=Math.max(1,Math.min(127,Math.round(88*(e.vel??1)*(e.h==='R'?1.05:1))));
     e.notes.forEach(m=>{ if(withBass&&e.h==='B') bsN.push({s:at,e:end,m,vel:Math.min(127,vel+12)}); else chN.push({s:at,e:end,m,vel}); }); });
   emit(chN,ch,0); emit(bsN,bs,1);
-  const tracks=[midiTrack('Chord Changes',cond),midiTrack('Chords',ch)]; if(withBass) tracks.push(midiTrack('Bass',bs));
+  const tracks=[midiTrack(APP_NAME,cond),midiTrack('Chords',ch)]; if(withBass) tracks.push(midiTrack('Bass',bs));
   /* the melody, or every part of the arrangement when it is showing, each on a track and channel of its own (from 3) */
   const ar=arrOn()?arrange():null, lines=ar?ar.lines.map((l,k)=>({name:partName(ar.voices[k]),notes:l,prog:ARR_PROGRAMS[ar.style][k]})):[{name:'Melody',notes:melNotes(),prog:0}];
   /* channels from 3 up, skipping 10, which General MIDI keeps for drums */
@@ -4276,7 +4279,7 @@ async function libImportFile(file){
       const list=sanitizeChords(x.snap.chords); if(!list) continue;
       LIB.items.push(newItem(name,{S:sanitizeS(pickS(x.snap.S)),chords:list.map(({id,...c})=>c)})); added++; }
     if(added){ libSave(); renderLibrary(); } toast(added?`Imported ${added} progression${added>1?'s':''}`:'No progressions found in that file');
-  }catch(e){ toast('That file is not a Chord Changes library'); }
+  }catch(e){ toast(`That file is not a ${APP_NAME} library`); }
 }
 
 /* printable lead sheet: built from the chart, shown only when printing (or saved as its own page where printing is blocked) */
@@ -4347,9 +4350,9 @@ function initIO(){
       MIDIOUT.out=v&&MIDIOUT.access?MIDIOUT.access.outputs.get(v):null; if(MIDIOUT.out) toast(`Sending to ${MIDIOUT.out.name||'MIDI output'} when you press Play`); }; }
   $('#libSaveBtn').onclick=libSaveCurrent;
   $('#libName').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); libSaveCurrent(); } };
-  $('#libExport').onclick=()=>saveFile('chord-changes-library.json',JSON.stringify(LIB,null,1));
+  $('#libExport').onclick=()=>saveFile(APP_SLUG+'-library.json',JSON.stringify(LIB,null,1));
   $('#libImport').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; if(f) libImportFile(f); };
-  $('#shareOpen').onclick=()=>{ const d=readShare($('#shareIn').value); if(!d){ toast('That is not a Chord Changes share link or code'); return; }
+  $('#shareOpen').onclick=()=>{ const d=readShare($('#shareIn').value); if(!d){ toast(`That is not a ${APP_NAME} share link or code`); return; }
     pushHist(); if(applyShare(d)){ $('#shareIn').value=''; libCurrent=null; commit(); toast('Loaded the shared progression'); } else { hist.pop(); toast('That link has no chords in it'); } };
   $('#libList').addEventListener('click',e=>{ const b=e.target.closest('[data-la]'); if(!b) return; const li=b.closest('[data-lib]'), idx=LIB.items.findIndex(i=>i.id===li.dataset.lib), it=LIB.items[idx]; if(!it) return;
     const a=b.dataset.la;
@@ -4367,6 +4370,7 @@ function initIO(){
 
 /* ============ boot ============ */
 function boot(){
+  document.title=APP_TITLE; document.querySelectorAll('[data-app-name]').forEach(el=>el.textContent=APP_NAME);
   $('#key').innerHTML=KEYLABEL.map((k,i)=>`<option value="${i}">${k}</option>`).join('');
   $('#mode').innerHTML=MODE_GROUPS.map(([g,ks])=>`<optgroup label="${g}">${ks.map(k=>`<option value="${k}">${MODE_LABEL[k]}</option>`).join('')}</optgroup>`).join('');
   $('#meter').innerHTML=Object.keys(METERS).filter(m=>!CYCLES[m]).map(m=>`<option value="${m}">${m}</option>`).join('')
