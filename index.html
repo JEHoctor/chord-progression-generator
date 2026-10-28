@@ -787,6 +787,7 @@ select.btn{border-radius:var(--r-pill)}
 .aw-p{font-size:15px}
 .aw-role,.aw-mv{color:var(--muted)}
 .aw-why{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13.5px;line-height:1.45}
+.aw-sub{margin:2px 0 -4px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
 .aw-alt{margin:0;font-size:13.5px;line-height:1.45;padding:8px 10px;background:var(--sunk);border-radius:10px}
 @media (max-width:759px){ .aw-row{grid-template-columns:auto 44px 1fr;font-size:12.5px} .aw-mv{grid-column:1 / -1;padding-left:2px} .arrwhy{max-height:52vh} }
 .ab-head .seg button{white-space:nowrap;flex:none}
@@ -1267,7 +1268,7 @@ const NUMS={I:0,II:2,III:4,IV:5,V:7,VI:9,VII:11};
 /* tables are plain objects, so keys that come from outside (chord text, share links, saved files) are only accepted when
    they are the table's own entries; "constructor" or "__proto__" never count */
 const ownKey=(o,k)=>typeof k==='string'&&Object.prototype.hasOwnProperty.call(o,k);
-const S={arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
+const S={arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
 let chords=[], sel=null, hist=[];
 /* the melody: one entry per beat of the chart, by absolute beat. A MIDI note number starts a note, -1 holds the note
    before it, null is a rest. It is independent of the chords, so moving a chord changes the harmony under the tune. */
@@ -2505,7 +2506,7 @@ function renderChart(){
   chords.forEach((c,i)=>{ if(starts[i]%L===0){ const b=starts[i]/L; if(c.br&&i>0) brBars.add(b); if(c.sec) secAt[b]=c.sec; if(i>0&&kcOk(c.kc)) kcAt[b]=c.kc; } });
   const rowList=[]; let cur=null;
   for(let b=0;b<nBars;b++){ if(!cur||cur.n>=per||brBars.has(b)||(secAt[b]&&b>0)||kcAt[b]){ cur={start:b,n:0,label:secAt[b],kc:kcAt[b]}; rowList.push(cur); } cur.n++; }
-  const ar=arrOn()?arrange():null, tuneOor=ar?new Set(arrOutOfRange(ar).filter(x=>x.k===ar.mel).map(x=>x.b)):null, mrow=ar?2+ar.mel:2, lanes=S.showMel?(ar?1+ar.voices.length:2):1;
+  const ar=arrOn()?arrange():null, tuneOor=ar?new Set(arrOutOfRange(ar).filter(x=>x.k===ar.mel).map(x=>x.b)):null, mrow=ar?arrRow(ar,ar.mel):2, lanes=S.showMel?(ar?1+arrShown(ar).length:2):1;
   /* the piano part's two lanes go under everything else */
   const pp=isPart()&&chords.some(real)?pianoPart():null, prow=lanes+1, span=lanes+(pp?2:0);
   for(const row of rowList){
@@ -2523,7 +2524,7 @@ function renderChart(){
     });
     /* the "+ Add chord" tile sits after the last chord, in the last row if there is room */
     if(row===rowList[rowList.length-1]){ const used=Math.min(total,r1)-r0; if(rowBeats-used>=1) html+=addTile(used+1,Math.min(L,rowBeats-used)); else tileNewRow=true; }
-    if(S.showMel) html+=melLaneHTML(r0,Math.min(r1,total),starts,mrow,ar&&ar.voices[ar.mel].short,tuneOor);
+    if(S.showMel) html+=melLaneHTML(r0,Math.min(r1,total),starts,mrow,ar&&arrTag(ar,ar.mel),tuneOor);
     if(ar) html+=arrLanesHTML(ar,r0,Math.min(r1,total));
     if(pp) html+=partLanesHTML(pp,r0,Math.min(r1,total),prow);
     html+='</div>';
@@ -2640,9 +2641,20 @@ const ARR_STYLES={
     env:{a:.015,d:.2,s:.55,len:.78,r:.1}, homo:true, jazz:true},
   drop2:{name:'Drop 2',blurb:'Close harmony with the second voice down dropped an octave: wider and warmer, like a sax section or a vocal group’s open chords.',
     roles:[{mel:true},{},{},{}], groups:['jazz','satb','ssaa','ttbb'], group:'jazz',
-    env:{a:.03,d:.3,s:.7,len:.85,r:.15}, homo:true, jazz:true, drop:true}
+    env:{a:.03,d:.3,s:.7,len:.85,r:.15}, homo:true, jazz:true, drop:true},
+  /* the orchestra is built on the string quartet: the quartet's lines stay, and every section gets a job around them */
+  orch:{name:'Orchestra',blurb:'Each section has a job. The violins carry the tune, doubled an octave up by the flute; the clarinet answers with a countermelody where the tune holds still; the horn and second violins hold a soft pad; the violas keep a pulse; cellos and double basses play the bass in octaves.',
+    voices:[{name:'Flute',short:'Fl',double:3,range:[60,96],clef:'treble',env:{a:.04,s:.9,len:.95,r:.2}},
+      {name:'Clarinet',short:'Cl',range:[50,91],clef:'treble',env:{a:.04,s:.85,len:.9,r:.2}},
+      {name:'Horn',short:'Hn',range:[41,77],clef:'treble',env:{a:.2,s:1,len:1,r:.5}},
+      {name:'Violins I (tune)',short:'Vn1',mel:true,range:[55,100],clef:'treble'},
+      {name:'Violins II',short:'Vn2',range:[55,100],clef:'treble'},
+      {name:'Violas',short:'Vla',range:[48,88],clef:'alto',env:{a:.01,d:.15,s:.35,len:.55,r:.08}},
+      {name:'Cellos',short:'Vc',range:[36,76],bass:true,clef:'bass'},
+      {name:'Double basses',short:'Cb',double:6,range:[28,67],clef:'bass8'}],
+    env:{a:.09,s:1,len:1,r:.45}, legato:true, orch:true}
 };
-let arrSolo=null, arrCache=null, arrAt=null; /* arrAt: the beat whose voicing is being explained */
+let arrSolo=null, arrCache={}, arrAt=null; /* arrAt: the beat whose voicing is being explained */
 const arrOn=()=>!!(S.showMel&&S.arrShow&&ownKey(ARR_STYLES,S.arr));
 const midiName=m=>prettyNote(spell(mod(m)))+(Math.floor(m/12)-1);
 /* the group a style sings with: the one chosen, else the style's own; barbershop picks the group whose lead range fits the tune */
@@ -2777,11 +2789,12 @@ function closeVoicing(st,set,m){
   /* drop 2: the second voice from the top goes down an octave, to the bottom */
   return st.drop?[v[0],v[2],v[3],v[1]-12]:v;
 }
-function arrange(){
-  const st=ARR_STYLES[S.arr]; if(!st) return null;
+function arrange(sk=S.arr){
+  const st=ARR_STYLES[sk]; if(!st) return null;
+  if(st.orch) return orchestrate();
   const group=arrGroupOf(st), V=arrVoicesFor(st,group), rs={...st,voices:V};
-  const key=JSON.stringify([S.arr,group,S.arrSeed|0,S.tonic,S.mode,S.meter,chords.map(c=>[c.root,c.q,c.bass,c.beats,c.kc]),melody]);
-  if(arrCache&&arrCache.key===key) return arrCache.val;
+  const key=JSON.stringify([sk,group,S.arrSeed|0,S.tonic,S.mode,S.meter,chords.map(c=>[c.root,c.q,c.bass,c.beats,c.kc]),melody]);
+  if(arrCache[sk]&&arrCache[sk].key===key) return arrCache[sk].val;
   const rnd=seeded((S.arrSeed|0)+1), noise=(S.arrSeed|0)>0, ev=arrEvents(), mi=V.findIndex(v=>v.mel), N=V.length;
   const tuneAt=i=>{ for(let d=0;d<ev.length;d++){ for(const j of [i-d,i+d]) if(ev[j]&&ev[j].m!=null) return ev[j].m; } return 72; };
   const cands=ev.map((e,i)=>{ const c=e.ci>=0?chords[e.ci]:null;
@@ -2812,8 +2825,42 @@ function arrange(){
       if(m==null) continue;
       const joins=last&&last.m===m&&last.b+last.n===e.b&&(j===mi?!e.on:(st.legato||!e.on));
       if(joins) last.n+=e.n; else line.push({b:e.b,n:e.n,m}); } });
-  const val={style:S.arr,group,rs,voices:V,mel:mi,lines,events:ev,picks,sets:chosen.map(x=>x.set),cands};
-  arrCache={key,val}; return val;
+  const val={style:sk,group,rs,voices:V,mel:mi,lines,events:ev,picks,sets:chosen.map(x=>x.set),cands};
+  arrCache[sk]={key,val}; return val;
+}
+/* the orchestra from the quartet: violins I keep the tune and the flute doubles it an octave up (in unison if that would be
+   too high); violins II keep their line as a pad; the violas re-strike theirs every beat, as a pulse; the cellos keep the
+   bass and the double basses double it an octave down. The horn holds a guide tone (the 3rd or 7th) nearest its last
+   note, under the tune. The clarinet plays only in the tune's gaps: a step-by-step line onto the next chord's 3rd, rising
+   to it under the held tune note, or falling to it from above when there is no room below. */
+function orchestrate(){
+  const core=arrange('strings'); if(core.orchestra) return core.orchestra;
+  const V=ARR_STYLES.orch.voices, total=chords.reduce((a,c)=>a+c.beats,0), lines=V.map(()=>[]), tune=core.lines[core.mel];
+  lines[3]=tune.map(n=>({...n})); lines[0]=tune.map(n=>({...n,m:n.m+12<=96?n.m+12:n.m}));
+  lines[4]=core.lines[1].map(n=>({...n}));
+  core.lines[2].forEach(n=>{ for(let i=0;i<n.n;i++) lines[5].push({b:n.b+i,n:1,m:n.m}); });
+  lines[6]=core.lines[3].map(n=>({...n})); lines[7]=core.lines[3].map(n=>({...n,m:n.m-12>=28?n.m-12:n.m}));
+  let prev=null; const horn=[];
+  core.events.forEach((e,k)=>{ const set=core.sets[k]; if(!set||!core.picks[k]) return;
+    let g=set.pcs.filter(p=>[3,4,10,11].includes(mod(p-set.root))); if(g.length<2) g=g.concat(set.pcs.filter(p=>mod(p-set.root)===7));
+    const top=e.m!=null?Math.min(72,e.m-3):72; let best=null;
+    /* nearest its last note, preferring its middle register and a note the strings don't already hold */
+    const taken=new Set(core.picks[k].filter(x=>x!=null)), cost=m=>Math.abs(m-(prev??62))+(m<53?3:0)+(taken.has(m)?20:0);
+    for(let m=48;m<=top;m++) if(g.includes(mod(m))&&(best==null||cost(m)<cost(best))) best=m;
+    if(best==null) return; prev=best; const last=horn[horn.length-1];
+    if(last&&last.m===best&&last.b+last.n===e.b) last.n+=e.n; else horn.push({b:e.b,n:e.n,m:best,deg:degName(set,best)}); });
+  lines[2]=horn;
+  const onsets=[]; for(let b=0;b<total;b++) if(melody[b]>0) onsets.push(b);
+  onsets.forEach((b,i)=>{ const e=onsets[i+1]; if(e==null||e-(b+1)<2) return; const ci=chordIdxAt(e); if(ci<0||!real(chords[ci])) return;
+    inKey(keyAt(ci),()=>{ const c=chords[ci], third=mod(c.root+(Q[c.q].iv.includes(3)?3:4)), len=Math.min(3,e-(b+1)), sc=scaleSet(), ref=Math.min(76,melody[b]-4);
+      /* under the held tune note when there is room, rising onto the target; otherwise over it, falling onto it */
+      const walk=(t,dir)=>{ const out=[]; let m=t; while(out.length<len){ m-=dir; while(!sc.has(mod(m))) m-=dir; out.unshift(m); } return out; };
+      let t=ref; while(mod(t)!==third) t--; let dir=1, steps=walk(t,1);
+      if(steps[0]<55){ t=melody[b]+3; while(mod(t)!==third) t++; dir=-1; steps=walk(t,-1); }
+      steps.forEach((m,j)=>lines[1].push({b:e-len+j,n:1,m,counter:true,dir}));
+      lines[1].push({b:e,n:1,m:t,counter:true,land:true,dir,next:chordName(c)}); }); });
+  const val={...core,style:'orch',group:null,voices:V,mel:3,lines,core,orch:true,maps:null,orchestra:null};
+  core.orchestra=val; return val;
 }
 /* notes outside their part's range: {k, b, m, lo|hi} */
 function arrOutOfRange(ar){ const out=[];
@@ -2844,9 +2891,9 @@ function voiceNote(m,t,dur,vel,out,env){
   g.gain.setTargetAtTime(0,end,env.r/4);
   o1.connect(lp); o2.connect(g2).connect(lp); lp.connect(g).connect(out); o1.start(t); o2.start(t); o1.stop(end+env.r+.05); o2.stop(end+env.r+.05);
 }
-function playArr(ar,t0,unit,out){ const env=ARR_STYLES[ar.style].env;
-  ar.lines.forEach((line,k)=>{ if(arrMuted(k)) return; const vel=k===ar.mel?.15:.1;
-    line.forEach(n=>voiceNote(n.m,t0+n.b*unit,n.n*unit,vel,out,env)); }); }
+function playArr(ar,t0,unit,out){ const env=ARR_STYLES[ar.style].env, many=ar.voices.length>4;
+  ar.lines.forEach((line,k)=>{ if(arrMuted(k)) return; const vel=k===ar.mel?.15:many?.07:.1, e=ar.voices[k].env||env;
+    line.forEach(n=>voiceNote(n.m,t0+n.b*unit,n.n*unit,vel,out,e)); }); }
 /* a voice's note at each beat: {m, s, b0} where s marks the beat the note starts on and b0 is that beat */
 function arrBeatMap(ar,k){ ar.maps=ar.maps||[]; if(ar.maps[k]) return ar.maps[k]; const at=[];
   ar.lines[k].forEach(n=>{ for(let i=0;i<n.n;i++) at[n.b+i]={m:n.m,s:i===0,b0:n.b}; }); return ar.maps[k]=at; }
@@ -2855,12 +2902,17 @@ const arrNote=(m,b)=>{ const ci=chordIdxAt(b); return inKey(keyAt(Math.max(ci,0)
    that chord's own key, so its 3rd reads G♯ and not A♭ */
 const setSpell=(set,fn)=>set&&set.foreign?inKey({t:mod(set.root+5),m:'ionian'},fn):fn();
 const arrNoteAt=(ar,m,b)=>{ const k=arrEventAt(ar,b), e=ar.events[k]; return inKey(keyAt(Math.max(e.ci,0)),()=>setSpell(ar.sets[k],()=>prettyNote(spell(mod(m))))); };
-function arrLanesHTML(ar,r0,r1){ let h=''; const L=barLen(), bad=new Set(arrOutOfRange(ar).map(x=>x.k+':'+x.b));
-  ar.voices.forEach((v,k)=>{ if(k===ar.mel) return; const at=arrBeatMap(ar,k), off=arrMuted(k);
+/* the parts that get a lane of their own, top to bottom: a part that only doubles another (the flute, the double basses)
+   shares that part's lane, named in its tag */
+const arrShown=ar=>ar.voices.map((_,k)=>k).filter(k=>ar.voices[k].double==null);
+const arrRow=(ar,k)=>2+arrShown(ar).indexOf(k);
+const arrTag=(ar,k)=>[ar.voices[k].short,...ar.voices.filter(v=>v.double===k).map(v=>v.short)].join('+');
+function arrLanesHTML(ar,r0,r1){ let h=''; const L=barLen(), bad=new Set(arrOutOfRange(ar).map(x=>x.k+':'+x.b)), shown=arrShown(ar), lowest=shown[shown.length-1];
+  shown.forEach(k=>{ const v=ar.voices[k]; if(k===ar.mel) return; const at=arrBeatMap(ar,k), off=arrMuted(k);
     for(let b=r0;b<r1;b++){ const x=at[b], nm=x?arrNoteAt(ar,x.m,x.b0):'', oc=x?Math.floor(x.m/12)-1:'', oor=x&&bad.has(k+':'+x.b0);
-      const cls=['acell',b%L===0?'bar0':'',x?(x.s?'note':'hold'):'rest',off?'muted':'',k===ar.voices.length-1?'low':'',oor?'oor':''].filter(Boolean).join(' ');
+      const cls=['acell',b%L===0?'bar0':'',x?(x.s?'note':'hold'):'rest',off?'muted':'',k===lowest?'low':'',oor?'oor':''].filter(Boolean).join(' ');
       const label=`${v.name}, bar ${Math.floor(b/L)+1} beat ${b%L+1}: ${x?esc(nm)+oc+(oor?` (outside its range, ${rangeTxt(v.range)})`:''):'rest'}. Tap to see why.`;
-      h+=`<button type="button" class="${cls}" data-ab="${b}" data-av="${k}" style="grid-column:${b-r0+1};grid-row:${k+2}"${b===r0?` data-v="${esc(v.short)}"`:''} title="${esc(label)}" aria-label="${esc(label)}">${x?(x.s?`<b>${esc(nm)}</b><small>${oc}</small>`:'<i></i>'):''}</button>`; } });
+      h+=`<button type="button" class="${cls}" data-ab="${b}" data-av="${k}" style="grid-column:${b-r0+1};grid-row:${arrRow(ar,k)}"${b===r0?` data-v="${esc(arrTag(ar,k))}"`:''} title="${esc(label)}" aria-label="${esc(label)}">${x?(x.s?`<b>${esc(nm)}</b><small>${oc}</small>`:'<i></i>'):''}</button>`; } });
   return h; }
 const arrPlayBtn=()=>{ const b=document.querySelector('#arrBar [data-aact="play"]'); if(b) b.innerHTML=playing?IC.stop+'Stop':IC.play+'Play'; };
 function renderArrBar(){
@@ -2887,7 +2939,8 @@ function arrLocal(ar,k,v,set){ const items=[], rs=ar.rs, prev=ar.picks[k-1], nex
   if(set) arrUnary(rs,set,v,items); arrPair(rs,prev,v,items); arrPair(rs,v,next,items);
   const by={}; items.forEach(x=>{ const o=by[x.k]=by[x.k]||{c:0,t:x.t}; o.c+=x.c; }); return by; }
 const sumOf=o=>Object.values(o).reduce((a,b)=>a+b.c,0);
-function arrWhy(ar,k){
+function arrWhy(ar,k,beat){
+  if(ar.orch) return orchWhy(ar,k,beat);
   const e=ar.events[k], v=ar.picks[k], set=ar.sets[k], c=e.ci>=0?chords[e.ci]:null, V=ar.voices, prev=ar.picks[k-1], pset=ar.sets[k-1];
   const out={e,v,set,rows:[],reasons:[],alt:null};
   if(!v) return out;
@@ -2907,7 +2960,7 @@ function arrWhy(ar,k){
     if(set&&!ar.rs.jazz){
       const has3=set.req.every(q=>v.some(p=>p!=null&&mod(p)===q));
       if(has3&&set.req.length) out.reasons.push(`It has the notes that make the chord what it is: ${[...set.req].sort((a,b)=>mod(a-set.root)-mod(b-set.root)).map(q=>`the ${degName(set,q)} (${noteNm(q)})`).join(', ')}.`);
-      const bot=v[V.length-1]; if(bot!=null) out.reasons.push(`The ${V[V.length-1].name.replace(' (tune)','')} sings the ${degName(set,mod(bot))} (${noteNm(bot)})${set.bass&&set.bass[mod(bot)]===0?', the steadiest bass note for this chord':''}.`);
+      const bot=v[V.length-1]; if(bot!=null) out.reasons.push(`The ${V[V.length-1].name.replace(' (tune)','')} ${ar.style==='strings'?'plays':'sings'} the ${degName(set,mod(bot))} (${noteNm(bot)})${set.bass&&set.bass[mod(bot)]===0?', the steadiest bass note for this chord':''}.`);
       const held=out.rows.filter((r,j)=>j!==ar.mel&&/^holds/.test(r.move)).map(r=>r.name);
       if(held.length) out.reasons.push(`${joinList(held.map(n=>n.replace(' (tune)','')))} ${held.length>1?'hold their':'holds its'} note${held.length>1?'s':''}: the smoothest move is no move.`);
       /* the runner-up in this place, with the moments around it as they are */
@@ -2922,20 +2975,45 @@ function arrWhy(ar,k){
   }));
   return out;
 }
+/* the orchestra's card: the quartet's explanation for the strings, plus each other section's job at that beat */
+function orchWhy(ar,k,beat){
+  const w=arrWhy(ar.core,k); if(!w.v) return w;
+  /* the orchestra moves inside a moment (the clarinet, the violas' pulse), so the card is for the beat that was tapped */
+  const e=w.e, bb=beat??e.b, V=ar.voices, at=j=>arrBeatMap(ar,j)[bb], was=j=>bb>0?arrBeatMap(ar,j)[bb-1]:null, core={3:0,4:1,5:2,6:3}; w.beat=bb;
+  inKey(keyAt(Math.max(e.ci,0)),()=>setSpell(w.set,()=>{
+    const mv=j=>{ const x=at(j), y=was(j); if(!x) return ''; if(!y) return 'comes in'; if(y.m===x.m) return x.s?'plays it again':'holds'; const d=Math.abs(x.m-y.m), dir=x.m>y.m?'up':'down'; return d<=2?`steps ${dir} from ${midiName(y.m)}`:`leaps ${dir} a ${intName(d)} from ${midiName(y.m)}`; };
+    const strings=w.rows;
+    w.rows=V.map((x,j)=>{ const n=at(j);
+      if(core[j]!=null){ const r={...strings[core[j]],name:x.name}; if(j===5&&n) r.role+=', on every beat'; return r; }
+      if(!n) return {name:x.name,note:'rest',role:j===1?'rests while the tune moves':'',move:''};
+      const line=j===1?ar.lines[1].find(q=>q.b===n.b0):null;
+      const role=j===0?'doubles the tune an octave up':j===7?'doubles the cellos an octave down':j===2?`the ${degName(w.set,n.m)} of ${w.set.label}, held as a pad`:line&&line.land?`lands on the 3rd of ${line.next}`:`countermelody, stepping ${line&&line.dir<0?'down':'up'}`;
+      return {name:x.name,note:midiName(n.m),role,move:j===0||j===7?'':mv(j),oor:x.range&&(n.m<x.range[0]||n.m>x.range[1]),range:x.range}; });
+    const cl=at(1), hn=at(2), jobs=['The tune is in the violins, with the flute an octave above to make it shine.'];
+    if(cl){ const over=ar.lines[1].find(q=>q.b===cl.b0)?.dir<0;
+      jobs.push(`The tune holds still here, so the clarinet moves ${over?'over it: a countermelody that steps down':'under it: a countermelody that steps up'} onto the next chord’s 3rd. Something is always moving, but never two lines at once.`); }
+    if(hn) jobs.push(`The horn holds ${midiName(hn.m)}, the ${degName(w.set,hn.m)} of ${w.set.label}: a guide tone, the note that tells the ear what kind of chord it is, as a soft pad under the tune.`);
+    jobs.push('The violas play their note again on every beat: a pulse that keeps the long notes moving.','The cellos play the bass line and the double basses double it an octave down, for weight.');
+    w.jobs=jobs;
+  }));
+  return w;
+}
 const joinList=a=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1];
 function renderArrWhy(){
   const el=$('#arrWhy'); if(!arrOn()||arrAt==null){ el.hidden=true; el.innerHTML=''; document.querySelectorAll('#rows .awhy').forEach(x=>x.classList.remove('awhy')); return; }
-  const ar=arrange(), k=arrEventAt(ar,arrAt), w=arrWhy(ar,k), e=w.e, L=barLen(), c=e.ci>=0?chords[e.ci]:null;
+  const ar=arrange(), k=arrEventAt(ar,arrAt), w=arrWhy(ar,k,arrAt), e=w.e, L=barLen(), c=e.ci>=0?chords[e.ci]:null, hb=w.beat??e.b;
   document.querySelectorAll('#rows .acell,#rows .mcell').forEach(x=>{ const b=+(x.dataset.ab??x.dataset.mb); x.classList.toggle('awhy',b>=e.b&&b<e.b+e.n); });
-  const head=`<div class="mp-head"><span><b>Bar ${Math.floor(e.b/L)+1}, beat ${e.b%L+1}</b>${c&&real(c)?` · over ${esc(chordName(c))}`:''}${e.m!=null?` · tune ${esc(arrNote(e.m,e.b))}`:''}</span><span class="aw-nav"><button type="button" class="btn small" data-aw="prev" ${k>0?'':'disabled'} aria-label="Previous change">${IC.left}</button><button type="button" class="btn small" data-aw="next" ${k<ar.events.length-1?'':'disabled'} aria-label="Next change">${IC.right}</button><button type="button" class="cp-x" data-aw="close" aria-label="Close">${IC.x}</button></span></div>`;
+  const head=`<div class="mp-head"><span><b>Bar ${Math.floor(hb/L)+1}, beat ${hb%L+1}</b>${c&&real(c)?` · over ${esc(chordName(c))}`:''}${e.m!=null?` · tune ${esc(arrNote(e.m,e.b))}`:''}</span><span class="aw-nav"><button type="button" class="btn small" data-aw="prev" ${k>0?'':'disabled'} aria-label="Previous change">${IC.left}</button><button type="button" class="btn small" data-aw="next" ${k<ar.events.length-1?'':'disabled'} aria-label="Next change">${IC.right}</button><button type="button" class="cp-x" data-aw="close" aria-label="Close">${IC.x}</button></span></div>`;
   if(!w.v){ el.hidden=false; el.innerHTML=head+`<p class="hint">${e.m==null?'The tune rests here, so the voices rest too.':'There is no chord here, so the tune is on its own.'}</p>`; return; }
   const rows=w.rows.map((r,j)=>`<div class="aw-row${j===ar.mel?' tune':''}${r.oor?' oor':''}"><span class="aw-n">${esc(r.name)}</span><b class="aw-p">${esc(r.note)}</b><span class="aw-role">${esc(r.role)}${r.oor?` · outside its range (${esc(rangeTxt(r.range))})`:''}</span><span class="aw-mv">${esc(r.move)}</span></div>`).join('');
   const alt=w.alt?`<p class="aw-alt"><b>Next best:</b> ${w.alt.notes.map(n=>`${esc(n.name)} ${esc(n.note)}`).join(' · ')}${w.alt.label!==w.set.label?` (${esc(w.alt.label)})`:''}. ${w.alt.cheaper?`It would cost a little less, but Version ${(S.arrSeed|0)+1}’s randomness chose this one.`:w.alt.worse.length?`It loses because it ${esc(joinList(w.alt.worse))}${w.alt.better.length?`, even though the chosen one ${esc(w.alt.better[0])}`:''}.`:'It is almost as good.'}</p>`:'';
   el.hidden=false;
   el.innerHTML=head+`<div class="aw-stack" role="table" aria-label="The voicing, top to bottom">${rows}</div>
-    <ul class="aw-why">${w.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>${alt}
+    ${w.jobs?`<ul class="aw-why">${w.jobs.map(r=>`<li>${esc(r)}</li>`).join('')}</ul><p class="aw-sub">Inside the strings</p>`:''}<ul class="aw-why">${w.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>${alt}
     <div class="mp-acts"><button type="button" class="btn small" data-aw="hear">${IC.play}Hear it</button>${k>0&&ar.picks[k-1]?`<button type="button" class="btn small" data-aw="move">${IC.play}Hear the move</button>`:''}${w.alt?`<button type="button" class="btn small" data-aw="alt">${IC.play}Hear the next best</button>`:''}</div>`;
 }
+/* the notes sounding at a moment: the voicing, or for the orchestra every part's note at that beat */
+const arrMoment=(ar,k)=>{ if(!ar.orch) return ar.picks[k]; const b=ar.events[k]?.b; return b==null?null:ar.voices.map((_,j)=>arrBeatMap(ar,j)[b]?.m??null); };
 function arrHear(list){ const a=ac(), out=previewOut(), env=ARR_STYLES[S.arr].env; let t=a.currentTime+.03;
   list.forEach(v=>{ v.filter(p=>p!=null).forEach(p=>voiceNote(p,t,1.1,.1,out,{...env,len:1})); t+=1.2; }); }
 function markNarrow(){ document.querySelectorAll('#rows .slot').forEach(s=>s.classList.toggle('narrow',s.offsetWidth>0&&s.offsetWidth<110)); }
@@ -3783,7 +3861,7 @@ function melNotes(){ const total=chords.reduce((a,c)=>a+c.beats,0), out=[];
   return out; }
 /* one line of notes as a single-staff part: notes and rests cut at bar lines and at chord changes (when the part carries the
    chord symbols), tied across the cuts, spelled in the key in force, with the key signature changing where the key does */
-const CLEFS={treble:'<sign>G</sign><line>2</line>',treble8:'<sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change>',alto:'<sign>C</sign><line>3</line>',bass:'<sign>F</sign><line>4</line>'};
+const CLEFS={bass8:'<sign>F</sign><line>4</line><clef-octave-change>-1</clef-octave-change>',treble:'<sign>G</sign><line>2</line>',treble8:'<sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change>',alto:'<sign>C</sign><line>3</line>',bass:'<sign>F</sign><line>4</line>'};
 function clefFor(notes,v={}){ if(v.clef) return v.clef; if(v.bass) return 'bass'; if(!notes.length) return 'treble'; const avg=notes.reduce((a,n)=>a+n.m,0)/notes.length; return avg>=60?'treble':avg>=52&&v.vocal?'treble8':'bass'; }
 function linePartXML(notes,clef,{chordsOn=false,tempo=false}={}){
   const bd=16/den(), L=barLen(), total=chords.reduce((a,c)=>a+c.beats,0), nBars=Math.max(1,Math.ceil(total/L)), starts=chordStarts();
@@ -3825,10 +3903,10 @@ ${parts.map((p,i)=>`<part id="P${i+1}">${p.xml}</part>`).join('\n')}</score-part
 `;
 }
 /* General MIDI programs for each style's parts: violin, viola, cello; voice oohs for the singers */
-const ARR_PROGRAMS={strings:[40,40,41,42],choir:[52,52,52,52],barber:[53,53,53,53],close:[53,53,53,53],drop2:[53,53,53,53]};
+const ARR_PROGRAMS={orch:[73,71,60,40,40,41,42,43],strings:[40,40,41,42],choir:[52,52,52,52],barber:[53,53,53,53],close:[53,53,53,53],drop2:[53,53,53,53]};
 /* the arrangement as a score: one staff per part, top to bottom, chord symbols and tempo over the top one */
 function buildArrXML(){
-  const ar=arrange(), vocal=ar.style!=='strings';
+  const ar=arrange(), vocal=ar.style!=='strings'&&!ar.orch;
   return scoreXML(ar.voices.map((v,k)=>({name:partName(v),program:ARR_PROGRAMS[ar.style][k],xml:linePartXML(ar.lines[k],clefFor(ar.lines[k],{...v,vocal}),{chordsOn:k===0,tempo:k===0})})));
 }
 
@@ -3896,7 +3974,8 @@ function buildMidi(withBass){
   const tracks=[midiTrack('Chord Changes',cond),midiTrack('Chords',ch)]; if(withBass) tracks.push(midiTrack('Bass',bs));
   /* the melody, or every part of the arrangement when it is showing, each on a track and channel of its own (from 3) */
   const ar=arrOn()?arrange():null, lines=ar?ar.lines.map((l,k)=>({name:partName(ar.voices[k]),notes:l,prog:ARR_PROGRAMS[ar.style][k]})):[{name:'Melody',notes:melNotes(),prog:0}];
-  lines.filter(l=>l.notes.length).forEach((l,k)=>{ const chan=2+k, evs=[{t:0,o:0,d:[0xC0|chan,l.prog]}];
+  /* channels from 3 up, skipping 10, which General MIDI keeps for drums */
+  lines.filter(l=>l.notes.length).forEach((l,k)=>{ const chan=2+k>=9?3+k:2+k, evs=[{t:0,o:0,d:[0xC0|chan,l.prog]}];
     emit(l.notes.map(n=>({s:Math.round(n.b*tpb),e:Math.round((n.b+n.n)*tpb),m:n.m,vel:k===(ar?ar.mel:0)?96:80})),evs,chan); tracks.push(midiTrack(l.name,evs)); });
   return concatBytes([Uint8Array.from([0x4D,0x54,0x68,0x64,0,0,0,6,0,1,0,tracks.length,(PPQ>>8)&255,PPQ&255]),...tracks]);
 }
@@ -3941,7 +4020,7 @@ let LIB={version:1,items:[]}, libCurrent=null;
 /* ============ untrusted state: one gate for settings and chords from saves, library files and share links ============ */
 const isBool=v=>typeof v==='boolean';
 const SANE={tonic:v=>Number.isInteger(v)&&v>=0&&v<12, mode:v=>ownKey(MODES,v), meter:v=>ownKey(METERS,v), tempo:v=>Number.isFinite(+v)&&+v>0&&v!==''&&v!==null&&typeof v!=='boolean',
-  voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), showMel:isBool, melPlay:isBool, arr:v=>ownKey(ARR_STYLES,v), arrGroup:v=>v===''||ownKey(ARR_GROUPS,v), arrShow:isBool, arrSeed:v=>Number.isInteger(v)&&v>=0&&v<1000, arrMute:v=>Array.isArray(v)&&v.length===5&&v.every(isBool), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
+  voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), showMel:isBool, melPlay:isBool, arr:v=>ownKey(ARR_STYLES,v), arrGroup:v=>v===''||ownKey(ARR_GROUPS,v), arrShow:isBool, arrSeed:v=>Number.isInteger(v)&&v>=0&&v<1000, arrMute:v=>Array.isArray(v)&&v.length>=5&&v.length<=9&&v.every(isBool), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
   pstyle:v=>ownKey(PIANO_STYLES,v), gstyle:v=>ownKey(GUITAR_STYLES,v), mood:v=>v===''||MOODS.some(m=>m.id===v),
   genres:v=>Array.isArray(v)&&v.length<=20&&v.every(g=>GENRES.some(x=>x.id===g)), vocab:v=>Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)),
   bars:v=>[4,8,12,16].includes(v), rhythm:v=>['bar','half','mixed','slow'].includes(v), level:v=>[0,1,2].includes(v), surprise:v=>Number.isFinite(v)&&v>=0&&v<=100,
@@ -4302,8 +4381,8 @@ function boot(){
     const gr=e.target.closest('[data-agroup]'), fx=e.target.closest('[data-afix]');
     if(fx){ const [kind,t]=fx.dataset.afix.split(':'); if(kind==='oct'){ pushHist(); melody=melody.map(x=>x>0?Math.min(108,Math.max(21,x+ +t)):x); commit(); toast(`Moved the tune ${+t<0?'down':'up'} an octave`); } else transpose(+t); return; }
     if(gr){ S.arrGroup=gr.dataset.agroup; arrSolo=null; }
-    else if(st){ S.arr=st.dataset.astyle; S.arrSeed=0; arrSolo=null; }
-    else if(mu){ const k=+mu.dataset.amute, m=(S.arrMute||[]).slice(0,5); while(m.length<5) m.push(false); m[k]=!m[k]; S.arrMute=m; arrSolo=null; }
+    else if(st){ S.arr=st.dataset.astyle; S.arrSeed=0; arrSolo=null; S.arrMute=Array(9).fill(false); }
+    else if(mu){ const k=+mu.dataset.amute, m=(S.arrMute||[]).slice(0,9); while(m.length<9) m.push(false); m[k]=!m[k]; S.arrMute=m; arrSolo=null; }
     else if(so){ const k=+so.dataset.asolo; arrSolo=arrSolo===k?null:k; }
     else if(a){ const w=a.dataset.aact; if(w==='again') S.arrSeed=((S.arrSeed|0)+1)%1000; else if(w==='first') S.arrSeed=0; else if(w==='close'){ S.arrShow=false; arrSolo=null; } }
     else return;
@@ -4317,7 +4396,7 @@ function boot(){
   $('#arrWhy').addEventListener('click',e=>{ const b=e.target.closest('[data-aw]'); if(!b||arrAt==null) return; const ar=arrange(), k=arrEventAt(ar,arrAt), w=b.dataset.aw;
     if(w==='close'){ arrAt=null; renderArrWhy(); return; }
     if(w==='prev'||w==='next'){ const n=ar.events[k+(w==='prev'?-1:1)]; if(n){ arrAt=n.b; renderArrWhy(); $('#arrWhy').querySelector(`[data-aw="${w}"]`)?.focus(); } return; }
-    if(w==='hear') arrHear([ar.picks[k]]); else if(w==='move') arrHear([ar.picks[k-1],ar.picks[k]]); else if(w==='alt'){ const x=arrWhy(ar,k).alt; if(x) arrHear([ar.picks[k-1],x.v].filter(Boolean)); } });
+    if(w==='hear') arrHear([arrMoment(ar,k)]); else if(w==='move') arrHear([arrMoment(ar,k-1),arrMoment(ar,k)]); else if(w==='alt'){ const x=arrWhy(ar,k).alt; if(x) arrHear([ar.picks[k-1],x.v].filter(Boolean)); } });
   $('#rows').addEventListener('click',e=>{ const p=e.target.closest('.pcell'); if(!p) return; e.stopPropagation();
     partAt={h:p.dataset.ph,b:+p.dataset.pb}; melSel=null; arrAt=null; renderChart(); renderMelPad(); renderArrWhy(); renderPartWhy();
     document.querySelector(`#rows .pcell[data-ph="${partAt.h}"][data-pb="${partAt.b}"]`)?.focus({preventScroll:true}); },true);
