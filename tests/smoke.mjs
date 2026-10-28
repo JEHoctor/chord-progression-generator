@@ -1134,6 +1134,51 @@ async function spelling() {
   check('spelling: the Chord panel spells E7 in C as E G♯ B D', tones === 'E G♯ B D', tones);
   await ctx.close();
 }
+/* faster input: number keys add the key's chords, and a MIDI keyboard names and records what it plays */
+async function fastInput() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  const load = txt => page.evaluate(txt => { S.tonic = 0; S.mode = 'ionian'; S.showMel = false; chords = parseProg(txt).chords; melody = []; melAnd = []; sel = chords[chords.length - 1].id; commit(); }, txt);
+  const chart = () => page.evaluate(() => chords.map(c => chordName(c) + ':' + c.beats).join(' '));
+  await load('C | Am');
+  await page.focus(`#rows .slot[data-id="${await page.evaluate(() => sel)}"]`);
+  await page.keyboard.press('4'); await page.keyboard.press('Shift+5'); await page.keyboard.press('Numpad2');
+  check('keys: 4, Shift+5 and keypad 2 add F, G7 and Dm after the selected chord, a bar each', await chart() === 'C:4 Am:4 F:4 G7:4 Dm:4', await chart());
+  await page.evaluate(() => { sel = chords[0].id; commit(); }); await page.focus(`#rows .slot[data-id="${await page.evaluate(() => sel)}"]`);
+  await page.keyboard.press('6');
+  check('keys: a number goes in after the selected chord, not at the end', await chart() === 'C:4 Am:4 Am:4 F:4 G7:4 Dm:4', await chart());
+  await page.keyboard.press('Control+z');
+  check('keys: one undo removes it', await chart() === 'C:4 Am:4 F:4 G7:4 Dm:4', await chart());
+  await load('C | ?');
+  await page.focus(`#rows .slot[data-id="${await page.evaluate(() => sel)}"]`); await page.keyboard.press('5');
+  check('keys: an empty slot is filled rather than added after', await chart() === 'C:4 G:4', await chart());
+  await load('C | G\n[Key: A minor]\nAm | E');
+  await page.focus(`#rows .slot[data-id="${await page.evaluate(() => sel)}"]`); await page.keyboard.press('Shift+5'); await page.keyboard.press('3');
+  check('keys: numbers follow the key in force at the selected bar (A minor: v7, then III)', await chart() === 'C:4 G:4 Am:4 E:4 Em7:4 C:4', await chart());
+  await page.click('#prog'); await page.keyboard.press('1');
+  check('keys: typing a number in a text box does not add a chord', await chart() === 'C:4 G:4 Am:4 E:4 Em7:4 C:4', await chart());
+
+  /* MIDI in, with a stand-in input since headless browsers have no devices */
+  check('midi in: the MIDI in control shows where Web MIDI exists', await page.evaluate(() => !document.querySelector('#midiInWrap').hidden && !!document.querySelector('#midiRec')));
+  await load('C | G');
+  const send = msgs => page.evaluate(msgs => msgs.forEach(m => midiInMessage(m)), msgs);
+  await page.evaluate(() => midiInUse({ id: 'test', name: 'Test keys' }));
+  await send([[0x90, 57, 90], [0x90, 60, 90], [0x90, 64, 90], [0x90, 67, 90]]);
+  const holding = await page.evaluate(() => document.querySelector('#midiHeard').textContent);
+  await send([[0x80, 64, 0], [0x90, 67, 0], [0x80, 60, 0], [0x80, 57, 0]]);
+  const fin = await page.evaluate(() => ({ keys: FINDER.keys.join(), mode: FINDER.mode, first: document.querySelector('#finder .fres.best .nm')?.textContent, heard: document.querySelector('#midiHeard').textContent }));
+  check('midi in: a held chord is named live, and when the keys come up it lands in the Chord finder with its names', holding === 'Holding Am7' && fin.keys === '57,60,64,67' && fin.mode === 'piano' && fin.first === 'Am7' && fin.heard === 'Played Am7', JSON.stringify({ holding, fin }));
+  check('midi in: with Record off, nothing is added to the chart', await chart() === 'C:4 G:4', await chart());
+  await page.check('#midiRec');
+  await send([[0x90, 53, 90], [0x90, 57, 90], [0x90, 60, 90], [0x80, 57, 0], [0x80, 53, 0], [0x80, 60, 0]]);
+  await send([[0x90, 55, 90], [0x90, 59, 90], [0x90, 62, 90], [0x90, 65, 90], [0x80, 55, 0], [0x80, 59, 0], [0x80, 62, 0], [0x80, 65, 0]]);
+  await send([[0x90, 64, 90], [0x80, 64, 0]]);
+  check('midi in: with Record on, each chord is added when the keys come up, and a single note adds nothing', await chart() === 'C:4 G:4 F:4 G7:4', await chart());
+  await send([[0x90, 52, 90], [0x90, 60, 90], [0x90, 55, 90], [0x80, 52, 0], [0x80, 55, 0], [0x80, 60, 0]]);
+  check('midi in: the lowest note played sets the bass (C/E)', await chart() === 'C:4 G:4 F:4 G7:4 C/E:4', await chart());
+  await page.uncheck('#midiRec'); await page.evaluate(() => midiInUse(null));
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1405,6 +1450,7 @@ try {
   await eighthNotes();
   await appName();
   await spelling();
+  await fastInput();
   await menus();
   await layout();
   await hardening();

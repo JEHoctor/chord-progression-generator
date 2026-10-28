@@ -295,7 +295,8 @@ body.zoomdiag .pv-grid{grid-template-columns:1fr} body.zoomdiag .pv{overflow-x:a
 .charchip small{font-weight:500;font-size:11.5px;color:var(--muted);margin-left:5px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r-inset);font-size:13.5px;font-weight:500;z-index:10;box-shadow:0 12px 32px -12px rgb(0 0 0 / .45)}
 .io-row{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding-top:2px}
-.io-pair{display:inline-flex;align-items:center;gap:6px}
+.io-pair{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
+#midiHeard{min-width:9ch;font-variant-numeric:tabular-nums}
 .io-pair select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-xs);height:30px;padding:0 8px;font-size:13px;max-width:100%}
 .library{display:block;padding:14px 18px}
 .library summary{display:flex;align-items:baseline;gap:10px;cursor:pointer;list-style:none}
@@ -1035,6 +1036,7 @@ body{padding-bottom:0}
     </details>
     <div class="io-row" role="group" aria-label="Playback extras">
       <button class="btn small" id="soundCheck" type="button" title="Test what your device can play">Sound check</button>
+      <span class="io-pair" id="midiInWrap" hidden><label class="label" for="midiIn">MIDI in</label><select id="midiIn"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select><label class="check" title="Each chord you play is added to the chart when you let go of the keys"><input type="checkbox" id="midiRec"> Record chords</label><output id="midiHeard" class="hint" aria-live="polite"></output></span>
       <span class="io-pair" id="midiOutWrap" hidden><label class="label" for="midiOut">MIDI out</label><select id="midiOut"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select></span>
     </div>
   </section>
@@ -3535,6 +3537,15 @@ function replaceAt(idx,list){
   const nw=list.map((c,i)=>({id:i===0?C.id:uid(),root:c.root,q:c.q,bass:c.bass??null,beats:parts[i],...(i===0&&C.br?{br:true}:{}),...(i===0&&C.sec?{sec:C.sec}:{})}));
   pushHist(); chords.splice(idx,1,...nw); sel=nw[0].id; commit();
 }
+/* a chord typed or played in: it fills the selected slot when that slot is empty (?), otherwise it goes in after it, a bar long */
+function addChordHere(c){
+  const idx=chords.findIndex(x=>x.id===sel), cur=chords[idx]; pushHist();
+  if(cur&&!real(cur)){ Object.assign(cur,{root:c.root,q:c.q,bass:c.bass??null}); }
+  else { const n={id:uid(),root:c.root,q:c.q,bass:c.bass??null,beats:barLen()}; chords.splice(idx<0?chords.length:idx+1,0,n); sel=n.id; }
+  commit(); return chords.find(x=>x.id===sel);
+}
+/* number keys: 1–7 add the chord on that degree of the key in force at the selected chord, Shift adds its seventh chord */
+function degreeChord(d,seventh){ const idx=Math.max(0,chords.findIndex(x=>x.id===sel)); return inKey(keyAt(idx),()=>diatonic(S.mode,d,seventh?4:3)); }
 function rebar(oldL,newL){
   let pos=0; const out=[];
   for(let i=0;i<chords.length;){
@@ -4187,9 +4198,9 @@ function buildMidi(withBass){
    (or the end of the chart) sends note-offs plus All Notes Off on every channel. */
 const MIDIOUT={access:null,out:null,held:[]};
 async function midiConnect(){
-  if(MIDIOUT.access){ fillMidiOuts(); return true; }
-  try{ MIDIOUT.access=await navigator.requestMIDIAccess(); MIDIOUT.access.onstatechange=fillMidiOuts; fillMidiOuts(); return true; }
-  catch(e){ const sel=$('#midiOut'); sel.innerHTML='<option value="">Not allowed here</option>'; sel.disabled=true;
+  if(MIDIOUT.access){ fillMidiOuts(); fillMidiIns(); return true; }
+  try{ MIDIOUT.access=await navigator.requestMIDIAccess(); MIDIOUT.access.onstatechange=()=>{ fillMidiOuts(); fillMidiIns(); }; fillMidiOuts(); fillMidiIns(); return true; }
+  catch(e){ const sel=$('#midiOut'); sel.innerHTML='<option value="">Not allowed here</option>'; sel.disabled=true; const si=$('#midiIn'); si.innerHTML=sel.innerHTML; si.disabled=true;
     toast('MIDI access was blocked. Allow MIDI for this page, or open the page on its own in Chrome or Edge.'); return false; }
 }
 function fillMidiOuts(){ const sel=$('#midiOut'), cur=MIDIOUT.out?MIDIOUT.out.id:''; const outs=[...MIDIOUT.access.outputs.values()];
@@ -4200,6 +4211,29 @@ function midiNotesOff(){ MIDIOUT.held.forEach(m=>midiSend([0x80,m,0])); MIDIOUT.
 function midiChord(v){ if(!MIDIOUT.out) return; midiNotesOff(); if(!v) return; v.all.forEach(m=>midiSend([0x90,m,88])); MIDIOUT.held=v.all.slice(); }
 function midiAllOff(){ midiNotesOff(); if(MIDIOUT.out) for(let c=0;c<16;c++){ midiSend([0xB0|c,123,0]); midiSend([0xB0|c,120,0]); } }
 
+/* MIDI in: a keyboard's notes name a chord. What the hands hold at their fullest is the chord; it shows in the Chord finder
+   (with every possible name) and, with Record on, is added to the chart when all the keys come up. */
+const MIDIIN={inp:null,held:new Set(),peak:[],rec:false};
+function fillMidiIns(){ const sel=$('#midiIn'); if(!sel||!MIDIOUT.access) return; const cur=MIDIIN.inp?MIDIIN.inp.id:'', ins=[...MIDIOUT.access.inputs.values()];
+  sel.innerHTML='<option value="">Off</option>'+ins.map(o=>`<option value="${esc(o.id)}">${esc(o.name||'MIDI input')}</option>`).join('')+(ins.length?'':'<option value="" disabled>No MIDI inputs found</option>');
+  sel.value=ins.some(o=>o.id===cur)?cur:''; midiInUse(sel.value?MIDIOUT.access.inputs.get(sel.value):null); }
+function midiInUse(inp){ if(MIDIIN.inp&&MIDIIN.inp!==inp) MIDIIN.inp.onmidimessage=null; MIDIIN.inp=inp; MIDIIN.held.clear(); MIDIIN.peak=[];
+  if(inp) inp.onmidimessage=e=>midiInMessage(e.data); renderMidiHeard(); }
+function midiInMessage(d){
+  const st=d[0]&0xF0, m=d[1];
+  if(st===0x90&&d[2]>0){ MIDIIN.held.add(m); if(MIDIIN.held.size>=MIDIIN.peak.length) MIDIIN.peak=[...MIDIIN.held]; }
+  else if(st===0x80||st===0x90){ MIDIIN.held.delete(m); }
+  else return;
+  if(MIDIIN.held.size) { renderMidiHeard(); return; }
+  /* all keys up: the chord is complete */
+  const notes=MIDIIN.peak; MIDIIN.peak=[];
+  if(notes.length>=2){ FINDER.mode='piano'; FINDER.keys=[...notes].sort((a,b)=>a-b); renderFinder();
+    const best=detectChords(notes)[0]; if(best&&MIDIIN.rec){ const n=addChordHere(best.c); toast(`Recorded ${chordName(n)}`); } }
+  renderMidiHeard(notes);
+}
+function renderMidiHeard(last){ const el=$('#midiHeard'); if(!el) return; const now=[...MIDIIN.held];
+  const notes=now.length?now:last||[], best=notes.length>=2?detectChords(notes)[0]:null;
+  el.textContent=!MIDIIN.inp?'':best?`${now.length?'Holding':'Played'} ${chordName(best.c)}`:notes.length?notes.slice().sort((a,b)=>a-b).map(x=>prettyNote(spell(mod(x)))).join(' '):'Play a chord'; }
 /* share links: key, mode, meter, tempo and the chart text (sections and beat counts included) as base64url JSON after #s= */
 function b64url(str){ let s=''; new TextEncoder().encode(str).forEach(x=>s+=String.fromCharCode(x)); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function unb64url(code){ const s=atob(code.replace(/-/g,'+').replace(/_/g,'/')); return new TextDecoder().decode(Uint8Array.from(s,ch=>ch.charCodeAt(0))); }
@@ -4352,7 +4386,11 @@ function initIO(){
   $('#copyboxDone').onclick=()=>closeBox('#copybox');
   $('#copybox').addEventListener('keydown',e=>{ if(e.key==='Escape') closeBox('#copybox'); });
   document.addEventListener('pointerdown',e=>{ const cb=$('#copybox'); if(!cb.hidden&&!cb.contains(e.target)&&!e.target.closest('#shareLink,#copy,#exportMenu')) cb.hidden=true; });
-  if('requestMIDIAccess' in navigator){ $('#midiOutWrap').hidden=false;
+  if('requestMIDIAccess' in navigator){ $('#midiOutWrap').hidden=false; $('#midiInWrap').hidden=false;
+    $('#midiIn').onchange=async e=>{ const v=e.target.value;
+      if(v==='__connect'){ e.target.value=''; midiInUse(null); await midiConnect(); return; }
+      midiInUse(v&&MIDIOUT.access?MIDIOUT.access.inputs.get(v):null); if(MIDIIN.inp) toast(`Listening to ${MIDIIN.inp.name||'MIDI input'}: play a chord`); };
+    $('#midiRec').onchange=e=>{ MIDIIN.rec=e.target.checked; };
     $('#midiOut').onchange=async e=>{ const v=e.target.value; midiAllOff();
       if(v==='__connect'){ e.target.value=''; MIDIOUT.out=null; await midiConnect(); return; }
       MIDIOUT.out=v&&MIDIOUT.access?MIDIOUT.access.outputs.get(v):null; if(MIDIOUT.out) toast(`Sending to ${MIDIOUT.out.name||'MIDI output'} when you press Play`); }; }
@@ -4756,6 +4794,9 @@ function boot(){
     if(e.altKey&&(e.key==='ArrowLeft'||e.key==='ArrowRight')&&idx>=0){ e.preventDefault(); const j=idx+(e.key==='ArrowRight'?1:-1);
       if(j>=0&&j<chords.length){ pushHist(); [chords[idx],chords[j]]=[chords[j],chords[idx]]; commit(); } return; }
     if((e.key==='Delete'||e.key==='Backspace')&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&idx>=0){ e.preventDefault(); deleteChord(idx); document.querySelector(`#rows .slot[data-id="${sel}"]`)?.focus(); return; }
+    const dg=/^(?:Digit|Numpad)([1-7])$/.exec(e.code);
+    if(dg&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!e.target.closest('.mcell,[data-ph],.pcell')){ const c=degreeChord(+dg[1]-1,e.shiftKey); if(!c) return; e.preventDefault();
+      const n=addChordHere(c); playOne(n); document.querySelector(`#rows .slot[data-id="${sel}"]`)?.focus(); toast(`Added ${chordName(n)}`); return; }
     if((e.key==='e'||e.key==='E')&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&idx>=0){ e.preventDefault(); openPicker(chords[idx].id); return; }
     if(e.key==='ArrowRight'&&idx<chords.length-1){ sel=chords[idx+1].id; renderAll(); }
     if(e.key==='ArrowLeft'&&idx>0){ sel=chords[idx-1].id; renderAll(); }
