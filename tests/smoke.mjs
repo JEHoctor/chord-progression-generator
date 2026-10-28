@@ -888,6 +888,67 @@ async function arranging() {
   await ph.ctx.close();
 }
 
+async function voicesExplained() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  const tune = [64, 62, 60, 62, 64, 64, 64, -1, 65, 65, 62, 62, 60, -1, -1, -1];
+  await page.evaluate(t => { S.tonic = 0; S.mode = 'ionian'; S.showMel = true; S.arrShow = true; S.arr = 'choir'; S.arrGroup = ''; S.arrSeed = 0; chords = parseProg('C | Am | Dm7 G7 | C').chords; melody = t.slice(); renderAll(); }, tune);
+  const ch = await page.evaluate(() => { const ar = arrange(); let par = 0; for (let k = 1; k < ar.picks.length; k++) { const a = ar.picks[k - 1], b = ar.picks[k]; for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) { const mi = b[i] - a[i], mj = b[j] - a[j], ia = mod(a[i] - a[j]), ib = mod(b[i] - b[j]); if (mi && mj && Math.sign(mi) === Math.sign(mj) && ia === ib && (ia === 7 || ia === 0)) par++; } }
+    return { group: ar.group, names: ar.voices.map(v => v.name).join(), bad: arrOutOfRange(ar).length, par, root: ar.picks.every((v, i) => mod(v[3]) === chords[ar.events[i].ci].root), ok: /within its range for mixed choir/.test(document.querySelector('#arrBar').textContent) }; });
+  check('voices: Choir is SATB by default, in range, roots in the bass, no parallel fifths or octaves', ch.group === 'satb' && ch.names === 'Soprano (tune),Alto,Tenor,Bass' && ch.bad === 0 && ch.par === 0 && ch.root && ch.ok, JSON.stringify(ch));
+  await page.click('#arrBar [data-agroup="ssaa"]');
+  const ss = await page.evaluate(t => { melody = t.map(x => x > 0 ? x + 7 : x); renderAll(); const ar = arrange(); return { g: S.arrGroup, names: ar.voices.map(v => v.name).join(), inR: ar.lines.every((l, k) => k === ar.mel || l.every(n => n.m >= ar.voices[k].range[0] - 3 && n.m <= ar.voices[k].range[1] + 3)), title: document.querySelector('#arrBar [data-amute="1"]').title }; }, tune);
+  check('voices: choosing SSAA renames the parts and keeps them near their ranges; a chip shows its range', ss.g === 'ssaa' && ss.names === 'Soprano 1 (tune),Soprano 2,Alto 1,Alto 2' && ss.inR && /Range C4–F5/.test(ss.title), JSON.stringify(ss));
+  // barbershop picks men's or women's voices to fit the tune
+  const auto = await page.evaluate(t => { S.arr = 'barber'; S.arrGroup = ''; melody = t.map(x => x > 0 ? x - 7 : x); const low = arrange().group; melody = t.map(x => x > 0 ? x + 7 : x); const high = arrange().group; melody = t.slice(); renderAll(); return { low, high }; }, tune);
+  check('voices: barbershop chooses TTBB for a low tune and SSAA for a high one', auto.low === 'ttbb' && auto.high === 'ssaa', JSON.stringify(auto));
+  // range trouble, flagged and fixed
+  await page.evaluate(t => { S.arr = 'choir'; S.arrGroup = 'ttbb'; melody = t.map(x => x > 0 ? x + 12 : x); renderAll(); }, tune);
+  const rg = await page.evaluate(() => ({ text: document.querySelector('#arrBar .ab-range')?.textContent || '', dots: document.querySelectorAll('#rows .mcell.oor').length, fix: [...document.querySelectorAll('#arrBar [data-afix]')].map(b => b.dataset.afix + '|' + b.textContent) }));
+  check('voices: notes out of a singer’s range are counted, named and marked in the lanes', /outside their singer’s range/.test(rg.text) && /Tenor 1: \d+ notes above D3–A4, F5 at worst \(bar 3\)/.test(rg.text) && rg.dots > 5, JSON.stringify(rg));
+  check('voices: it offers to move the tune down an octave', rg.fix.some(f => f.startsWith('oct:-12|Move the tune down')), JSON.stringify(rg.fix));
+  await page.click('#arrBar [data-afix="oct:-12"]');
+  check('voices: the fix moves the tune and clears the flags (and can be undone)', await page.evaluate(t => melody[0] === t[0] && !document.querySelector('#rows .oor') && /within its range/.test(document.querySelector('#arrBar').textContent), tune));
+  await page.evaluate(() => { undo(); });
+  check('voices: undo puts the tune back up', await page.evaluate(() => melody[0] === 76));
+  const kf = await page.evaluate(() => { const b = document.querySelector('#arrBar [data-afix^="key:"]'); return b ? { t: +b.dataset.afix.split(':')[1], label: b.textContent, before: arrOutOfRange(arrange()).length } : null; });
+  if (kf) { await page.click('#arrBar [data-afix^="key:"]'); }
+  check('voices: when a key would suit the singers better, it offers it, and transposing helps', kf && /^Transpose to /.test(kf.label) && await page.evaluate(n => arrOutOfRange(arrange()).length < n, kf.before), JSON.stringify(kf));
+  // the why card
+  await page.evaluate(t => { S.tonic = 0; S.mode = 'ionian'; chords = parseProg('C | Am | Dm7 G7 | C').chords; S.arr = 'barber'; S.arrGroup = ''; melody = t.slice(); melody[3] = 62; renderAll(); }, tune);
+  await page.click('#rows .acell[data-ab="1"][data-av="3"]');
+  const why = await page.evaluate(() => { const el = document.querySelector('#arrWhy'); return { vis: !el.hidden, head: el.querySelector('.mp-head').textContent, rows: [...el.querySelectorAll('.aw-row')].map(r => r.querySelector('.aw-n').textContent + '=' + r.querySelector('.aw-p').textContent + '/' + r.querySelector('.aw-role').textContent), why: el.querySelector('.aw-why').textContent, alt: el.querySelector('.aw-alt')?.textContent || '', col: document.querySelectorAll('#rows .awhy').length }; });
+  check('why: tapping a part’s note opens a card for that moment and outlines its column', why.vis && /Bar 1, beat 2 · over C · tune D/.test(why.head) && why.rows.length === 4 && why.col === 4, JSON.stringify(why));
+  check('why: it names each note’s job and says why the chord was chosen', why.rows[0] === 'Tenor=F4/the 7th of G7' && /The tune’s D is not in C, so it gets G7, the chord’s own dominant/.test(why.why) && /Bass sings the root/.test(why.why), JSON.stringify(why));
+  check('why: it shows the next-best voicing and what it loses on', /^Next best: .*It loses because it /.test(why.alt), why.alt);
+  check('why: a dominant borrowed from another key is spelled in its own key (E7 has G♯, not A♭)', /G♯4[^(]*\(E7\)/.test(why.alt) && !/A♭/.test(why.alt), why.alt);
+  const hear = await page.evaluate(() => { const o = voiceNote, n = []; window.voiceNote = m => n.push(m); document.querySelector('#arrWhy [data-aw="hear"]').click(); const one = n.length; document.querySelector('#arrWhy [data-aw="move"]').click(); window.voiceNote = o; return { one, move: n.length - one }; });
+  check('why: Hear it plays the voicing, Hear the move plays the one before and then this one', hear.one === 4 && hear.move === 8, JSON.stringify(hear));
+  await page.click('#arrWhy [data-aw="next"]');
+  check('why: the arrows step to the next change', await page.evaluate(() => /beat 3/.test(document.querySelector('#arrWhy .mp-head').textContent)));
+  const jz = await page.evaluate(() => { S.arr = 'close'; renderAll(); const ar = arrange(); return arrWhy(ar, 1).reasons.join(' '); });
+  check('why: close harmony explains how it built the chord (a 9th taking the root’s place)', /The tune’s D is the chord’s 9th, a colour note\. It takes the place of the root/.test(jz) && /a fourth note is added, its 6th/.test(jz), jz);
+  await page.click('#rows .mcell[data-mb="5"]');
+  check('why: opening the note pad closes the card', await page.evaluate(() => document.querySelector('#arrWhy').hidden && !document.querySelector('#melPad').hidden));
+  await page.click('#rows .acell[data-ab="0"][data-av="1"]');
+  await page.keyboard.press('Escape');
+  check('why: Escape closes the card', await page.evaluate(() => document.querySelector('#arrWhy').hidden));
+  // the score names the parts plainly and sets a tenor's clef an octave down
+  const xr = await page.evaluate(() => { S.arr = 'choir'; S.arrGroup = 'satb'; renderAll(); const d = new DOMParser().parseFromString(buildArrXML(), 'application/xml');
+    return { names: [...d.querySelectorAll('part-name')].map(n => n.textContent).join(), clefs: [...d.querySelectorAll('part')].map(p => p.querySelector('clef sign').textContent + (p.querySelector('clef clef-octave-change')?.textContent || '')).join() }; });
+  check('voices: the choir score names Soprano, Alto, Tenor, Bass, with the tenor in octave treble clef', xr.names === 'Soprano,Alto,Tenor,Bass' && xr.clefs === 'G,G,G-1,F' && await page.evaluate(() => { S.arrGroup = 'ttbb'; const d = new DOMParser().parseFromString(buildArrXML(), 'application/xml'); return [...d.querySelectorAll('part')].map(p => p.querySelector('clef sign').textContent).join() === 'G,G,F,F'; }), JSON.stringify(xr));
+  check('no console errors (voices and why)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+  const ph = await openPage({ viewport: { width: 390, height: 844 } });
+  await ph.page.goto(URL_);
+  await ph.page.evaluate(t => { S.tonic = 0; S.mode = 'ionian'; S.showMel = true; S.arrShow = true; S.arr = 'choir'; S.arrGroup = ''; chords = parseProg('C | Am | Dm7 G7 | C').chords; melody = t.slice(); selectTab('phone', 'p-chart'); renderAll(); }, tune);
+  await ph.page.click('#rows .acell[data-ab="4"][data-av="2"]');
+  const pw = await ph.page.evaluate(() => { const r = document.querySelector('#arrWhy').getBoundingClientRect(); return { w: r.width <= innerWidth, h: r.height < innerHeight * .6, noH: document.documentElement.scrollWidth <= innerWidth }; });
+  check('why: on a phone the card fits the width and leaves the chart visible', pw.w && pw.h && pw.noH, JSON.stringify(pw));
+  await ph.page.screenshot({ path: path.join(OUT, 'why-phone.png') });
+  await ph.ctx.close();
+}
+
 // the top-bar menus must be visible and on top at every width, not just "open"
 async function menus() {
   for (const [w, h, tag] of [[1440, 900, 'desktop'], [1280, 720, 'small laptop'], [900, 900, 'tablet'], [390, 844, 'phone']]) {
@@ -1079,6 +1140,7 @@ try {
   await ceilings();
   await melodyLane();
   await arranging();
+  await voicesExplained();
   await menus();
   await layout();
   await hardening();
