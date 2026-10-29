@@ -1503,6 +1503,33 @@ async function playbackFeedback() {
   check('feedback: no page errors', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 }
+async function liveChord() {
+  const { ctx, page } = await openPage();
+  await page.goto(URL_);
+  check('live: the live chord bar is hidden until a MIDI input is chosen', await page.evaluate(() => document.querySelector('#live').hidden));
+  const r = await page.evaluate(async () => {
+    const w = ms => new Promise(r => setTimeout(r, ms)), on = m => midiInMessage([0x90, m, 90]), off = m => midiInMessage([0x80, m, 0]), ped = v => midiInMessage([0xB0, 64, v]);
+    const name = () => document.querySelector('#live .lv-name')?.textContent || '', o = {};
+    chords = parseProg('C | Am | F | G').chords; S.tonic = 0; S.mode = 'ionian'; sel = chords[3].id; renderAll();
+    midiInUse({ name: 'Test keyboard', onmidimessage: null });
+    o.shown = !document.querySelector('#live').hidden; o.idle = document.querySelector('#live').textContent;
+    on(48); on(52); await w(20); o.early = name(); on(55); on(58); await w(150);
+    o.held = name(); o.num = document.querySelector('#live .lv-num')?.textContent; o.lit = document.querySelector('#live').classList.contains('on'); o.bg = document.querySelector('#live').style.getPropertyValue('--k');
+    [48, 52, 55, 58].forEach(off); await w(150); o.last = name(); o.tag = document.querySelector('#live .lv-tag').textContent;
+    ped(127); on(48); on(52); on(55); on(57); await w(150); o.c6 = name(); o.also = document.querySelector('#live small')?.textContent || ''; [48, 52, 55, 57].forEach(off); on(41); await w(150); o.pedal = name();
+    off(41); ped(0); on(43); on(47); on(50); await w(150); o.lifted = name();
+    const n = chords.length; document.querySelector('#live [data-live-add]').click(); o.added = chords.length === n + 1 && chordName(chords.find(c => c.id === sel)) === 'G';
+    [43, 47, 50].forEach(off); midiInUse(null); o.gone = document.querySelector('#live').hidden; return o;
+  });
+  check('live: choosing an input shows the bar, asking for a chord', r.shown && /Play a chord/.test(r.idle), JSON.stringify(r));
+  check('live: the name waits for the chord to settle, then shows it, lit, with its numeral in the key and its colour', r.early === '' && r.held === 'C7' && r.num === 'V7/IV' && r.lit && !!r.bg, JSON.stringify(r));
+  check('live: after the keys are let go the last chord stays, marked Last', r.last === 'C7' && r.tag === 'Last', JSON.stringify(r));
+  check('live: notes held by the sustain pedal count, with other names for the same notes', r.c6 === 'C6' && /Also could be Am7\/C/.test(r.also) && r.pedal === 'Fmaj9', JSON.stringify(r));
+  check('live: lifting the pedal drops the sustained notes', r.lifted === 'G', JSON.stringify(r));
+  check('live: Add to chart puts the chord after the selected one, and the bar goes when MIDI in is off', r.added && r.gone, JSON.stringify(r));
+  check('live: no page errors', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1787,6 +1814,7 @@ try {
   await customColours();
   await textSize();
   await playbackFeedback();
+  await liveChord();
   await menus();
   await layout();
   await hardening();

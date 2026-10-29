@@ -565,6 +565,20 @@ html{scroll-padding-bottom:calc(var(--dock-h,76px) + 16px)}
 .dock .play-big{height:calc(48px*var(--fs,1));min-width:132px;justify-content:center;border-radius:var(--r-pill);font-size:calc(16px*var(--fs,1));font-weight:700;background:var(--accent);border-color:var(--accent);color:var(--accent-ink);box-shadow:0 6px 18px -8px var(--accent)}
 .dock .play-big:hover{filter:brightness(1.08);background:var(--accent)}
 .dock .now{display:flex;flex-direction:column;line-height:1.15;min-width:64px}
+/* live chord: what the MIDI keyboard is playing, named as you play, above the Play bar */
+.live{display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;padding:2px 0 10px;margin-bottom:10px;border-bottom:1px solid color-mix(in srgb,currentColor 18%,transparent)}
+.live .lv-tag{display:flex;align-items:center;gap:6px;font-size:calc(12px*var(--fs,1));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--stage-mute,var(--muted))}
+.live .lv-tag i{width:9px;height:9px;border-radius:50%;background:currentColor;opacity:.45}
+.live.on .lv-tag i{background:var(--play,#e33);opacity:1;box-shadow:0 0 0 3px color-mix(in srgb,var(--play,#e33) 30%,transparent)}
+.live .lv-name{font-family:var(--f-chord);font-weight:900;font-size:calc(40px*var(--fs,1));line-height:1;min-width:3ch;padding:4px 12px;border-radius:var(--r-xs,6px);background:var(--k,transparent);color:var(--k-ink,inherit)}
+.live:not(.on) .lv-name{opacity:.75}
+.live .lv-idle{font-size:calc(16px*var(--fs,1));color:var(--stage-mute,var(--muted))}
+.live .lv-num{font-family:var(--f-mono);font-size:calc(18px*var(--fs,1));font-weight:600}
+.live .lv-txt{flex:1 1 260px;min-width:0;font-size:calc(14px*var(--fs,1));line-height:1.4}
+.live .lv-txt small{display:block;font-size:calc(13px*var(--fs,1));color:var(--stage-mute,var(--muted))}
+.live .lv-kb{--ink:#1b1b1b;--surface:#fafaf7;--muted:#8a8a8a;flex:0 0 auto;width:calc(220px*var(--fs,1))}
+.live .lv-kb svg{display:block;width:100%;height:auto}
+@media (max-width:640px){ .live .lv-kb{display:none} .live .lv-name{font-size:calc(32px*var(--fs,1))} .live .lv-txt{flex-basis:100%;order:5} .live [data-live-add]{margin-left:auto} }
 .dock .now b{font-size:calc(18px*var(--fs,1));letter-spacing:-.02em}
 .dock-opts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;flex:1 1 auto}
 .tempo-mini{display:inline-flex;align-items:center;gap:6px;font-weight:600}
@@ -1199,6 +1213,7 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
   </div>
 </div>
 <div class="dock" id="dock" role="region" aria-label="Play and export">
+  <div class="live" id="live" hidden role="region" aria-label="Live chord from MIDI in"></div>
   <div class="dock-in">
     <button class="btn play-big" id="play" type="button"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>Play</button>
     <div class="now" aria-live="polite"><span class="label">Now</span><b id="nowChord">–</b></div>
@@ -3864,7 +3879,7 @@ function renderFinder(){
   h+=`</div></div>`;
   el.innerHTML=h; el._res=res;
 }
-function renderAll(){ PLAN=null; guitarPlan.cache=null; renderControls(); renderTension(); if(melSel){ const tot=chords.reduce((a,c)=>a+c.beats,0); if(!S.showMel||!tot) melSel=null; else { const b=Math.min(melSel.b,tot-1); melSel={a:Math.min(melSel.a,tot-1),b,h:melSplit(b)?melSel.h||0:0}; } } renderChart(); renderFormBar(); renderArrBar(); renderMelPad(); renderArrWhy(); renderPartWhy(); renderVLX(); renderDetail(); renderSubs(); renderPalette(); renderFinder(); renderDoor(); renderIdeas(); renderNext(); const pt=serialize(); $('#prog').value=pt; $('#prog').rows=Math.min(14,Math.max(3,pt.split('\n').length+1));  resyncPlay(); }
+function renderAll(){ PLAN=null; guitarPlan.cache=null; renderControls(); renderTension(); if(melSel){ const tot=chords.reduce((a,c)=>a+c.beats,0); if(!S.showMel||!tot) melSel=null; else { const b=Math.min(melSel.b,tot-1); melSel={a:Math.min(melSel.a,tot-1),b,h:melSplit(b)?melSel.h||0:0}; } } renderChart(); renderFormBar(); renderArrBar(); renderMelPad(); renderArrWhy(); renderPartWhy(); renderVLX(); renderDetail(); renderSubs(); renderPalette(); renderFinder(); renderDoor(); renderIdeas(); renderNext(); const pt=serialize(); $('#prog').value=pt; $('#prog').rows=Math.min(14,Math.max(3,pt.split('\n').length+1)); renderLive(); resyncPlay(); }
 
 /* ============ front door ============ */
 /* a fresh visit opens on an example with some colour in it, and the Create panel opens on "I have chords" */
@@ -4752,17 +4767,20 @@ function midiAllOff(){ midiNotesOff(); if(MIDIOUT.out) for(let c=0;c<16;c++){ mi
 
 /* MIDI in: a keyboard's notes name a chord. What the hands hold at their fullest is the chord; it shows in the Chord finder
    (with every possible name) and, with Record on, is added to the chart when all the keys come up. */
-const MIDIIN={inp:null,held:new Set(),peak:[],rec:false};
+const MIDIIN={inp:null,held:new Set(),peak:[],rec:false,pedal:false,sus:new Set(),last:null};
 function fillMidiIns(){ const sel=$('#midiIn'); if(!sel||!MIDIOUT.access) return; const cur=MIDIIN.inp?MIDIIN.inp.id:'', ins=[...MIDIOUT.access.inputs.values()];
   sel.innerHTML='<option value="">Off</option>'+ins.map(o=>`<option value="${esc(o.id)}">${esc(o.name||'MIDI input')}</option>`).join('')+(ins.length?'':'<option value="" disabled>No MIDI inputs found</option>');
   sel.value=ins.some(o=>o.id===cur)?cur:''; midiInUse(sel.value?MIDIOUT.access.inputs.get(sel.value):null); }
-function midiInUse(inp){ if(MIDIIN.inp&&MIDIIN.inp!==inp) MIDIIN.inp.onmidimessage=null; MIDIIN.inp=inp; MIDIIN.held.clear(); MIDIIN.peak=[];
+function midiInUse(inp){ if(MIDIIN.inp&&MIDIIN.inp!==inp) MIDIIN.inp.onmidimessage=null; MIDIIN.inp=inp; MIDIIN.held.clear(); MIDIIN.peak=[]; MIDIIN.sus.clear(); MIDIIN.pedal=false; MIDIIN.last=null; renderLive();
   if(inp) inp.onmidimessage=e=>midiInMessage(e.data); renderMidiHeard(); }
 function midiInMessage(d){
   const st=d[0]&0xF0, m=d[1];
-  if(st===0x90&&d[2]>0){ MIDIIN.held.add(m); if(MIDIIN.held.size>=MIDIIN.peak.length) MIDIIN.peak=[...MIDIIN.held]; }
-  else if(st===0x80||st===0x90){ MIDIIN.held.delete(m); }
+  /* the sustain pedal: keys let go while it is down keep sounding, so they count towards the live chord until it lifts */
+  if(st===0xB0&&m===64){ MIDIIN.pedal=d[2]>=64; if(!MIDIIN.pedal) MIDIIN.sus.clear(); liveSoon(); return; }
+  if(st===0x90&&d[2]>0){ MIDIIN.held.add(m); MIDIIN.sus.delete(m); if(MIDIIN.held.size>=MIDIIN.peak.length) MIDIIN.peak=[...MIDIIN.held]; }
+  else if(st===0x80||st===0x90){ MIDIIN.held.delete(m); if(MIDIIN.pedal) MIDIIN.sus.add(m); }
   else return;
+  liveSoon();
   if(MIDIIN.held.size) { renderMidiHeard(); return; }
   /* all keys up: the chord is complete */
   const notes=MIDIIN.peak; MIDIIN.peak=[];
@@ -4773,6 +4791,38 @@ function midiInMessage(d){
 function renderMidiHeard(last){ const el=$('#midiHeard'); if(!el) return; const now=[...MIDIIN.held];
   const notes=now.length?now:last||[], best=notes.length>=2?detectChords(notes)[0]:null;
   el.textContent=!MIDIIN.inp?'':best?`${now.length?'Holding':'Played'} ${chordName(best.c)}`:notes.length?notes.slice().sort((a,b)=>a-b).map(x=>prettyNote(spell(mod(x)))).join(' '):'Play a chord'; }
+/* ---- live chord: names what the MIDI keyboard is sounding as you play ----
+   It reads in the key where Add to chart would put the chord (the selected chord's), colours it the way the chart does, and
+   keeps the last chord on screen after you let go. Changes settle for a moment first, so a chord pressed key by key, or a
+   change of hand shape, doesn't flicker through every in-between name. */
+const LIVE_SETTLE=70;
+const liveNotes=()=>[...new Set([...MIDIIN.held,...MIDIIN.sus])].sort((a,b)=>a-b);
+function liveSoon(){ clearTimeout(liveSoon.h); liveSoon.h=setTimeout(renderLive,LIVE_SETTLE); }
+function liveKey(){ const i=chords.findIndex(x=>x.id===sel); return keyAt(i<0?chords.length-1:i); }
+function renderLive(){
+  const el=$('#live'); if(!el) return;
+  if(!MIDIIN.inp){ el.hidden=true; el.innerHTML=''; return; }
+  el.hidden=false;
+  const ns=liveNotes(), on=ns.length>0;
+  if(ns.length>=2){ const r=inKey(liveKey(),()=>detectChords(ns)); if(r.length) MIDIIN.last={notes:ns,res:r}; }
+  const L=MIDIIN.last, tag=`<span class="lv-tag"><i></i>${on||!L?'Live':'Last'}</span>`;
+  el.classList.toggle('on',on);
+  if(on&&ns.length<2||!L){
+    el.innerHTML=tag+(ns.length===1?`<span class="lv-name">${esc(prettyNote(inKey(liveKey(),()=>spell(mod(ns[0])))))}</span><span class="lv-txt">One note. Add another to make a chord.</span>`:`<span class="lv-idle">Play a chord on your MIDI keyboard to see its name here.</span>`);
+    el.style.removeProperty('--k'); el.style.removeProperty('--k-ink'); return; }
+  inKey(liveKey(),()=>{
+    const c=L.res[0].c, a=analyze0(c), job=jobOf0(c), simple=S.simple&&!S.simpleTheory;
+    const k=S.colorBy==='job'||S.simple?job:a.kind, col=colorOf(k);
+    el.style.setProperty('--k',col); el.style.setProperty('--k-ink',inkFor(col));
+    const also=L.res.slice(1).filter(x=>x.sc<=L.res[0].sc+1.2).slice(0,2).map(x=>chordName0(x.c));
+    const lo=Math.min(48,12*Math.floor(L.notes[0]/12)), hi=Math.max(lo+35,12*Math.ceil((L.notes[L.notes.length-1]+1)/12)-1);
+    el.innerHTML=tag+`<span class="lv-name" aria-live="polite">${chordHTML(c)}</span>`
+      +`<span class="lv-txt">${simple?'':`<span class="lv-num">${esc(a.num)}</span> `}${esc(simple?jobSentence0(c):a.note)}`
+      +`${also.length?`<small>Also could be ${esc(also.join(' or '))}</small>`:''}</span>`
+      +`<span class="lv-kb">${finderKeyboard(L.notes,lo,hi,false)}</span>`
+      +`<button type="button" class="btn small primary" data-live-add>Add to chart</button>`; });
+}
+function liveAdd(){ const L=MIDIIN.last; if(!L) return; const n=addChordHere(L.res[0].c); toast(`Added ${chordName(n)}`); renderLive(); }
 /* share links: key, mode, meter, tempo and the chart text (sections and beat counts included) as base64url JSON after #s= */
 function b64url(str){ let s=''; new TextEncoder().encode(str).forEach(x=>s+=String.fromCharCode(x)); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function unb64url(code){ const s=atob(code.replace(/-/g,'+').replace(/_/g,'/')); return new TextDecoder().decode(Uint8Array.from(s,ch=>ch.charCodeAt(0))); }
@@ -4931,6 +4981,7 @@ function initIO(){
       if(v==='__connect'){ e.target.value=''; midiInUse(null); await midiConnect(); return; }
       midiInUse(v&&MIDIOUT.access?MIDIOUT.access.inputs.get(v):null); if(MIDIIN.inp) toast(`Listening to ${MIDIIN.inp.name||'MIDI input'}: play a chord`); };
     $('#midiRec').onchange=e=>{ MIDIIN.rec=e.target.checked; };
+    $('#live').onclick=e=>{ if(e.target.closest('[data-live-add]')) liveAdd(); };
     $('#midiOut').onchange=async e=>{ const v=e.target.value; midiAllOff();
       if(v==='__connect'){ e.target.value=''; MIDIOUT.out=null; await midiConnect(); return; }
       MIDIOUT.out=v&&MIDIOUT.access?MIDIOUT.access.outputs.get(v):null; if(MIDIOUT.out) toast(`Sending to ${MIDIOUT.out.name||'MIDI output'} when you press Play`); }; }
