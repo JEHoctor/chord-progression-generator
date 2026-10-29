@@ -211,6 +211,12 @@ body.simple .j-home{--k:var(--t-home)} body.simple .j-away{--k:var(--t-bor)} bod
 .nextpick .np .nm{font-family:var(--f-chord);font-weight:800;font-size:30px;line-height:1}
 .nextpick .np p{margin:0;font-size:14px;line-height:1.45}
 .nextpick .np .btns{display:flex;gap:6px;margin-top:auto}
+.tune-ideas{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.tune-ideas .ti-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:4px}
+.tune-ideas .item{grid-template-columns:minmax(0,1fr)}
+.tune-ideas .item .btns{grid-column:1;grid-row:auto;flex-wrap:wrap;margin-top:4px}
+.tune-ideas .ti-t{font-weight:600}
+.tune-ideas .ti-spot{font-size:12.5px;color:var(--muted)}
 .hearback{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
 .hearback select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-xs);height:28px;padding:0 6px;font-size:13px;color:var(--ink)}
 .door-in{display:flex;gap:8px}
@@ -2853,7 +2859,7 @@ function renderMelPad(){
       <button type="button" class="btn small" data-mp="hold" ${b>0&&!h?'':'disabled'} title="Hold the note before (−)">Hold –</button><button type="button" class="btn small" data-mp="rest" ${h?'disabled':''} title="Rest (.)">Rest</button>
       <button type="button" class="btn small" data-mp="split" title="Two notes in this beat (/)" aria-pressed="${split}">${split?'Join the beat':'Split the beat ½'}</button>
       <button type="button" class="btn small" data-mp="prev" aria-label="Previous beat">${IC.left}</button><button type="button" class="btn small" data-mp="next" aria-label="Next beat">${IC.right}</button>
-      ${rg?`<button type="button" class="btn small primary" data-mp="harm">Suggest chords for ${rg.first===rg.last?'bar '+rg.first:'bars '+rg.first+'–'+rg.last}</button>`:''}</div>
+      ${rg?`<button type="button" class="btn small primary" data-mp="harm">Suggest chords for ${rg.first===rg.last?'bar '+rg.first:'bars '+rg.first+'–'+rg.last}</button><button type="button" class="btn small" data-mp="tune" aria-pressed="${!!tuneFor}">Tune ideas for ${rg.first===rg.last?'bar '+rg.first:'bars '+rg.first+'–'+rg.last}</button>`:''}</div>${tuneIdeasHTML()}
     <p class="hint mp-hint"><span class="mp-tip">${multi?'Selected beats: Delete clears them; Suggest chords harmonizes their bars.':'Type A–G for a note (then # or ] to raise it a half step, [ to lower it), – to hold, . for a rest, / to split a beat into two notes, ↑ ↓ for the octave. Shift-click or Shift-arrow selects bars to harmonize.'}</span> <span class="mp-key"><i class="r-tone"></i>chord tone <i class="r-color"></i>colour note <i class="r-clash"></i>clash</span></p>`;
 }
 /* moves a note (the one at a position, or the one it holds) by n half steps */
@@ -2874,6 +2880,68 @@ function melMove(d,extend){ if(!melSel) return; const total=chords.reduce((a,c)=
   const nb=Math.max(0,Math.min(total-1,melSel.b+d)), nh=!extend&&d<0&&melSplit(nb)?1:0;
   melSel=extend?{a:melSel.a,b:nb,h:0}:{a:nb,b:nb,h:nh}; renderChart(); renderMelPad(); focusMelCell(); }
 function melShift(n){ if(!melSel) return; melNudgeAt({b:melSel.b,h:melSplit(melSel.b)?melSel.h||0:0},n); }
+/* ---- tune ideas: small changes to the notes, each with its reason. Rule-based, from the chords under the tune:
+   a note that clashes on a strong beat can move to the nearest chord tone, or come just after one as a passing note;
+   a leap of a 3rd or more can be filled with a note on the "and" of the beat before it; a note held two beats or more can
+   step to a neighbour and back. Each idea is a list of edits {b, h, m} (h=1 for the "and"), heard before it is used. */
+let tuneFor=null; /* {b0,b1} while the ideas are open for a stretch of beats */
+function tuneIdeas(b0,b1){
+  const total=chords.reduce((a,c)=>a+c.beats,0), st=chordStarts(), L=barLen(), notes=melNotes(), out=[];
+  const at=b=>{ const ci=chordIdxAt(Math.floor(b),st); return {ci,c:ci>=0?chords[ci]:null,k:keyAt(Math.max(ci,0))}; };
+  const nm=(m,b)=>inKey(at(b).k,()=>prettyNote(spell(mod(m))));
+  const scaleBetween=(a,b,k)=>{ const lo=Math.min(a,b), hi=Math.max(a,b), sc=inKey(k,()=>scaleSet()), r=[]; for(let m=lo+1;m<hi;m++) if(sc.has(mod(m))) r.push(m); return r; };
+  notes.forEach((n,i)=>{
+    if(n.b<b0-1e-9||n.b>=b1) return; const {ci,c,k}=at(n.b), on=n.b%1===0, name=nm(n.m,n.b);
+    /* 1. a clash on a strong beat */
+    if(on&&c&&real(c)&&melRel(mod(n.m),ci,n.b)==='clash'){
+      const tones=inKey(k,()=>new Set(corePcs(c))), up=[1,2,3,4].map(d=>n.m+d).find(m=>tones.has(mod(m))), dn=[1,2,3,4].map(d=>n.m-d).find(m=>tones.has(mod(m))), cn=chordName(c);
+      /* the note's job in the chord in words: R → root, 5 → 5th, ♭7 → ♭7th */
+      const role=m=>{ const r=roleOf(c,mod(m)); if(r==='R'||r==='root') return 'root'; const d=r.match(/^([♭♯b#]?)(\d+)$/); if(!d) return r; const n=+d[2]; return d[1]+n+(n===2?'nd':n===3?'rd':'th'); };
+      [up,dn].filter(Boolean).sort((a,b)=>Math.abs(a-n.m)-Math.abs(b-n.m)).forEach(m=>out.push({b:n.b,kind:'clash',title:`Move ${name} ${m>n.m?'up':'down'} to ${nm(m,n.b)}`,
+        why:`${name} rubs against ${cn} on a strong beat. ${nm(m,n.b)} is ${cn}’s ${role(m)}, ${Math.abs(m-n.m)===1?'just a half step away':Math.abs(m-n.m)===2?'a step away':'close by'}, so the beat rests on the chord.`,edits:[{b:n.b,h:0,m}]}));
+      const near=[up,dn].filter(Boolean).sort((a,b)=>Math.abs(a-n.m)-Math.abs(b-n.m))[0];
+      if(near&&n.n>=1&&!(melAnd[n.b]>0)) out.push({b:n.b,kind:'clash',title:`Lean in: ${nm(near,n.b)} on the beat, then ${name}`,
+        why:`Keeps your ${name}, but half a beat later: ${nm(near,n.b)} lands on the beat with ${cn}, and ${name} becomes a passing note that colours it rather than clashing.`,edits:[{b:n.b,h:0,m:near},{b:n.b,h:1,m:n.m}]});
+    }
+    /* 2. a leap into the next note */
+    const q=notes[i+1];
+    if(q&&Math.abs(q.b-(n.b+n.n))<1e-9&&q.b%1===0&&q.b<b1+1e-9){ const d=Math.abs(q.m-n.m), slot=q.b-1;
+      if(d>=3&&slot>=n.b-1e-9&&slot%1===0&&!(melAnd[slot]>0)){ const mids=scaleBetween(n.m,q.m,at(slot).k);
+        if(mids.length){ const pm=d<=4?mids[0]:mids.reduce((x,y)=>Math.abs(y-(n.m+q.m)/2)<Math.abs(x-(n.m+q.m)/2)?y:x), dir=q.m>n.m?'up':'down';
+          const iv=d<=4?'3rd':d<=5?'4th':d<=7?'5th':d<=9?'6th':'big leap';
+          out.push({b:slot+.5,kind:'smooth',title:`Fill the ${iv} from ${name} ${dir} to ${nm(q.m,q.b)} with ${nm(pm,slot)}`,
+            why:d<=4?`A passing note on the “and” walks through the 3rd instead of skipping it: ${name}, ${nm(pm,slot)}, ${nm(q.m,q.b)}.`:`The jump from ${name} ${dir} to ${nm(q.m,q.b)} is a ${iv}. A note in between, half a beat before it, makes it smoother to hear and easier to sing.`,
+            edits:[{b:slot,h:1,m:pm}]}); } } }
+    /* 3. a long note gets a neighbour */
+    if(on&&n.n>=2&&!(melAnd[n.b]>0)&&melody[n.b+1]===-1&&!(c&&real(c)&&melRel(mod(n.m),ci,n.b)==='clash')){ const sc=inKey(k,()=>scaleSet()); let nb=n.m+1; while(!sc.has(mod(nb))) nb++;
+      out.push({b:n.b,kind:'smooth',title:`Give the long ${name} a neighbour: ${name} ${nm(nb,n.b)} ${name}`,
+        why:`${name} is held for ${n.n} beats. Stepping up to ${nm(nb,n.b)} and straight back keeps the note but gives it a little motion, the way singers decorate a held note.`,edits:[{b:n.b,h:1,m:nb},{b:n.b+1,h:0,m:n.m}]}); }
+  });
+  return out.sort((x,y)=>x.b-y.b);
+}
+/* the tune with an idea's edits applied, as copies */
+function tuneWith(edits){ const mel=melody.slice(), and=melAnd.slice(); edits.forEach(e=>{ if(e.h) and[e.b]=e.m; else { while(mel.length<=e.b) mel.push(null); mel[e.b]=e.m; } }); return {mel,and}; }
+/* a bar or two around an idea, with its chords, as the tune is now or with the idea */
+function tuneHear(idea,withIt){
+  const L=barLen(), total=chords.reduce((a,c)=>a+c.beats,0), bs=idea.edits.map(e=>e.b), b0=Math.floor(Math.min(...bs)/L)*L, b1=Math.min(total,(Math.floor(Math.max(...bs)/L)+1)*L);
+  const {mel,and}=withIt?tuneWith(idea.edits):{mel:melody,and:melAnd}, unit=60/S.tempo*(4/den());
+  stopAll(); const out=newSession(), t0=actx.currentTime+.05, st=chordStarts();
+  chords.forEach((c,i)=>{ const s=Math.max(st[i],b0), e=Math.min(st[i]+c.beats,b1); if(e>s&&real(c)) strum(c,t0+(s-b0)*unit,(e-s)*unit,out,playedVoicing(c)); });
+  notesOf(mel,and,total).forEach(n=>{ const s=Math.max(n.b,b0), e=Math.min(n.b+n.n,b1); if(e>s+1e-9) tone(n.m,t0+(s-b0)*unit,(e-s)*unit*.94,.2,out); });
+}
+function tuneUse(idea){ pushHist(); idea.edits.forEach(e=>{ if(e.h) melAnd[e.b]=e.m; else { while(melody.length<=e.b) melody.push(null); melody[e.b]=e.m; } }); commit(); renderMelPad(); toast(`${idea.title.replace(/:.*$/,'')}: done`,{label:'Undo',fn:undoTo(hist[hist.length-1])}); }
+function tuneIdeasHTML(){
+  if(!tuneFor) return ''; const L=barLen(), list=tuneIdeas(tuneFor.b0,tuneFor.b1), whole=tuneFor.b0===0&&tuneFor.b1>=chords.reduce((a,c)=>a+c.beats,0);
+  const where=whole?'the whole tune':tuneFor.b1-tuneFor.b0<=L?`bar ${tuneFor.b0/L+1}`:`bars ${tuneFor.b0/L+1}–${Math.ceil(tuneFor.b1/L)}`;
+  $('#melPad')._tune=list;
+  return `<div class="tune-ideas"><div class="ti-head"><b>Tune ideas for ${where}</b>${whole?'':'<button type="button" class="linkbtn" data-mp="tunewhole">Look across the whole tune</button>'}</div>
+    ${list.length?list.map((x,k)=>`<div class="item k-${x.kind==='clash'?'sec':'bor'}"><div class="names"><span class="ti-spot">${esc(spotOf(x.b))}</span><span class="ti-t">${esc(x.title)}</span></div><div class="why">${esc(x.why)}</div>
+      <div class="btns"><button type="button" class="btn small" data-ti="now" data-k="${k}" title="The tune as it is">${IC.play}Now</button><button type="button" class="btn small" data-ti="with" data-k="${k}" title="With this idea">${IC.play}With it</button><button type="button" class="btn small primary" data-ti="use" data-k="${k}">Use</button></div></div>`).join('')
+      :`<p class="hint">Nothing to suggest here: no clashes on strong beats, no leaps of a 3rd or more to fill, and no notes held long enough to decorate.${whole?'':' Try the whole tune.'}</p>`}
+    <p class="hint">Ideas fix notes that clash with the chord on a strong beat, fill leaps, and decorate long notes. Nothing changes until you press Use.</p></div>`;
+}
+const spotOf=b=>{ const L=barLen(); return `Bar ${Math.floor(b/L)+1}, beat ${Math.floor(b)%L+1}${b%1?' “and”':''}`; };
+
 /* the selected bars' melody, harmonized in the key in force there; the results open in Harmonize, set to replace those bars */
 function melHarmonize(){
   const rg=melRangeBars(); if(!rg) return; const beats=[]; let prev=null;
@@ -4981,13 +5049,17 @@ function boot(){
   $('#melPad').addEventListener('click',e=>{ const n=e.target.closest('[data-mpn]'), a=e.target.closest('[data-mp]'); if(!melSel) return; const b=melSel.b;
     if(n) return melSet(b,melOctave(+n.dataset.mpn,b,melSel.h||0));
     if(!a) return; const k=a.dataset.mp;
-    if(k==='close'){ melSel=null; renderChart(); renderMelPad(); return; }
+    if(k==='close'){ melSel=null; tuneFor=null; renderChart(); renderMelPad(); return; }
     if(k==='up'||k==='down') return melShift(k==='up'?12:-12);
     if(k==='hold'){ if(melPitch(b-1)>0) melSet(b,-1); else toast('Nothing to hold: put a note before it first'); return; }
     if(k==='rest') return melSet(b,null);
     if(k==='split') return melToggleSplit(b);
     if(k==='prev'||k==='next') return melMove(k==='next'?1:-1,false);
-    if(k==='harm') return melHarmonize(); });
+    if(k==='harm') return melHarmonize();
+    if(k==='tune'){ const rg=melRangeBars(); tuneFor=tuneFor&&tuneFor.b0===rg.s0&&tuneFor.b1===rg.e0?null:{b0:rg.s0,b1:rg.e0}; renderMelPad(); return; }
+    if(k==='tunewhole'){ tuneFor={b0:0,b1:chords.reduce((a,c)=>a+c.beats,0)}; renderMelPad(); return; } });
+  $('#melPad').addEventListener('click',e=>{ const t=e.target.closest('[data-ti]'); if(!t) return; const x=$('#melPad')._tune?.[+t.dataset.k]; if(!x) return;
+    if(t.dataset.ti==='use') tuneUse(x); else tuneHear(x,t.dataset.ti==='with'); });
   $('#rows').addEventListener('keydown',e=>{ const c=e.target.closest('.mcell'); if(!c||e.metaKey||e.ctrlKey) return; e.stopPropagation(); const b=+c.dataset.mb; if(!melSel||melSel.b!==b) melSel={a:b,b,h:0};
     const key=e.key, L=/^[a-gA-G]$/.test(key)?key.toUpperCase():null, h=melSplit(b)?melSel.h||0:0;
     if(L){ e.preventDefault(); return melSet(b,melOctave(pcOf(L),b,h),true,h); }

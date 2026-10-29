@@ -1315,6 +1315,38 @@ async function simpleView() {
   check('simple: the choice is remembered', await page.evaluate(() => !S.simple && !document.body.classList.contains('simple')));
   await ctx.close();
 }
+/* tune ideas: clash fixes, filled leaps and decorated long notes, heard before they are used */
+async function tuneIdeasSuite() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  /* C major: F♯ clashes with C on beat 1; E to G is a 3rd; G held 2 beats; C up to A is a 6th; A held 4 beats */
+  await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; S.showMel = true; S.arrShow = false; chords = parseProg('C | F | G | C').chords; melody = [66, -1, 64, 67, -1, 60, 69, -1, -1, -1, 67, 65, 64, -1, -1, -1]; melAnd = []; sel = chords[0].id; melSel = { a: 0, b: 0, h: 0 }; commit(); renderMelPad(); });
+  await page.click('#melPad [data-mp="tune"]');
+  const list = await page.evaluate(() => $('#melPad')._tune.map(x => `${x.b}|${x.title}`));
+  check('tune ideas: a clash gets the nearest chord tones and a lean-in, and is not decorated', list.length === 5 && /^2\.5\|Fill the 3rd/.test(list[3]) && /^3\|Give the long G/.test(list[4]) && /^0\|Move F♯ (up to G|down to E)$/.test(list[0]) && /^0\|Move F♯ (up to G|down to E)$/.test(list[1]) && /^0\|Lean in: (G|E) on the beat, then F♯$/.test(list[2]), list.join(' / '));
+  await page.click('#melPad [data-mp="tunewhole"]');
+  const all = await page.evaluate(() => $('#melPad')._tune.map(x => `${x.b}|${x.title}`).join(' / '));
+  check('tune ideas: across the whole tune it finds the 3rd, the 6th and the long notes', /2\.5\|Fill the 3rd from E up to G with F/.test(all) && /5\.5\|Fill the 6th from C up to A with (E|F)/.test(all) && /6\|Give the long A a neighbour: A B A/.test(all) && /3\|Give the long G a neighbour/.test(all), all);
+  const heard = await page.evaluate(() => { const got = []; const t = tone; window.tone = (m, at, d) => { got.push(m); }; const x = $('#melPad')._tune[0]; tuneHear(x, false); const now = got.slice(); got.length = 0; tuneHear(x, true); window.tone = t; return { now: now.join(), with: got.join() }; });
+  check('tune ideas: Now and With it play the bar as it is and with the change', heard.now.split(',').includes('66') && !heard.with.split(',').includes('66') && heard.with.split(',').includes('67'), JSON.stringify(heard));
+  const k3 = await page.evaluate(() => $('#melPad')._tune.findIndex(x => /Fill the 3rd/.test(x.title)));
+  await page.click(`#melPad [data-ti="use"][data-k="${k3}"]`);
+  const used = await page.evaluate(() => ({ and: melAnd[2], mel: melody.slice(0, 4).join(), lane: document.querySelector('#rows .mcell[data-mb="2"]').classList.contains('split'), still: $('#melPad')._tune.some(x => /Fill the 3rd/.test(x.title)) }));
+  check('tune ideas: Use puts the passing note on the “and”, splits the cell, and the idea leaves the list', used.and === 65 && used.mel === '66,-1,64,67' && used.lane && !used.still, JSON.stringify(used));
+  await page.keyboard.press('Control+z').catch(() => {});
+  await page.evaluate(() => { document.activeElement.blur(); });
+  await page.keyboard.press('Control+z');
+  check('tune ideas: undo takes it back', await page.evaluate(() => !(melAnd[2] > 0)));
+  const kc = await page.evaluate(() => $('#melPad')._tune.findIndex(x => /^Lean in/.test(x.title)));
+  await page.click(`#melPad [data-ti="use"][data-k="${kc}"]`);
+  const lean = await page.evaluate(() => ({ on: melody[0], and: melAnd[0], rel: melRel(mod(melody[0]), 0, 0), relAnd: melRel(66 % 12, 0, 0.5) }));
+  check('tune ideas: Lean in puts a chord tone on the beat and the clash just after, as a passing note', [64, 67].includes(lean.on) && lean.and === 66 && lean.rel === 'tone' && lean.relAnd === 'pass', JSON.stringify(lean));
+  await page.evaluate(() => { melody = [60, 62, 64, 65, 67, 65, 64, 62, 60, -1, 62, 64, 60, -1, -1, -1]; melAnd = []; commit(); tuneFor = { b0: 0, b1: 4 }; renderMelPad(); });
+  check('tune ideas: a smooth stretch says there is nothing to suggest', await page.evaluate(() => $('#melPad')._tune.length === 0 && /Nothing to suggest here/.test(document.querySelector('.tune-ideas').textContent)));
+  await page.click('#melPad [data-mp="close"]');
+  check('tune ideas: closing the note pad closes the ideas', await page.evaluate(() => tuneFor === null && !document.querySelector('.tune-ideas')));
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1590,6 +1622,7 @@ try {
   await frontDoor();
   await hearArr();
   await simpleView();
+  await tuneIdeasSuite();
   await menus();
   await layout();
   await hardening();
