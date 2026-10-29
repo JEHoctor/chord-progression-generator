@@ -2929,7 +2929,8 @@ const ARR_STYLES={
     env:{a:.09,s:1,len:1,r:.45}, legato:true, orch:true}
 };
 let arrSolo=null, arrCache={}, arrAt=null; /* arrAt: the beat whose voicing is being explained */
-const arrOn=()=>!!(S.showMel&&S.arrShow&&ownKey(ARR_STYLES,S.arr));
+/* an empty chart has nothing to arrange: the arrangement waits, switched on, until there are chords again */
+const arrOn=()=>!!(S.showMel&&S.arrShow&&ownKey(ARR_STYLES,S.arr)&&chords.length);
 const midiName=m=>prettyNote(spell(mod(m)))+(Math.floor(m/12)-1);
 /* the group a style sings with: the one chosen, else the style's own; barbershop picks the group whose lead range fits the tune */
 function arrGroupOf(st){

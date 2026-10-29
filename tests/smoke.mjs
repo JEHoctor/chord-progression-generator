@@ -1261,6 +1261,13 @@ async function hearArr() {
   await page.click('#arrWhy [data-aw="bar"]');
   const bar = await page.evaluate(() => ({ n: heard.length, strummed, span: Math.max(...heard.map(h => h.t + h.d)) - Math.min(...heard.map(h => h.t)), bar: 4 * 60 / S.tempo }));
   check('arrange: Hear the bar in the why card plays the whole bar it is in', bar.n >= 4 && bar.strummed === 1 && Math.abs(bar.span - bar.bar) < 0.05, JSON.stringify(bar));
+  await page.evaluate(() => { S.arrShow = true; S.showMel = true; chords = parseProg('C | F | G | C').chords; melody = [64, 65, 67, 64, 65, -1, 69, 65, 67, -1, 71, 74, 72, -1, -1, -1]; sel = chords[0].id; commit(); });
+  const errs0 = page.errors.length;
+  await page.click('#rows .acell[data-ab="5"]');
+  await page.evaluate(() => document.querySelector('#clearChart').click());
+  const cleared = await page.evaluate(() => ({ n: chords.length, rows: document.querySelectorAll('#rows .slot').length, bar: document.querySelector('#arrBar').hidden, toast: document.querySelector('#toast').textContent, on: S.arrShow }));
+  await page.keyboard.press('Control+z');
+  check('arrange: Start over works with the arrangement open, and undo brings the arrangement back', cleared.n === 0 && cleared.rows === 0 && cleared.bar && /fresh start/.test(cleared.toast) && cleared.on && page.errors.length === errs0 && await page.evaluate(() => chords.length === 4 && !document.querySelector('#arrBar').hidden), JSON.stringify(cleared));
   await page.evaluate(() => { S.arrShow = false; renderAll(); played1 = 0; });
   await page.click(`#rows .slot[data-id="${await page.evaluate(() => chords[0].id)}"]`);
   check('arrange: with the arrangement off, tapping a chord plays the chord as before', await page.evaluate(() => played1 === 1));
