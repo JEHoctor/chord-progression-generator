@@ -803,7 +803,7 @@ async function melodyLane() {
   await ph.page.goto(URL_);
   await ph.page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; S.showMel = true; chords = parseProg('C | Am | F | G').chords; melody = [64, 62, 60, 62]; melSel = { a: 4, b: 4 }; selectTab('phone', 'p-chart'); renderAll(); });
   const pz = await ph.page.evaluate(() => ({ h: document.querySelector('#melPad').getBoundingClientRect().height, noH: document.documentElement.scrollWidth <= innerWidth, cells: document.querySelectorAll('#rows .mcell').length }));
-  check('melody: on a phone the lane fits and the pad stays short', pz.h < 200 && pz.noH && pz.cells === 16, JSON.stringify(pz));
+  check('melody: on a phone the lane fits and the pad stays short', pz.h < 240 && pz.noH && pz.cells === 16, JSON.stringify(pz));
   await ph.ctx.close();
 }
 
@@ -1347,6 +1347,37 @@ async function tuneIdeasSuite() {
   check('tune ideas: closing the note pad closes the ideas', await page.evaluate(() => tuneFor === null && !document.querySelector('.tune-ideas')));
   await ctx.close();
 }
+/* the note pad: typing notes with sharps and flats, and picking a note or octave from menus */
+async function melodyInput() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; S.showMel = true; S.arrShow = false; chords = parseProg('C | F | G | C').chords; melody = []; melAnd = []; sel = chords[0].id; melSel = { a: 0, b: 0, h: 0 }; commit(); renderMelPad(); });
+  await page.fill('#mpType', 'F# G Bb A');
+  const read = await page.textContent('#mpTypeRead');
+  await page.press('#mpType', 'Enter');
+  const put = await page.evaluate(() => ({ mel: melody.slice(0, 4).join(), sel: melSel.b, box: document.querySelector('#mpType').value }));
+  check('melody input: Type notes reads sharps and flats, says how it reads them, and Enter puts them in, moving on to the next beat', /Reads as F♯ +G +B♭ +A from bar 1, beat 1/.test(read) && put.mel === '66,67,70,69' && put.sel === 4 && put.box === '', JSON.stringify({ read, put }));
+  await page.evaluate(() => { melSel = { a: 5, b: 5, h: 0 }; renderMelPad(); });
+  await page.fill('#mpType', 'E♭ - . D | (C D) E');
+  await page.click('#melPad [data-mp="type"]');
+  const bars = await page.evaluate(() => ({ mel: melody.slice(4, 12).join(), and8: melAnd[8] }));
+  check('melody input: with bars it starts at the bar, fits each bar, and reads ♭ and (pairs)', bars.mel === '63,-1,,62,60,64,-1,-1' && bars.and8 === 62, JSON.stringify(bars));
+  await page.fill('#mpType', 'F# H2 Bb');
+  check('melody input: an unreadable note is named and nothing is put in', /Can’t read “H2”/.test(await page.textContent('#mpTypeRead')) && (await page.click('#melPad [data-mp="type"]'), await page.evaluate(() => melody.slice(0, 4).join())) === '66,67,70,69');
+  await page.fill('#mpType', 'g');
+  check('melody input: typing in the box doesn’t type into the lane', await page.evaluate(() => melody[melSel.b]) !== 67 || await page.evaluate(() => document.activeElement.id === 'mpType'));
+  await page.fill('#mpType', '');
+  await page.evaluate(() => { melSel = { a: 0, b: 0, h: 0 }; renderMelPad(); });
+  const opts = await page.evaluate(() => [...document.querySelectorAll('#mpNoteSel option')].map(o => o.textContent).join(' '));
+  await page.selectOption('#mpNoteSel', { label: 'G♭' });
+  const pick = await page.evaluate(() => ({ m: melody[0], sel: melSel.b, shown: document.querySelector('#mpNoteSel').selectedOptions[0].textContent }));
+  await page.selectOption('#mpOctSel', '5');
+  const oct = await page.evaluate(() => ({ m: melody[0], sel: melSel.b }));
+  check('melody input: the Note menu lists every spelling and keeps the octave; the Octave menu moves it; neither moves on', /rest C C♯ D♭ D D♯ E♭ E F F♯ G♭ G G♯ A♭ A A♯ B♭ B$/.test(opts) && pick.m === 66 && pick.sel === 0 && pick.shown === 'F♯' && oct.m === 78 && oct.sel === 0, JSON.stringify({ opts, pick, oct }));
+  const btns = await page.evaluate(() => [...document.querySelectorAll('#melPad .mp-n')].map(b => b.textContent).join(' '));
+  check('melody input: black-key buttons show both names', /D♭C♯/.test(btns) && /F♯G♭/.test(btns) && /B♭A♯/.test(btns), btns);
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1623,6 +1654,7 @@ try {
   await hearArr();
   await simpleView();
   await tuneIdeasSuite();
+  await melodyInput();
   await menus();
   await layout();
   await hardening();

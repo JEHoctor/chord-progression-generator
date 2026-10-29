@@ -878,6 +878,13 @@ select.btn{border-radius:var(--r-pill)}
 .melpad[hidden]{display:none}
 .mp-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
 .mp-notes{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:4px}
+.mp-n small{display:block;font-size:10px;font-weight:500;opacity:.75;margin-top:2px}
+.mp-pick,.mp-type{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.mp-pick select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-xs);height:32px;padding:0 8px;font-size:14px;color:var(--ink)}
+.mp-type input{flex:1 1 200px;min-width:0;background:var(--sunk);border:1px solid transparent;border-radius:var(--r-xs);height:34px;padding:0 10px;font-size:14px;font-family:var(--f-mono,inherit);color:var(--ink)}
+.mp-type-read{margin:0}
+.mp-type-read.bad{color:var(--t-chr)}
+@media (max-width:759px){ .mp-pick,.mp-type{flex-wrap:nowrap;gap:6px} .mp-pick .label,.mp-type .label{display:none} .mp-pick select{height:30px;font-size:13px;flex:1 1 0;min-width:0} .mp-type input{height:30px;flex:1 1 auto} .mp-type .btn{flex:none} .mp-type-read{font-size:12px;line-height:1.3} .mp-type-read:not(.has){display:none} .mp-n small{display:none} }
 .mp-n{height:40px;border:1.5px solid var(--line);border-radius:8px;background:var(--sunk);color:var(--muted);font:600 14px/1 var(--f-ui);padding:0;min-width:0}
 .mp-n.sc{color:var(--ink);background:var(--surface)}
 .mp-n.r-tone{background:var(--mel-tone);border-color:var(--mel-tone);color:#141414}
@@ -2844,7 +2851,8 @@ function playMelNote(m,b){ const a=ac(), out=previewOut(), ci=chordIdxAt(b);
 const focusMelCell=()=>{ if(melSel) document.querySelector(`#rows .mcell[data-mb="${melSel.b}"]`)?.focus({preventScroll:false}); };
 function melRangeBars(){ if(!melSel) return null; const L=barLen(), total=chords.reduce((a,c)=>a+c.beats,0), lo=Math.min(melSel.a,melSel.b), hi=Math.max(melSel.a,melSel.b);
   const s0=Math.floor(lo/L)*L, e0=Math.min(total,(Math.floor(hi/L)+1)*L); return {s0,e0,first:s0/L+1,last:Math.ceil(e0/L)}; }
-function renderMelPad(){
+function renderMelPad(){ renderMelPad0(); melTypeRead(); }
+function renderMelPad0(){
   /* the note pad and the why card share the bottom of the chart: opening the pad closes the card */
   if(melSel&&arrAt!=null){ arrAt=null; renderArrWhy(); }
   if(melSel&&partAt!=null){ partAt=null; renderPartWhy(); }
@@ -2854,13 +2862,18 @@ function renderMelPad(){
   const rg=melRangeBars(), multi=melSel.a!==melSel.b, split=melSplit(b);
   el.hidden=false;
   el.innerHTML=`<div class="mp-head"><span><b>Bar ${Math.floor(b/L)+1}, beat ${b%L+1}${h?', the “and”':''}</b>${c&&real(c)?` · over ${esc(chordName(c))}`:''}${m>0?` · ${esc(inKey(k,()=>prettyNote(spell(mod(m)))))}${Math.floor(m/12)-1}`:''}</span><button type="button" class="cp-x" data-mp="close" aria-label="Close the note pad">${IC.x}</button></div>
-    <div class="mp-notes">${notes.map(pc=>{ const rel=ci>=0?melRel(pc,ci,b+(h?.5:0)):''; return `<button type="button" class="mp-n${sc.has(pc)?' sc':''}${rel?' r-'+rel:''}${m>0&&mod(m)===pc?' on':''}" data-mpn="${pc}" title="${esc(MEL_REL[rel]||'')}">${esc(inKey(k,()=>prettyNote(spell(pc))))}</button>`; }).join('')}</div>
+    <div class="mp-notes">${notes.map(pc=>{ const rel=ci>=0?melRel(pc,ci,b+(h?.5:0)):'', nm=inKey(k,()=>prettyNote(spell(pc))), alt=[prettyNote(SHARP[pc]),prettyNote(FLAT[pc])].find(x=>x!==nm&&SHARP[pc]!==FLAT[pc]);
+      return `<button type="button" class="mp-n${sc.has(pc)?' sc':''}${rel?' r-'+rel:''}${m>0&&mod(m)===pc?' on':''}" data-mpn="${pc}" title="${esc(nm+(alt?' (also called '+alt+')':'')+(rel?': '+MEL_REL[rel]:''))}" aria-label="${esc(nm+(alt?' or '+alt:''))}">${esc(nm)}${alt?`<small>${esc(alt)}</small>`:''}</button>`; }).join('')}</div>
+    <div class="mp-pick"><label class="label" for="mpNoteSel">Note</label><select id="mpNoteSel"><option value=""${m>0?'':' selected'}>${cur===-1?'Note: holding':'Note: rest'}</option>${NOTE_SPELL.map(([n,pc])=>`<option value="${pc}"${m>0&&mod(m)===pc&&inKey(k,()=>prettyNote(spell(pc)))===n?' selected':''}>${n}</option>`).join('')}</select>
+      <label class="label" for="mpOctSel">Octave</label><select id="mpOctSel" ${m>0?'':'disabled'}>${m>0?'':'<option selected>Octave</option>'}${[2,3,4,5,6].map(o=>`<option value="${o}"${m>0&&Math.floor(m/12)-1===o?' selected':''}>Octave ${o}${o===4?' (middle C)':''}</option>`).join('')}</select></div>
+    <div class="mp-type"><label class="label" for="mpType">Type notes</label><input id="mpType" type="text" spellcheck="false" autocomplete="off" value="${esc(mpTypeVal)}" placeholder="Type notes: F# G Bb A"><button type="button" class="btn small primary" data-mp="type">Put in</button></div>
+    <p class="hint mp-type-read" id="mpTypeRead" aria-live="polite"></p>
     <div class="mp-acts"><span class="mp-oct" role="group" aria-label="Octave"><button type="button" class="btn small" data-mp="down" ${m>0?'':'disabled'} aria-label="Octave down">↓ Octave</button><button type="button" class="btn small" data-mp="up" ${m>0?'':'disabled'} aria-label="Octave up">↑ Octave</button></span>
       <button type="button" class="btn small" data-mp="hold" ${b>0&&!h?'':'disabled'} title="Hold the note before (−)">Hold –</button><button type="button" class="btn small" data-mp="rest" ${h?'disabled':''} title="Rest (.)">Rest</button>
       <button type="button" class="btn small" data-mp="split" title="Two notes in this beat (/)" aria-pressed="${split}">${split?'Join the beat':'Split the beat ½'}</button>
       <button type="button" class="btn small" data-mp="prev" aria-label="Previous beat">${IC.left}</button><button type="button" class="btn small" data-mp="next" aria-label="Next beat">${IC.right}</button>
       ${rg?`<button type="button" class="btn small primary" data-mp="harm">Suggest chords for ${rg.first===rg.last?'bar '+rg.first:'bars '+rg.first+'–'+rg.last}</button><button type="button" class="btn small" data-mp="tune" aria-pressed="${!!tuneFor}">Tune ideas for ${rg.first===rg.last?'bar '+rg.first:'bars '+rg.first+'–'+rg.last}</button>`:''}</div>${tuneIdeasHTML()}
-    <p class="hint mp-hint"><span class="mp-tip">${multi?'Selected beats: Delete clears them; Suggest chords harmonizes their bars.':'Type A–G for a note (then # or ] to raise it a half step, [ to lower it), – to hold, . for a rest, / to split a beat into two notes, ↑ ↓ for the octave. Shift-click or Shift-arrow selects bars to harmonize.'}</span> <span class="mp-key"><i class="r-tone"></i>chord tone <i class="r-color"></i>colour note <i class="r-clash"></i>clash</span></p>`;
+    <p class="hint mp-hint"><span class="mp-tip">${multi?'Selected beats: Delete clears them; Suggest chords harmonizes their bars.':'In a lane cell, type A–G for a note, then # (or ]) to make it sharp or [ to make it flat; or write several at once in Type notes, which reads F#, Bb and E♭, – to hold, . for a rest, / to split a beat into two notes, ↑ ↓ for the octave. Shift-click or Shift-arrow selects bars to harmonize.'}</span> <span class="mp-key"><i class="r-tone"></i>chord tone <i class="r-color"></i>colour note <i class="r-clash"></i>clash</span></p>`;
 }
 /* moves a note (the one at a position, or the one it holds) by n half steps */
 function melNudgeAt(p,n){
@@ -2880,6 +2893,41 @@ function melMove(d,extend){ if(!melSel) return; const total=chords.reduce((a,c)=
   const nb=Math.max(0,Math.min(total-1,melSel.b+d)), nh=!extend&&d<0&&melSplit(nb)?1:0;
   melSel=extend?{a:melSel.a,b:nb,h:0}:{a:nb,b:nb,h:nh}; renderChart(); renderMelPad(); focusMelCell(); }
 function melShift(n){ if(!melSel) return; melNudgeAt({b:melSel.b,h:melSplit(melSel.b)?melSel.h||0:0},n); }
+/* ---- typing notes into the lane: the same text as Harmonize (F# G Bb A, | between bars, - to hold, . for a rest, (A B) for
+   two notes in a beat), written from the selected beat, or from the start of its bar when the text has bars. Each note goes
+   in the octave nearest the one before it, as typed letters do. */
+let mpTypeVal='';
+function melTypePlan(text){
+  if(!melSel||!String(text||'').trim()) return null; const r=parseMelody(text); if(r.bad) return {bad:r.bad}; if(r.tooMany) return {tooMany:r.tooMany};
+  const L=barLen(), total=chords.reduce((a,c)=>a+c.beats,0), b0=text.includes('|')?Math.floor(melSel.b/L)*L:melSel.b;
+  let prev=null; for(let i=b0-1;prev==null&&i>=0;i--){ if(melAnd[i]>0) prev=melAnd[i]; else if(melody[i]>0) prev=melody[i]; } prev=prev??67;
+  const near=pc=>{ let m=prev-6; while(mod(m)!==pc) m++; return prev=Math.min(84,Math.max(55,m)); };
+  const mel=[], and=[];
+  r.beats.forEach((x,i)=>{ mel[i]=x==null?null:x.onset?near(x.pc):-1; and[i]=r.ands[i]!=null?near(r.ands[i]):null; });
+  if(mel[0]===-1&&!(melPitch(b0-1)>0)) mel[0]=null;
+  const fit=Math.max(0,Math.min(mel.length,total-b0));
+  return {b0,mel:mel.slice(0,fit),and:and.slice(0,fit),lost:mel.length-fit};
+}
+function melTypeRead(){
+  const el=$('#mpTypeRead'); if(!el) return; const pl=melTypePlan(mpTypeVal), L=barLen(); el.classList.toggle('bad',!!(pl&&(pl.bad||pl.tooMany)));
+  el.classList.toggle('has',!!pl);
+  if(!pl){ el.textContent='Note names with sharps or flats: C#, Db, F♯, B♭. Put | between bars to fit each bar, - holds, . rests, (A B) puts two notes in a beat.'; return; }
+  if(pl.bad){ el.textContent=`Can’t read ${pl.bad.map(b=>`“${b}”`).join(', ')}. Use note names like F#, Bb or E♭, - to hold and . for a rest.`; return; }
+  if(pl.tooMany){ const t=pl.tooMany[0]; el.textContent=`Bar ${t.bar} has ${t.n} notes; at most ${t.max} fit in a bar. Spread them over two bars.`; return; }
+  const k=keyAt(Math.max(0,chordIdxAt(pl.b0))), nm=m=>inKey(k,()=>prettyNote(spell(mod(m))));
+  const parts=pl.mel.map((x,i)=>(x>0?nm(x):x===-1?'–':'·')+(pl.and[i]>0?' '+nm(pl.and[i]):''));
+  el.textContent=`Reads as ${parts.join('  ')} from bar ${Math.floor(pl.b0/L)+1}, beat ${pl.b0%L+1}.${pl.lost?` ${pl.lost} beat${pl.lost>1?'s':''} won’t fit: add bars first.`:''}`;
+}
+function melTypePut(){
+  const pl=melTypePlan(mpTypeVal); if(!pl||pl.bad||pl.tooMany||!pl.mel.length){ melTypeRead(); return; }
+  pushHist(); pl.mel.forEach((x,i)=>{ const b=pl.b0+i; while(melody.length<=b) melody.push(null); melody[b]=x; melAnd[b]=pl.and[i]; });
+  const end=Math.min(pl.b0+pl.mel.length,chords.reduce((a,c)=>a+c.beats,0)-1); melSel={a:end,b:end,h:0}; mpTypeVal='';
+  commit(); renderMelPad(); toast(`Put in ${pl.mel.filter(x=>x>0).length+pl.and.filter(x=>x>0).length} notes`,{label:'Undo',fn:undoTo(hist[hist.length-1])});
+  document.querySelector('#mpType')?.focus();
+}
+/* every spelling, for the note menu */
+const NOTE_SPELL=[['C',0],['C♯',1],['D♭',1],['D',2],['D♯',3],['E♭',3],['E',4],['F',5],['F♯',6],['G♭',6],['G',7],['G♯',8],['A♭',8],['A',9],['A♯',10],['B♭',10],['B',11]];
+
 /* ---- tune ideas: small changes to the notes, each with its reason. Rule-based, from the chords under the tune:
    a note that clashes on a strong beat can move to the nearest chord tone, or come just after one as a passing note;
    a leap of a 3rd or more can be filled with a note on the "and" of the beat before it; a note held two beats or more can
@@ -5056,8 +5104,16 @@ function boot(){
     if(k==='split') return melToggleSplit(b);
     if(k==='prev'||k==='next') return melMove(k==='next'?1:-1,false);
     if(k==='harm') return melHarmonize();
+    if(k==='type') return melTypePut();
     if(k==='tune'){ const rg=melRangeBars(); tuneFor=tuneFor&&tuneFor.b0===rg.s0&&tuneFor.b1===rg.e0?null:{b0:rg.s0,b1:rg.e0}; renderMelPad(); return; }
     if(k==='tunewhole'){ tuneFor={b0:0,b1:chords.reduce((a,c)=>a+c.beats,0)}; renderMelPad(); return; } });
+  $('#melPad').addEventListener('input',e=>{ if(e.target.id==='mpType'){ mpTypeVal=e.target.value; melTypeRead(); } });
+  $('#melPad').addEventListener('keydown',e=>{ if(e.target.id==='mpType'){ e.stopPropagation(); if(e.key==='Enter'){ e.preventDefault(); melTypePut(); } if(e.key==='Escape'){ e.target.blur(); } } });
+  $('#melPad').addEventListener('change',e=>{ if(!melSel) return; const b=melSel.b, h=melSplit(b)?melSel.h||0:0;
+    if(e.target.id==='mpNoteSel'){ const v=e.target.value; if(v==='') return melSet(b,null,false,h); const cur=h?melAnd[b]:melody[b], was=cur===-1?melPitch(b):cur;
+      /* the same octave as the note it replaces, or the nearest to the note before */
+      const pc=+v, m=was>0?Math.floor(was/12)*12+pc:melOctave(pc,b,h); return melSet(b,m,false,h); }
+    if(e.target.id==='mpOctSel'){ const cur=h?melAnd[b]:melody[b]; if(!(cur>0)) return; return melSet(b,mod(cur)+12*(+e.target.value+1),false,h); } });
   $('#melPad').addEventListener('click',e=>{ const t=e.target.closest('[data-ti]'); if(!t) return; const x=$('#melPad')._tune?.[+t.dataset.k]; if(!x) return;
     if(t.dataset.ti==='use') tuneUse(x); else tuneHear(x,t.dataset.ti==='with'); });
   $('#rows').addEventListener('keydown',e=>{ const c=e.target.closest('.mcell'); if(!c||e.metaKey||e.ctrlKey) return; e.stopPropagation(); const b=+c.dataset.mb; if(!melSel||melSel.b!==b) melSel={a:b,b,h:0};
