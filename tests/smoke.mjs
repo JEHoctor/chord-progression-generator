@@ -1602,6 +1602,11 @@ async function feedbackRound2() {
   check('round 2: the playing strip is drawn in the ink colour, not the play green that matched Home', strip.sh.startsWith(strip.ink.replace('rgb(', 'rgb(')) && /-8px/.test(strip.sh), JSON.stringify(strip));
   const empty = await page.evaluate(() => { chords = parseProg('G | B7 | Em | Cm | G | F#m7b5 | Am7 | Cmaj7 | Bm | D7 | F#dim7 | ?').chords; S.tonic = 7; S.mode = 'ionian'; renderAll(); const g = suggestions(11).groups.find(g => g.id === "dia"); return g.items.map(i => chordName(i.chords[0])).join(' '); });
   check('round 2: an empty slot offers every chord of the key (Em7 after F♯°7 included)', empty.split(' ').length === 7 && /Em/.test(empty), empty);
+  const noTune = await page.evaluate(() => { chords = parseProg('C | Am | F | G7').chords; melody = []; melAnd = []; S.tonic = 0; S.mode = 'ionian'; S.showMel = true; S.arrShow = true; const o = {};
+    for (const k of ['close', 'barber', 'choir', 'drop2']) { S.arr = k; arrCache = {}; const ar = arrange(k); o[k] = ar.lines.every(l => l.length >= 4); }
+    S.arr = 'close'; renderAll(); o.ghost = document.querySelectorAll('#rows .mcell .ghost').length; o.hint = /No tune yet/.test(document.querySelector('#arrBar').textContent); o.untouched = melody.length === 0;
+    S.arrShow = false; S.showMel = false; renderAll(); return o; });
+  check('round 2: close harmony, barbershop, choir and drop 2 arrange a chart with no tune, singing a chord-tone line shown in grey', noTune.close && noTune.barber && noTune.choir && noTune.drop2 && noTune.ghost >= 4 && noTune.hint && noTune.untouched, JSON.stringify(noTune));
   check('round 2: no page errors', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 }

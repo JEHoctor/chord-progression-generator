@@ -815,6 +815,7 @@ select.btn{border-radius:var(--r-pill)}
 .mcell b{font-weight:700;color:var(--ink);white-space:nowrap}
 .mcell.bar0{border-left-width:3px}
 .mcell.rest span{opacity:.5}
+.mcell .ghost{font-style:normal;font-weight:600;color:var(--muted);opacity:.8} .mcell i.ghost{display:block;width:70%;height:3px;border-radius:2px;background:currentColor;opacity:.3}
 .mcell.hold i{display:block;width:70%;height:3px;border-radius:2px;background:currentColor;opacity:.55}
 .mcell.r-tone{background:var(--mel-tone);border-color:var(--mel-tone)} .mcell.r-tone b{color:#141414}
 .mcell.r-color{border-color:var(--mel-tone);border-style:dashed}
@@ -2938,14 +2939,15 @@ const MEL_REL={tone:'chord tone',color:'colour note',pass:'passing note',clash:'
 /* one cell per beat; a beat with a note on its "and" is split in two halves, each coloured on its own (the second half is
    never a strong beat, so a note outside the chord there is a passing note) */
 function melLaneHTML(r0,r1,starts,mrow=2,tag='',oor=null){
-  let h=''; const L=barLen(), lo=melSel?Math.min(melSel.a,melSel.b):-1, hi=melSel?Math.max(melSel.a,melSel.b):-1;
+  let h=''; const L=barLen(), lo=melSel?Math.min(melSel.a,melSel.b):-1, hi=melSel?Math.max(melSel.a,melSel.b):-1, ghost=arrOn()&&arrAutoTune()?autoTop():null;
   for(let b=r0;b<r1;b++){ const x=melody[b]??null, m=x===-1?melPitch(b):x, ci=chordIdxAt(b,starts), y=melAnd[b]??null;
     const nm=p=>inKey(keyAt(Math.max(ci,0)),()=>prettyNote(spell(mod(p))));
     const rel=m>0&&ci>=0?melRel(mod(m),ci,b):'', name=m>0?nm(m):'';
-    const first=x>0?`<b>${esc(name)}</b>`:x===-1?'<i></i>':'<span>·</span>';
+    const g=ghost&&x==null?ghost[b]:null, gm=g===-1?null:g;
+    const first=x>0?`<b>${esc(name)}</b>`:x===-1?'<i></i>':g>0?`<em class="ghost">${esc(nm(g))}</em>`:g===-1?'<i class="ghost"></i>':'<span>·</span>';
     const yrel=y>0&&ci>=0?melRel(mod(y),ci,b+.5):'';
     const cur=melSel&&b===melSel.b, cls=['mcell',y>0?'split':'',x===-1?'hold':x>0?'note':'rest',!(y>0)&&rel?'r-'+rel:'',b%L===0?'bar0':'',b>=lo&&b<=hi?'msel':'',cur?'cur':'',oor&&oor.has(b)?'oor':''].filter(Boolean).join(' ');
-    const what=x>0?name+' ('+MEL_REL[rel]+')'+(oor&&oor.has(b)?', outside the singer’s range':''):x===-1?'holding '+name:'rest';
+    const what=x>0?name+' ('+MEL_REL[rel]+')'+(oor&&oor.has(b)?', outside the singer’s range':''):x===-1?'holding '+name:gm>0?`rest (the arrangement sings ${nm(gm)} here until you write a tune)`:'rest';
     const label=`Bar ${Math.floor(b/L)+1}, beat ${b%L+1}: ${what}${y>0?`, then ${nm(y)} on the “and” (${MEL_REL[yrel]})`:''}`;
     const body=y>0?`<span class="mh${rel?' r-'+rel:''}${x===-1?' hold':''}${cur&&!melSel.h?' hcur':''}" data-mh="0">${first}</span><span class="mh r-${yrel}${cur&&melSel.h?' hcur':''}" data-mh="1"><b>${esc(nm(y))}</b></span>`:first;
     h+=`<button type="button" class="${cls}" data-mb="${b}" style="grid-column:${b-r0+1};grid-row:${mrow}"${tag&&b===r0?` data-v="${esc(tag)}"`:''} aria-label="${esc(label)}" title="${esc(label)}">${body}</button>`; }
@@ -3308,7 +3310,23 @@ function closeVoicing(st,set,m){
   /* drop 2: the second voice from the top goes down an octave, to the bottom */
   return st.drop?[v[0],v[2],v[3],v[1]-12]:v;
 }
+/* with nothing in the melody lane, the arrangement harmonizes a tune of its own: one chord tone per chord, around the top of
+   the treble staff, each the nearest to the one before (a 3rd or 5th rather than the root where it's as near), held for the chord */
+function autoTop(){
+  const out=[]; let prev=72;
+  chords.forEach(c=>{ const n=c.beats; if(!real(c)){ for(let k=0;k<n;k++) out.push(null); return; }
+    const pcs=allPcs(c); let best=null, bv=Infinity;
+    for(let m=66;m<=79;m++){ if(!pcs.includes(mod(m))) continue; const v=Math.abs(m-prev)+(mod(m)===c.root?1.2:0)+Math.abs(m-72)*.12+(m===prev?.6:0); if(v<bv){ bv=v; best=m; } }
+    out.push(best); for(let k=1;k<n;k++) out.push(-1); prev=best; });
+  return out;
+}
+const arrAutoTune=()=>!melNotes().length&&chords.some(real);
 function arrange(sk=S.arr){
+  if(!arrAutoTune()) return arrange0(sk);
+  const km=melody, ka=melAnd; melody=autoTop(); melAnd=[];
+  try{ return arrange0(sk); } finally{ melody=km; melAnd=ka; }
+}
+function arrange0(sk){
   const st=ARR_STYLES[sk]; if(!st) return null;
   if(st.orch) return orchestrate();
   const group=arrGroupOf(st), V=arrVoicesFor(st,group), rs={...st,voices:V};
@@ -3451,7 +3469,7 @@ function renderArrBar(){
   const chip=(k,name,r)=>`<span class="vchip${arrMuted(k)?' off':''}"><button type="button" data-amute="${k}" aria-pressed="${!(S.arrMute||[])[k]}" title="${r?`Range ${rangeTxt(r)}. `:''}Mute or unmute this part">${esc(name)}</button><button type="button" data-asolo="${k}" aria-pressed="${arrSolo===k}" aria-label="Hear ${esc(name)} alone" title="Hear this part alone">S</button></span>`;
   const bad=hasTune?arrOutOfRange(ar):[], fixes=bad.length?arrRangeFixes(ar,bad):[], L=barLen();
   const groups=st.groups?`<div class="ab-groups"><span class="label">Singers</span><div class="seg" role="group" aria-label="Who sings">${st.groups.map(g=>`<button type="button" data-agroup="${g}" aria-pressed="${g===ar.group}" title="${esc(ARR_GROUPS[g].full)}: ${ARR_GROUPS[g].v.map(v=>v[0]+' '+rangeTxt([v[2],v[3]])).join(', ')}">${esc(ARR_GROUPS[g].name)}</button>`).join('')}</div>${st.group==='auto'&&!st.groups.includes(S.arrGroup)?'<span class="hint">chosen to fit your tune</span>':''}</div>`:'';
-  const range=!hasTune?'':bad.length?`<p class="ab-range" role="status"><span class="oor-dot" aria-hidden="true"></span><span>${bad.length} note${bad.length>1?'s are':' is'} outside ${bad.length>1?'their':'its'} singer’s range. ${rangeSummary(ar,bad)}</span>${fixes.map(f=>`<button type="button" class="btn small" data-afix="${f.kind}:${f.t}">${esc(f.label)}</button>`).join('')}</p>`
+  const range=!hasTune&&!arrAutoTune()?'':bad.length?`<p class="ab-range" role="status"><span class="oor-dot" aria-hidden="true"></span><span>${bad.length} note${bad.length>1?'s are':' is'} outside ${bad.length>1?'their':'its'} singer’s range. ${rangeSummary(ar,bad)}</span>${fixes.map(f=>`<button type="button" class="btn small" data-afix="${f.kind}:${f.t}">${esc(f.label)}</button>`).join('')}</p>`
     :`<p class="hint ab-range-ok">Every part is within its range${st.voices?'':` for ${esc(ARR_GROUPS[ar.group].full)}`}.</p>`;
   el.hidden=false;
   el.innerHTML=`<div class="ab-head"><b class="ab-t">Arrange</b><div class="seg ab-styles" role="group" aria-label="Arrangement style">${Object.entries(ARR_STYLES).map(([k,x])=>`<button type="button" data-astyle="${k}" aria-pressed="${k===S.arr}">${esc(x.name)}</button>`).join('')}</div>
@@ -3459,7 +3477,7 @@ function renderArrBar(){
     <button type="button" class="cp-x" data-aact="close" aria-label="Close arranging">${IC.x}</button></div>
     ${groups}
     <p class="hint ab-blurb">${esc(st.blurb)}${seed?` <span class="ab-ver">Version ${seed+1}.</span>`:''}</p>
-    ${hasTune?range:'<p class="hint ab-empty">Write a tune in the melody lane: tap a box under the chords, then a note. The other parts fill in around it as you go.</p>'}
+    ${hasTune?range:range+'<p class="hint ab-empty">No tune yet, so the top part sings a line of chord tones, shown in grey in the melody lane. Write your own tune there (tap a box under the chords, then a note) and the parts fill in around it.</p>'}
     <div class="ab-voices" role="group" aria-label="Parts to hear">${ar.voices.map((v,k)=>chip(k,v.name,v.range)).join('')}${chip(N,S.instrument==='guitar'?'Guitar chords':'Piano chords')}<span class="hint ab-tip">Tap a part to mute it, S to hear it alone. Tap a note in the lanes to see why it’s there.</span></div>`;
 }
 /* ---- why this voicing: the card for a tapped beat ---- */
