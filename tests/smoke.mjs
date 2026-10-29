@@ -1164,7 +1164,7 @@ async function fastInput() {
   check('keys: typing a number in a text box does not add a chord', await chart() === 'C:4 G:4 Am:4 E:4 Em7:4 C:4', await chart());
 
   /* MIDI in, with a stand-in input since headless browsers have no devices */
-  check('midi in: the MIDI in control shows where Web MIDI exists', await page.evaluate(() => !document.querySelector('#midiInWrap').hidden && !!document.querySelector('#midiRec')));
+  check('midi in: the MIDI in control shows where Web MIDI exists', await page.evaluate(() => !document.querySelector('#midiInWrap').hidden));
   await load('C | G');
   const send = msgs => page.evaluate(msgs => msgs.forEach(m => midiInMessage(m)), msgs);
   await page.evaluate(() => midiInUse({ id: 'test', name: 'Test keys' }));
@@ -1173,15 +1173,14 @@ async function fastInput() {
   await send([[0x80, 64, 0], [0x90, 67, 0], [0x80, 60, 0], [0x80, 57, 0]]);
   const fin = await page.evaluate(() => ({ keys: FINDER.keys.join(), mode: FINDER.mode, first: document.querySelector('#finder .fres.best .nm')?.textContent, heard: document.querySelector('#midiHeard').textContent }));
   check('midi in: a held chord is named live, and when the keys come up it lands in the Chord finder with its names', holding === 'Holding Am7' && fin.keys === '57,60,64,67' && fin.mode === 'piano' && fin.first === 'Am7' && fin.heard === 'Played Am7', JSON.stringify({ holding, fin }));
-  check('midi in: with Record off, nothing is added to the chart', await chart() === 'C:4 G:4', await chart());
-  await page.check('#midiRec');
-  await send([[0x90, 53, 90], [0x90, 57, 90], [0x90, 60, 90], [0x80, 57, 0], [0x80, 53, 0], [0x80, 60, 0]]);
-  await send([[0x90, 55, 90], [0x90, 59, 90], [0x90, 62, 90], [0x90, 65, 90], [0x80, 55, 0], [0x80, 59, 0], [0x80, 62, 0], [0x80, 65, 0]]);
-  await send([[0x90, 64, 90], [0x80, 64, 0]]);
-  check('midi in: with Record on, each chord is added when the keys come up, and a single note adds nothing', await chart() === 'C:4 G:4 F:4 G7:4', await chart());
-  await send([[0x90, 52, 90], [0x90, 60, 90], [0x90, 55, 90], [0x80, 52, 0], [0x80, 55, 0], [0x80, 60, 0]]);
+  check('midi in: playing chords adds nothing to the chart by itself', await chart() === 'C:4 G:4', await chart());
+  const add = () => page.evaluate(async () => { await new Promise(r => setTimeout(r, 120)); sel = chords[chords.length - 1].id; document.querySelector('#live [data-live-add]').click(); });
+  await send([[0x90, 53, 90], [0x90, 57, 90], [0x90, 60, 90], [0x80, 57, 0], [0x80, 53, 0], [0x80, 60, 0]]); await add();
+  await send([[0x90, 55, 90], [0x90, 59, 90], [0x90, 62, 90], [0x90, 65, 90], [0x80, 55, 0], [0x80, 59, 0], [0x80, 62, 0], [0x80, 65, 0]]); await add();
+  check('midi in: Add to chart adds the chord just played, after the selected one', await chart() === 'C:4 G:4 F:4 G7:4', await chart());
+  await send([[0x90, 52, 90], [0x90, 60, 90], [0x90, 55, 90], [0x80, 52, 0], [0x80, 55, 0], [0x80, 60, 0]]); await add();
   check('midi in: the lowest note played sets the bass (C/E)', await chart() === 'C:4 G:4 F:4 G7:4 C/E:4', await chart());
-  await page.uncheck('#midiRec'); await page.evaluate(() => midiInUse(null));
+  await page.evaluate(() => midiInUse(null));
   await ctx.close();
 }
 /* the front door: an example with colour, "I have chords" first, numerals, the progression's why, ideas, Start over, Hear from */
@@ -1243,7 +1242,7 @@ async function frontDoor() {
   await page.evaluate(() => { S.tonic = 7; S.mode = 'ionian'; });
   await page.evaluate(() => { S.hearBack = 1; selectTab('left', 'gen'); });
   await page.reload();
-  check('door: the last door chosen opens next time', await page.evaluate(() => document.querySelector('#tab-gen').getAttribute('aria-selected') === 'true' && document.querySelector('#tab-gen').textContent === 'Let’s play'));
+  check('door: the last door chosen opens next time', await page.evaluate(() => document.querySelector('#tab-gen').getAttribute('aria-selected') === 'true' && document.querySelector('#tab-gen').textContent === 'Generate'));
   await ctx.close();
 }
 /* hearing the arrangement a bar or a chord at a time */
@@ -1580,6 +1579,32 @@ async function focusMode() {
   check('focus: no page errors', page.errors.length === 0 && p2.page.errors.length === 0, page.errors.concat(p2.page.errors).join(' | '));
   await p2.ctx.close();
 }
+async function feedbackRound2() {
+  const { ctx, page } = await openPage();
+  await page.goto(URL_);
+  const r = await page.evaluate(() => {
+    const o = {}; chords = parseProg('C | G').chords; sel = chords[0].id; S.tonic = 0; S.mode = 'ionian'; renderAll();
+    document.querySelector('#dia [data-pal]:nth-child(6)').click();
+    o.untouched = chords.map(c => chordName(c)).join(' '); o.bar = !document.querySelector('#palPick').hidden && /Picked: Am/.test(document.querySelector('#palPick').textContent);
+    document.querySelector('#palPick [data-palput="after"]').click(); o.after = chords.map(c => chordName(c)).join(' ');
+    document.querySelector('#dia [data-pal]:nth-child(4)').click(); document.querySelector('#palPick [data-palput="in"]').click(); o.into = chords.map(c => chordName(c)).join(' ');
+    const lens = []; S.drone = false; S.bars = 16;
+    for (const g of [['jazz'], ['blues'], ['funk', 'jazz', 'film']]) { S.genres = g; for (let i = 0; i < 12; i++) { generate(); lens.push(chords.reduce((a, c) => a + c.beats, 0) / barLen()); } }
+    S.bars = 4; S.genres = ['blues']; for (let i = 0; i < 12; i++) { generate(); lens.push(chords.reduce((a, c) => a + c.beats, 0) / barLen() * 4); }
+    o.lens = [...new Set(lens)].join(); S.genres = []; S.bars = 4;
+    o.tab = document.querySelector('#tab-gen').textContent;
+    return o;
+  });
+  check('round 2: tapping a chord in Keys and modes plays it and holds it; the chart changes only on Add after or Put in', r.untouched === 'C G' && r.bar && r.after === 'C Am G' && r.into === 'C F G', JSON.stringify(r));
+  check('round 2: Generate fills the chosen length, whichever genres are picked (16 bars with Jazz or Blues; 4 with Blues)', r.lens === '16', r.lens);
+  check('round 2: the Create tab for new chords is called Generate', r.tab === 'Generate', r.tab);
+  const strip = await page.evaluate(async () => { chords = parseProg('G | C').chords; S.tonic = 7; renderAll(); markPlaying(chords[0].id); await new Promise(r => setTimeout(r, 600)); const el = document.querySelector('.slot.playing'), sh = getComputedStyle(el).boxShadow, ink = getComputedStyle(document.body).color; markPlaying(null); return { sh, ink }; });
+  check('round 2: the playing strip is drawn in the ink colour, not the play green that matched Home', strip.sh.startsWith(strip.ink.replace('rgb(', 'rgb(')) && /-8px/.test(strip.sh), JSON.stringify(strip));
+  const empty = await page.evaluate(() => { chords = parseProg('G | B7 | Em | Cm | G | F#m7b5 | Am7 | Cmaj7 | Bm | D7 | F#dim7 | ?').chords; S.tonic = 7; S.mode = 'ionian'; renderAll(); const g = suggestions(11).groups.find(g => g.id === "dia"); return g.items.map(i => chordName(i.chords[0])).join(' '); });
+  check('round 2: an empty slot offers every chord of the key (Em7 after F♯°7 included)', empty.split(' ').length === 7 && /Em/.test(empty), empty);
+  check('round 2: no page errors', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1866,6 +1891,7 @@ try {
   await playbackFeedback();
   await liveChord();
   await focusMode();
+  await feedbackRound2();
   await menus();
   await layout();
   await hardening();
