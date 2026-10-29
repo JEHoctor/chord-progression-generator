@@ -9,7 +9,8 @@ permissions:
 
 jobs:
   smoke:
-    runs-on: ubuntu-latest
+    # pinned: ubuntu-latest moved to Ubuntu 26 in October 2026, which the pinned Playwright (1.47.2) can't install browsers on
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
