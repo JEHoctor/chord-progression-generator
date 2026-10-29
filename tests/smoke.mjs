@@ -1386,8 +1386,8 @@ async function colorByJob() {
   const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
   await page.goto(URL_);
   await page.evaluate(() => { S.tonic = 7; S.mode = 'ionian'; chords = parseProg('G | C | D | Cm').chords; sel = chords[2].id; selectTab('phone', 'p-chord'); commit(); });
-  const before = await page.evaluate(() => ({ job: document.querySelector('#rows .slot').classList.contains('j-home'), legend: document.querySelector('.legend:not(.simple-legend)').checkVisibility(), pressed: document.querySelector('[data-colorby="kind"]').getAttribute('aria-pressed') }));
-  await page.click('[data-colorby="job"]');
+  const before = await page.evaluate(() => ({ job: document.querySelector('#rows .slot').classList.contains('j-home'), legend: document.querySelector('.legend:not(.simple-legend)').checkVisibility(), pressed: (document.querySelector('#colorMenu').open = true, renderColorMenu(), document.querySelector('[data-colorby="kind"]').getAttribute('aria-pressed')) }));
+  await page.click('#colorMenu summary'); await page.click('[data-colorby="job"]');
   const after = await page.evaluate(() => { const sl = [...document.querySelectorAll('#rows .slot')]; return { cls: sl.map(x => [...x.classList].find(c => c.startsWith('j-'))).join(' '), colors: sl.map(x => getComputedStyle(x).getPropertyValue('--k').trim()).join(' '), nums: sl.map(x => x.querySelector('.cr').textContent).join(' '), jl: document.querySelector('.simple-legend').checkVisibility(), kl: document.querySelector('.legend:not(.simple-legend)').checkVisibility(), theory: document.querySelector('#simpleTheory').checkVisibility(), pill: document.querySelector('#detail .job-line')?.textContent, swaps: getComputedStyle(document.querySelector('#tab-swaps')).display !== 'none', simple: S.simple }; });
   check('colour by job: the full view can colour chords Home / Away / Pull / Surprise and keep its numerals and tools', !before.job && before.legend && before.pressed === 'true' && after.cls === 'j-home j-away j-pull j-surprise' && /var\(--t-home\)|#34C77B/i.test(after.colors.split(' ')[0]) && after.nums === 'I IV V iv' && after.jl && !after.kl && !after.theory && /^Pull D is Pull in G major/.test(after.pill) && after.swaps && !after.simple, JSON.stringify({ before, after }));
   await page.reload();
@@ -1395,8 +1395,37 @@ async function colorByJob() {
   await page.evaluate(() => { S.quiz = true; renderAll(); });
   check('colour by job: the quiz still hides the colours', await page.evaluate(() => getComputedStyle(document.querySelector('#rows .slot')).getPropertyValue('--k').trim() === getComputedStyle(document.documentElement).getPropertyValue('--t-dia').trim() || /t-dia/.test(getComputedStyle(document.querySelector('#rows .slot')).getPropertyValue('--k'))));
   await page.evaluate(() => { S.quiz = false; renderAll(); });
-  await page.click('[data-colorby="kind"]');
+  await page.evaluate(() => { document.querySelector('#colorMenu').open = true; renderColorMenu(); }); await page.click('[data-colorby="kind"]');
   check('colour by job: Where it’s from brings the source colours back', await page.evaluate(() => !document.body.classList.contains('jobcolors') && document.querySelector('.legend:not(.simple-legend)').checkVisibility()));
+  await ctx.close();
+}
+/* your own colours, readable text on any of them, and Home following the key */
+async function customColours() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  await page.evaluate(() => { S.colorBy = 'job'; S.tonic = 0; S.mode = 'ionian'; chords = parseProg('C | F | G | C\n[Key: D major]\nD | G | A | D').chords; sel = chords[0].id; selectTab('phone', 'p-chord'); commit(); });
+  await page.click('[data-opencolors]');
+  check('colours: Change the colours under the key opens the Colours menu', await page.evaluate(() => document.querySelector('#colorMenu').open && !!document.querySelector('#colorPop [data-col="away"]')));
+  await page.evaluate(() => { const i = document.querySelector('#colorPop [data-col="away"]'); i.value = '#1f3a93'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); });
+  const own = await page.evaluate(() => { const f = document.querySelector('#rows .slot.j-away'), cs = getComputedStyle(f); return { bg: cs.backgroundColor, ink: cs.color, saved: S.colors.away, sw: getComputedStyle(document.querySelector('.simple-legend .j-away'), '::before').backgroundColor }; });
+  check('colours: a colour you choose is used in the chart and the key, with white text where dark text would be hard to read', own.bg === 'rgb(31, 58, 147)' && own.ink === 'rgb(255, 255, 255)' && own.saved === '#1f3a93' && own.sw === 'rgb(31, 58, 147)', JSON.stringify(own));
+  const pale = await page.evaluate(() => { S.colors = { ...S.colors, pull: '#ffe4a0' }; renderAll(); return getComputedStyle(document.querySelector('#rows .slot.j-pull')).color; });
+  check('colours: a pale colour keeps dark text', pale === 'rgb(20, 20, 20)', pale);
+  await page.check('#keyHomeOn');
+  const kh = await page.evaluate(() => { const sl = [...document.querySelectorAll('#rows .slot.j-home')].map(x => getComputedStyle(x).backgroundColor), hex = h => `rgb(${[1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(', ')})`; return { sl, c: hex(keyColor(0)), d: hex(keyColor(2)), keys: document.querySelectorAll('#colorPop [data-keycol]').length, homeSw: !!document.querySelector('#colorPop [data-col="home"]') }; });
+  check('colours: with Home following the key, Home chords take their key’s colour, so the change to D shows', kh.sl.length === 4 && kh.sl[0] === kh.c && kh.sl[1] === kh.c && kh.sl[2] === kh.d && kh.sl[3] === kh.d && kh.c !== kh.d && kh.keys === 12 && !kh.homeSw, JSON.stringify(kh));
+  await page.evaluate(() => { const i = document.querySelector('#colorPop [data-keycol="0"]'); i.value = '#0044cc'; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); });
+  const c0 = await page.evaluate(() => ({ slot: getComputedStyle(document.querySelector('#rows .slot.j-home')).backgroundColor, legend: getComputedStyle(document.documentElement).getPropertyValue('--t-home').trim() }));
+  check('colours: giving C its own colour (blue) recolours C’s Home chords and the key', c0.slot === 'rgb(0, 68, 204)' && c0.legend === '#0044cc', JSON.stringify(c0));
+  await page.evaluate(() => { document.activeElement.blur(); chords[1] = { ...chords[1], root: 2, q: 'm' }; pushHist(); commit(); });
+  await page.keyboard.press('Control+z');
+  await page.reload();
+  check('colours: your colours are remembered and survive undo', await page.evaluate(() => S.colors.away === '#1f3a93' && S.keyHome && S.keyColors[0] === '#0044cc'));
+  await page.evaluate(() => { document.querySelector('#colorMenu').open = true; renderColorMenu(); });
+  await page.click('[data-colreset]'); await page.click('[data-keyreset]');
+  check('colours: Reset brings back the starting colours', await page.evaluate(() => Object.keys(S.colors).length === 0 && S.keyColors === null && getComputedStyle(document.documentElement).getPropertyValue('--t-away').trim().toLowerCase() === '#3d86ff'));
+  await page.keyboard.press('Escape');
+  check('colours: Escape closes the menu', await page.evaluate(() => !document.querySelector('#colorMenu').open));
   await ctx.close();
 }
 async function appName() {
@@ -1680,6 +1709,7 @@ try {
   await tuneIdeasSuite();
   await melodyInput();
   await colorByJob();
+  await customColours();
   await menus();
   await layout();
   await hardening();
