@@ -1530,6 +1530,26 @@ async function liveChord() {
   check('live: no page errors', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 }
+  /* Hear what I play: keys sound through the app while held, the pedal holds them, and the switch turns it off */
+  { const { ctx, page } = await openPage(); await page.goto(URL_);
+    const r = await page.evaluate(async () => {
+      const w = ms => new Promise(r => setTimeout(r, ms)), o = {}; let log = [];
+      const ot = window.tone, op = window.pluck; window.tone = (m, t, d, v, out) => { log.push({ f: 't', m, v }); return ot(m, t, d, v, out); }; window.pluck = (m, t, d, v, out) => { log.push({ f: 'p', m, v }); return op(m, t, d, v, out); };
+      const on = (m, v = 100) => midiInMessage([0x90, m, v]), off = m => midiInMessage([0x80, m, 0]), ped = v => midiInMessage([0xB0, 64, v]);
+      S.instrument = 'piano'; midiInUse({ name: 'Test keyboard', onmidimessage: null }); await w(50);
+      o.def = S.hearIn && document.querySelector('#midiHear').checked;
+      on(60, 120); on(64, 30); o.sounded = log.map(e => e.f + e.m).join(); o.louder = log[0].v > log[1].v; o.voices = MIDIIN.voices.size;
+      off(60); o.afterOff = MIDIIN.voices.has(60) ? 'still' : 'gone';
+      ped(127); off(64); o.pedalHeld = MIDIIN.voices.has(64); ped(0); o.pedalLift = MIDIIN.voices.has(64);
+      S.instrument = 'guitar'; log = []; on(52); off(52); o.guitar = log.map(e => e.f).join();
+      S.instrument = 'piano'; document.querySelector('#midiHear').click(); log = []; on(62); off(62); o.offSilent = log.length === 0 && !S.hearIn;
+      document.querySelector('#midiHear').click(); midiInUse(null); window.tone = ot; window.pluck = op; return o;
+    });
+    check('hear: on by default, each key sounds as it is pressed, louder when struck harder', r.def && r.sounded === 't60,t64' && r.louder && r.voices === 2, JSON.stringify(r));
+    check('hear: letting go stops the note; the sustain pedal holds it until it lifts', r.afterOff === 'gone' && r.pedalHeld && !r.pedalLift, JSON.stringify(r));
+    check('hear: keys use the Play bar’s sound, and the switch turns them off', r.guitar === 'p' && r.offSilent, JSON.stringify(r));
+    check('hear: no page errors', page.errors.length === 0, page.errors.join(' | '));
+    await ctx.close(); }
   /* MIDI in and out live in Chart tools; a browser without Web MIDI says so there instead */
   { const { ctx, page } = await openPage(); await page.goto(URL_);
     const r = await page.evaluate(() => ({ inTools: !!document.querySelector('#chartTools #midiInWrap') && !!document.querySelector('#chartTools #midiOutWrap'), none: document.querySelector('#midiNone').hidden }));

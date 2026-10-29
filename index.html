@@ -1150,7 +1150,7 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
         <button class="btn" id="clearChart" type="button" title="Clear the chords and the tune (you can undo it)">Start over</button>
         <button class="btn" id="recolor" type="button" title="Rewrite every chord using the chord types in Chords allowed">Apply chords allowed</button>
         <div class="io-row midi-row" role="group" aria-label="MIDI keyboard">
-        <span class="io-pair" id="midiInWrap" hidden><label class="label" for="midiIn">MIDI in</label><select id="midiIn"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select><label class="check" title="Each chord you play is added to the chart when you let go of the keys"><input type="checkbox" id="midiRec"> Record chords</label><output id="midiHeard" class="hint" aria-live="polite"></output></span>
+        <span class="io-pair" id="midiInWrap" hidden><label class="label" for="midiIn">MIDI in</label><select id="midiIn"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select><label class="check" title="Each chord you play is added to the chart when you let go of the keys"><input type="checkbox" id="midiRec"> Record chords</label><label class="check" title="Sound each key through the app, in the Play bar’s sound. Turn it off if your keyboard makes its own sound."><input type="checkbox" id="midiHear"> Hear what I play</label><output id="midiHeard" class="hint" aria-live="polite"></output></span>
         <span class="io-pair" id="midiOutWrap" hidden><label class="label" for="midiOut">MIDI out</label><select id="midiOut"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select></span>
           <span class="hint" id="midiNone" hidden>MIDI keyboards work in Chrome or Edge. This browser can’t connect to them.</span>
         </div>
@@ -1452,7 +1452,7 @@ const NUMS={I:0,II:2,III:4,IV:5,V:7,VI:9,VII:11};
 /* tables are plain objects, so keys that come from outside (chord text, share links, saved files) are only accepted when
    they are the table's own entries; "constructor" or "__proto__" never count */
 const ownKey=(o,k)=>typeof k==='string'&&Object.prototype.hasOwnProperty.call(o,k);
-const S={textSize:1,colors:{},keyHome:false,keyColors:null,colorBy:'kind',simple:false,simpleTheory:false,vocabFull:null,hearBack:1,foldForm:true,linkForm:true,arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
+const S={hearIn:true,textSize:1,colors:{},keyHome:false,keyColors:null,colorBy:'kind',simple:false,simpleTheory:false,vocabFull:null,hearBack:1,foldForm:true,linkForm:true,arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
 let chords=[], sel=null, hist=[];
 /* the melody: one entry per beat of the chart, by absolute beat. A MIDI note number starts a note, -1 holds the note
    before it, null is a rest. It is independent of the chords, so moving a chord changes the harmony under the tune.
@@ -4771,18 +4771,31 @@ function midiAllOff(){ midiNotesOff(); if(MIDIOUT.out) for(let c=0;c<16;c++){ mi
 
 /* MIDI in: a keyboard's notes name a chord. What the hands hold at their fullest is the chord; it shows in the Chord finder
    (with every possible name) and, with Record on, is added to the chart when all the keys come up. */
-const MIDIIN={inp:null,held:new Set(),peak:[],rec:false,pedal:false,sus:new Set(),last:null};
+const MIDIIN={inp:null,held:new Set(),peak:[],rec:false,pedal:false,sus:new Set(),last:null,voices:new Map(),out:null};
+/* Hear what I play: each key sounds through the app in the Play bar's sound, as loud as it was struck, for as long as it is
+   held (or the sustain pedal holds it). A voice is the synth's own note, long enough to fade out by itself, routed through a
+   gain of its own that is closed when the key is let go. It goes straight to the master output, so stopping playback
+   doesn't cut what you're playing. */
+function hearOn(m,v){
+  if(!S.hearIn||!actx) return; hearOff(m,true);
+  const a=actx; if(!MIDIIN.out){ MIDIIN.out=a.createGain(); MIDIIN.out.connect(master); }
+  const g=a.createGain(), t=a.currentTime+.005, vel=.05+.2*Math.pow(v/127,1.3); g.connect(MIDIIN.out);
+  (S.instrument==='guitar'?pluck:tone)(m,t,S.instrument==='guitar'?3:8,vel,g); MIDIIN.voices.set(m,g);
+}
+function hearOff(m,now){ const g=MIDIIN.voices.get(m); if(!g) return; MIDIIN.voices.delete(m);
+  try{ g.gain.setTargetAtTime(0,actx.currentTime,now?.015:.07); }catch(e){} setTimeout(()=>{ try{ g.disconnect(); }catch(e){} },now?150:700); }
+function hearAllOff(){ [...MIDIIN.voices.keys()].forEach(m=>hearOff(m)); }
 function fillMidiIns(){ const sel=$('#midiIn'); if(!sel||!MIDIOUT.access) return; const cur=MIDIIN.inp?MIDIIN.inp.id:'', ins=[...MIDIOUT.access.inputs.values()];
   sel.innerHTML='<option value="">Off</option>'+ins.map(o=>`<option value="${esc(o.id)}">${esc(o.name||'MIDI input')}</option>`).join('')+(ins.length?'':'<option value="" disabled>No MIDI inputs found</option>');
   sel.value=ins.some(o=>o.id===cur)?cur:''; midiInUse(sel.value?MIDIOUT.access.inputs.get(sel.value):null); }
-function midiInUse(inp){ if(MIDIIN.inp&&MIDIIN.inp!==inp) MIDIIN.inp.onmidimessage=null; MIDIIN.inp=inp; MIDIIN.held.clear(); MIDIIN.peak=[]; MIDIIN.sus.clear(); MIDIIN.pedal=false; MIDIIN.last=null; renderLive();
+function midiInUse(inp){ if(MIDIIN.inp&&MIDIIN.inp!==inp) MIDIIN.inp.onmidimessage=null; MIDIIN.inp=inp; MIDIIN.held.clear(); MIDIIN.peak=[]; MIDIIN.sus.clear(); MIDIIN.pedal=false; MIDIIN.last=null; hearAllOff(); if(inp) ac(); renderLive();
   if(inp) inp.onmidimessage=e=>midiInMessage(e.data); renderMidiHeard(); }
 function midiInMessage(d){
   const st=d[0]&0xF0, m=d[1];
   /* the sustain pedal: keys let go while it is down keep sounding, so they count towards the live chord until it lifts */
-  if(st===0xB0&&m===64){ MIDIIN.pedal=d[2]>=64; if(!MIDIIN.pedal) MIDIIN.sus.clear(); liveSoon(); return; }
-  if(st===0x90&&d[2]>0){ MIDIIN.held.add(m); MIDIIN.sus.delete(m); if(MIDIIN.held.size>=MIDIIN.peak.length) MIDIIN.peak=[...MIDIIN.held]; }
-  else if(st===0x80||st===0x90){ MIDIIN.held.delete(m); if(MIDIIN.pedal) MIDIIN.sus.add(m); }
+  if(st===0xB0&&m===64){ MIDIIN.pedal=d[2]>=64; if(!MIDIIN.pedal){ MIDIIN.sus.forEach(x=>{ if(!MIDIIN.held.has(x)) hearOff(x); }); MIDIIN.sus.clear(); } liveSoon(); return; }
+  if(st===0x90&&d[2]>0){ hearOn(m,d[2]); MIDIIN.held.add(m); MIDIIN.sus.delete(m); if(MIDIIN.held.size>=MIDIIN.peak.length) MIDIIN.peak=[...MIDIIN.held]; }
+  else if(st===0x80||st===0x90){ MIDIIN.held.delete(m); if(MIDIIN.pedal) MIDIIN.sus.add(m); else hearOff(m); }
   else return;
   liveSoon();
   if(MIDIIN.held.size) { renderMidiHeard(); return; }
@@ -4850,7 +4863,7 @@ let LIB={version:1,items:[]}, libCurrent=null;
 /* ============ untrusted state: one gate for settings and chords from saves, library files and share links ============ */
 const isBool=v=>typeof v==='boolean';
 const SANE={textSize:v=>TEXT_SIZES.some(t=>t.v===v), colors:v=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.entries(v).every(([k,x])=>ownKey(DEF_COLORS,k)&&HEX_RE.test(x)), keyHome:v=>typeof v==='boolean', keyColors:v=>v===null||Array.isArray(v)&&v.length===12&&v.every(x=>HEX_RE.test(x)), colorBy:v=>v==='kind'||v==='job', simple:v=>typeof v==='boolean', simpleTheory:v=>typeof v==='boolean', vocabFull:v=>v===null||Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)), hearBack:v=>[1,2,4].includes(v), tonic:v=>Number.isInteger(v)&&v>=0&&v<12, mode:v=>ownKey(MODES,v), meter:v=>ownKey(METERS,v), tempo:v=>Number.isFinite(+v)&&+v>0&&v!==''&&v!==null&&typeof v!=='boolean',
-  voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), showMel:isBool, melPlay:isBool, foldForm:isBool, linkForm:isBool, arr:v=>ownKey(ARR_STYLES,v), arrGroup:v=>v===''||ownKey(ARR_GROUPS,v), arrShow:isBool, arrSeed:v=>Number.isInteger(v)&&v>=0&&v<1000, arrMute:v=>Array.isArray(v)&&v.length>=5&&v.length<=9&&v.every(isBool), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
+  hearIn:isBool, voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), showMel:isBool, melPlay:isBool, foldForm:isBool, linkForm:isBool, arr:v=>ownKey(ARR_STYLES,v), arrGroup:v=>v===''||ownKey(ARR_GROUPS,v), arrShow:isBool, arrSeed:v=>Number.isInteger(v)&&v>=0&&v<1000, arrMute:v=>Array.isArray(v)&&v.length>=5&&v.length<=9&&v.every(isBool), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
   pstyle:v=>ownKey(PIANO_STYLES,v), gstyle:v=>ownKey(GUITAR_STYLES,v), mood:v=>v===''||MOODS.some(m=>m.id===v),
   genres:v=>Array.isArray(v)&&v.length<=20&&v.every(g=>GENRES.some(x=>x.id===g)), vocab:v=>Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)),
   bars:v=>[4,8,12,16].includes(v), rhythm:v=>['bar','half','mixed','slow'].includes(v), level:v=>[0,1,2].includes(v), surprise:v=>Number.isFinite(v)&&v>=0&&v<=100,
@@ -4986,6 +4999,7 @@ function initIO(){
       if(v==='__connect'){ e.target.value=''; midiInUse(null); await midiConnect(); return; }
       midiInUse(v&&MIDIOUT.access?MIDIOUT.access.inputs.get(v):null); if(MIDIIN.inp) toast(`Listening to ${MIDIIN.inp.name||'MIDI input'}: play a chord`); };
     $('#midiRec').onchange=e=>{ MIDIIN.rec=e.target.checked; };
+    $('#midiHear').checked=S.hearIn; $('#midiHear').onchange=e=>{ S.hearIn=e.target.checked; if(!S.hearIn) hearAllOff(); else ac(); save(); };
     $('#live').onclick=e=>{ if(e.target.closest('[data-live-add]')) liveAdd(); };
     $('#midiOut').onchange=async e=>{ const v=e.target.value; midiAllOff();
       if(v==='__connect'){ e.target.value=''; MIDIOUT.out=null; await midiConnect(); return; }
@@ -5462,7 +5476,7 @@ function transpose(n){
 function vocabName(){ const vk=[...S.vocab].sort().join(); const p=Object.keys(PRESETS).find(k=>[...PRESETS[k]].sort().join()===vk); return p?'Chords allowed: '+p:'Chords allowed: '+['triads',...FAMS.filter(f=>!f.fixed&&famOn(f.id)).map(f=>f.name)].join(', '); }
 function undo(){ const s=hist.pop(); if(!s) return; syncedTop=hist[hist.length-1]??null; restoreSnap(s); }
 /* which view you're in isn't an edit, so undo leaves it (and the chord families it set) as they are */
-const VIEW_KEYS=['textSize','simple','simpleTheory','vocab','vocabFull','colorBy','colors','keyHome','keyColors'];
+const VIEW_KEYS=['hearIn','textSize','simple','simpleTheory','vocab','vocabFull','colorBy','colors','keyHome','keyColors'];
 function restoreSnap(s){ const d=JSON.parse(s), keep=Object.fromEntries(VIEW_KEYS.map(k=>[k,S[k]])); Object.assign(S,d.S,keep); setTuning(S.tuning); chords=d.chords; sel=d.sel; melody=d.melody||[]; melAnd=d.melAnd||[]; commit(); }
 /* an Undo offered in a toast reverts that action, even if other edits happened since: it restores the snapshot taken just before it */
 function undoTo(snap){ return ()=>{ const i=hist.lastIndexOf(snap); if(i>=0) hist.length=i; syncedTop=hist[hist.length-1]??null; restoreSnap(snap); }; }
