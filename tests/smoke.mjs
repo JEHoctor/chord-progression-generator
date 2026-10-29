@@ -47,7 +47,10 @@ export function parseMidi(buf) {
 
 // ---------- harness ----------
 const results = []; let failures = 0;
-const check = (name, ok, detail = '') => { results.push(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  (' + detail + ')' : ''}`); if (!ok) failures++; };
+/* on GitHub Actions a failure is also written as an error annotation, so it shows on the run's summary page */
+const annotate = (name, detail) => { if (!process.env.GITHUB_ACTIONS) return; const esc = t => String(t).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+  console.log(`::error title=${esc(name).replace(/[:,]/g, ' ').slice(0, 200)}::${esc(detail || name).slice(0, 2000)}`); };
+const check = (name, ok, detail = '') => { results.push(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  (' + detail + ')' : ''}`); if (!ok) { failures++; annotate(name, detail); } };
 // headless Chromium on a machine with no audio device can stall creating an AudioContext; this flag gives it a silent output
 const browser = await chromium.launch({ args: ['--disable-audio-output'] });
 async function openPage(opts = {}) {
