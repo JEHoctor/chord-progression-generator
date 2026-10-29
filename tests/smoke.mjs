@@ -1428,6 +1428,45 @@ async function customColours() {
   check('colours: Escape closes the menu', await page.evaluate(() => !document.querySelector('#colorMenu').open));
   await ctx.close();
 }
+/* reading comfort: Text size, nothing under 12px, controls big enough to hit, and a Play bar that keeps out of the way */
+async function textSize() {
+  const sizes = page => page.evaluate(() => { const els = [...document.querySelectorAll('body *')].filter(e => e.checkVisibility() && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && !e.closest('svg')); return els.map(e => parseFloat(getComputedStyle(e).fontSize)); });
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(URL_);
+  const n0 = await sizes(page);
+  check('text size: at Normal nothing on screen is under 12px', Math.min(...n0) >= 12, String(Math.min(...n0)));
+  const hint0 = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.hint')).fontSize));
+  await page.click('#textSize');
+  const l = await page.evaluate(() => ({ fs: getComputedStyle(document.documentElement).getPropertyValue('--fs').trim(), label: document.querySelector('#textSizeLabel').textContent, hint: parseFloat(getComputedStyle(document.querySelector('.hint')).fontSize), btn: document.querySelector('#play').getBoundingClientRect().height }));
+  await page.click('#textSize');
+  const xl = await page.evaluate(() => ({ label: document.querySelector('#textSizeLabel').textContent, hint: parseFloat(getComputedStyle(document.querySelector('.hint')).fontSize), hs: document.documentElement.scrollWidth > innerWidth, compact: document.body.classList.contains('dock-compact'), dockRow: Math.abs(document.querySelector('#play').getBoundingClientRect().top - document.querySelector('#exportBtn').getBoundingClientRect().top) < 20 }));
+  check('text size: Text cycles Normal → Large → Largest, scaling the text', l.label === 'Text: Large' && l.fs === '1.2' && Math.abs(l.hint - hint0 * 1.2) < .6 && xl.label === 'Text: Largest' && Math.abs(xl.hint - hint0 * 1.4) < .6, JSON.stringify({ hint0, l, xl }));
+  check('text size: at Largest the laptop layout has no sideways scroll and the Play bar keeps to one row', !xl.hs && xl.compact && xl.dockRow, JSON.stringify(xl));
+  await page.reload();
+  check('text size: the choice is remembered', await page.evaluate(() => S.textSize === 1.4 && document.querySelector('#textSizeLabel').textContent === 'Text: Largest'));
+  await page.click('#textSize');
+  check('text size: and goes back round to Normal', await page.evaluate(() => S.textSize === 1));
+  const small = await page.evaluate(() => { selectTab('phone', 'p-chord'); renderAll(); return [...document.querySelectorAll('.chip,.io-pair select,#detail select,.stepper button,.cp-x,.keytag,#tempo')].filter(e => e.checkVisibility()).filter(e => e.getBoundingClientRect().height < 35.5).map(e => (e.id || e.className) + ':' + Math.round(e.getBoundingClientRect().height)); });
+  check('text size: chips, small menus, steppers and close buttons are at least 36px tall', small.length === 0, small.join(' '));
+  await ctx.close();
+  /* a laptop zoomed to 200%: a short window */
+  const z = await openPage({ viewport: { width: 720, height: 450 } });
+  await z.page.goto(URL_);
+  const zr = await z.page.evaluate(() => ({ compact: document.body.classList.contains('dock-compact'), dock: document.querySelector('#dock').getBoundingClientRect().height, inst: document.querySelector('#instrument').checkVisibility(), hs: document.documentElement.scrollWidth > innerWidth }));
+  await z.page.click('#dockMore');
+  const zo = await z.page.evaluate(() => ({ inst: document.querySelector('#instrument').checkVisibility(), style: document.querySelector('#pstyle').checkVisibility(), label: document.querySelector('#dockMore').textContent, exp: document.querySelector('#dockMore').getAttribute('aria-expanded') }));
+  check('short screen: the Play bar shrinks to one row (Play, tempo, More, Export), and More shows the rest', zr.compact && zr.dock < 70 && !zr.inst && !zr.hs && zo.inst && zo.style && zo.label === 'Less' && zo.exp === 'true', JSON.stringify({ zr, zo }));
+  await z.ctx.close();
+  /* a phone with Largest text */
+  const ph = await openPage({ viewport: { width: 390, height: 844 } });
+  await ph.page.goto(URL_);
+  await ph.page.evaluate(() => { S.textSize = 1.4; renderAll(); });
+  await ph.page.waitForTimeout(100);
+  const pr = await ph.page.evaluate(() => ({ hs: document.documentElement.scrollWidth > innerWidth, compact: document.body.classList.contains('dock-compact') }));
+  const pn = await ph.page.evaluate(() => { S.textSize = 1; renderAll(); return new Promise(r => requestAnimationFrame(() => r(document.body.classList.contains('dock-compact')))); });
+  check('text size: on a phone, Largest fits the width and uses the one-row Play bar; Normal keeps the usual two rows', !pr.hs && pr.compact && !pn, JSON.stringify({ pr, pn }));
+  await ph.ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1710,6 +1749,7 @@ try {
   await melodyInput();
   await colorByJob();
   await customColours();
+  await textSize();
   await menus();
   await layout();
   await hardening();
