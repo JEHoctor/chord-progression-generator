@@ -1467,6 +1467,42 @@ async function textSize() {
   check('text size: on a phone, Largest fits the width and uses the one-row Play bar; Normal keeps the usual two rows', !pr.hs && pr.compact && !pn, JSON.stringify({ pr, pn }));
   await ph.ctx.close();
 }
+async function playbackFeedback() {
+  const { ctx, page } = await openPage();
+  await page.goto(URL_);
+  /* every note the synth is asked for, with its start relative to now */
+  const rec = () => page.evaluate(() => { window.__log = []; for (const f of ['tone', 'pluck']) { const o = window['__' + f] || (window['__' + f] = window[f]); window[f] = (m, t, ...x) => { window.__log.push({ m, t: t - actx.currentTime }); return o(m, t, ...x); }; } });
+  await rec();
+  const pins = await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms)), first = () => { const t0 = Math.min(...__log.map(e => e.t)); return __log.filter(e => e.t < t0 + .2).map(e => e.m).sort((a, b) => a - b).join(); };
+    chords = parseProg('C | G | Am | F').chords; S.instrument = 'piano'; S.pstyle = 'block'; renderAll();
+    const c = chords[0], sh = guitarShapes({ root: c.root, q: c.q, bass: null })[2]; c.gpin = { t: S.tuning, cp: 0, fr: sh.fr.slice() }; renderAll();
+    __log = []; playChart(); await wait(150); stopAll(); const gOnPiano = first(), gWant = shapeVoicing(sh.fr).all.sort((a, b) => a - b).join();
+    delete c.gpin; const pv = pianoVoicings(c)[3]; c.ppin = { bass: pv.bass, rh: pv.rh.slice() }; S.instrument = 'guitar'; renderAll();
+    __log = []; playChart(); await wait(150); stopAll(); const pOnGuitar = first(), pWant = [pv.bass, ...pv.rh].sort((a, b) => a - b).join();
+    S.instrument = 'piano'; delete c.ppin; renderAll(); return { gOnPiano, gWant, pOnGuitar, pWant };
+  });
+  check('feedback: a pinned guitar shape is what the piano plays when the sound is Piano', pins.gOnPiano === pins.gWant, JSON.stringify(pins));
+  check('feedback: a pinned piano voicing is what the guitar plays when the sound is Guitar', pins.pOnGuitar === pins.pWant, JSON.stringify(pins));
+  const live = await page.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    chords = parseProg('C | G | Am | F').chords; S.tempo = 120; S.loop = true; S.meter = '4/4'; renderAll();
+    playChart(); await wait(700); __log = [];
+    sel = chords[0].id; addChordHere(parseProg('E7').chords[0]); await wait(120);
+    const e7 = __log.some(e => e.t > .9 && e.t < 1.6 && e.m % 12 === 8), restruck = __log.some(e => e.t < .2 && e.m % 12 === 0), hl = document.querySelector('.slot.playing')?.dataset.id === chords[0].id;
+    __log = []; sel = chords[2].id; renderAll(); await wait(50); const quiet = __log.length === 0, hl2 = !!document.querySelector('.slot.playing');
+    stopAll(); return { e7, restruck, hl, quiet, hl2 };
+  });
+  check('feedback: a chord added while playing is heard in this pass, not only after the loop comes round', live.e7 && live.restruck, JSON.stringify(live));
+  check('feedback: the playing chord stays lit through an edit, and selecting a chord does not restart playback', live.hl && live.quiet && live.hl2, JSON.stringify(live));
+  const meter = await page.evaluate(() => { S.meter = '7/8'; chords = parseProg('C | G').chords; renderAll(); const a = styleEvents(playedVoicing(chords[0]), chords[0].beats, 0).map(e => e.at).join();
+    S.meter = '4/4'; chords = parseProg('C | G').chords; renderAll(); const b = styleEvents(playedVoicing(chords[0]), chords[0].beats, 0).map(e => e.at).join(); return { a, b }; });
+  check('feedback: in 7/8 block chords are struck on each group (2+2+3); 4/4 still holds one chord per bar', meter.a === '0,2,4' && meter.b === '0', JSON.stringify(meter));
+  const keys = await page.evaluate(() => ['C G', 'C | G | C | G', 'Am G', 'Dm G C'].map(t => { const k = guessKey(parseProg(t).chords); return SHARP[k.t] + ' ' + k.m; }).join('; '));
+  check('feedback: a two-chord loop reads from its first chord (C G is I V in C), and ii V I still finds C', keys === 'C ionian; C ionian; A aeolian; C ionian', keys);
+  check('feedback: no page errors', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1750,6 +1786,7 @@ try {
   await colorByJob();
   await customColours();
   await textSize();
+  await playbackFeedback();
   await menus();
   await layout();
   await hardening();

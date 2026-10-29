@@ -1404,6 +1404,8 @@ function templatePool(){
 const METERS={'4/4':[2,2],'3/4':[2,1],'2/4':[1,1],'5/4':[3,2],'6/8':[3,3],'7/8':[4,3],'9/8':[6,3],'12/8':[6,6]};
 /* beat groupings shown as accented ticks */
 const ACCENTS={'4/4':[0,2],'3/4':[0],'2/4':[0],'5/4':[0,3],'6/8':[0,3],'7/8':[0,2,4],'9/8':[0,3,6],'12/8':[0,3,6,9]};
+/* meters whose beats fall into groups of different sizes or of three: their groups are played, not only clicked */
+const GROUPED=m=>m!=='4/4'&&(ACCENTS[m]||[]).length>1;
 /* rhythmic cycles from South and North Indian music, offered as grids for sketching chord changes. The key keeps the
    "beats/unit" form every other part of the app reads; the name after it picks the grouping and its marks.
    Carnatic marks: I4 laghu (a clap and three finger counts), O drutam (a clap and a wave). Hindustani marks: X sam,
@@ -2147,6 +2149,8 @@ function pianoVoicing(c){
 
 /* ============ audio ============ */
 let actx=null, master=null, session=null, timers=[], playing=false;
+/* GATE: while a pass is rescheduled from the middle, notes due before this audio time are left out (see resyncPlay) */
+let GATE=0;
 /* iPhone and iPad: Safari treats Web Audio as "ambient" sound, so the ring/silent switch mutes it. The page's sound is
    marked as media playback instead: through the audio session API where Safari has it (iOS 17+), otherwise by keeping
    a silent media element playing, which moves the page into the playback category. The audio engine is also resumed
@@ -2173,6 +2177,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden&&silentEl&
 function ac(){ audioUnlock(); if(!actx){ actx=new (window.AudioContext||window.webkitAudioContext)(); const comp=actx.createDynamicsCompressor(); master=actx.createGain(); master.gain.value=.7; master.connect(comp).connect(actx.destination); audioUnlock(); } return actx; }
 function newSession(){ const a=ac(); if(session){ try{ session.gain.setTargetAtTime(0,a.currentTime,.03); const s=session; setTimeout(()=>s.disconnect(),300);}catch(e){} } session=a.createGain(); session.connect(master); return session; }
 function tone(m,t,dur,vel,out){
+  if(t<GATE) return;
   const a=actx, f=440*Math.pow(2,(m-69)/12);
   const o1=a.createOscillator(), o2=a.createOscillator(), g=a.createGain(), g2=a.createGain(), lp=a.createBiquadFilter();
   o1.type='triangle'; o1.frequency.value=f; o2.type='sine'; o2.frequency.value=f*2; g2.gain.value=.22;
@@ -2219,9 +2224,9 @@ function bassLine(list){
 }
 function voicePlan(list,loop){
   const rs=list.filter(real), plan=new Map(); if(!rs.length) return plan;
-  if(S.voicing==='fixed'){ rs.forEach(c=>plan.set(c,ppinOk(c)?pinVoicing(c):pianoVoicing(c))); return plan; }
-  const rh=viterbi(rs.map(c=>ppinOk(c)?[c.ppin.rh.slice()]:rhCandidates(c)),vlUnary,vlMove,loop), bs=bassLine(rs);
-  rs.forEach((c,i)=>{ if(ppinOk(c)){ plan.set(c,pinVoicing(c)); return; } const r=rh[i].filter(m=>m>bs[i]+2); const v={bass:bs[i],rh:r.length?r:rh[i],}; v.all=[v.bass,...v.rh]; plan.set(c,v); });
+  if(S.voicing==='fixed'){ rs.forEach(c=>plan.set(c,pianoPin(c)||pianoVoicing(c))); return plan; }
+  const pins=rs.map(pianoPin), rh=viterbi(rs.map((c,i)=>pins[i]?[pins[i].rh.slice()]:rhCandidates(c)),vlUnary,vlMove,loop), bs=bassLine(rs);
+  rs.forEach((c,i)=>{ if(pins[i]){ plan.set(c,pins[i]); return; } const r=rh[i].filter(m=>m>bs[i]+2); const v={bass:bs[i],rh:r.length?r:rh[i],}; v.all=[v.bass,...v.rh]; plan.set(c,v); });
   return plan;
 }
 let PLAN=null;
@@ -2241,6 +2246,7 @@ function strum(c,t,dur,out,v){ if(!real(c)) return; v=v||pianoVoicing(c);
   tone(v.bass,t,dur,.2,out); v.rh.forEach((m,i)=>tone(m,t+.018*(i+1),dur-.018*(i+1),.13,out)); }
 /* a plucked-string tone: bright attack that darkens and decays like a guitar string, low notes ringing longer */
 function pluck(m,t,dur,vel,out){
+  if(t<GATE) return;
   const a=actx, f=440*Math.pow(2,(m-69)/12), o1=a.createOscillator(), o2=a.createOscillator(), g=a.createGain(), g2=a.createGain(), lp=a.createBiquadFilter();
   o1.type='sawtooth'; o1.frequency.value=f; o2.type='triangle'; o2.frequency.value=f*1.002; g2.gain.value=.6;
   const ring=Math.min(3.2,Math.max(.8,dur+.4))*(m<52?1.25:1);
@@ -2248,7 +2254,7 @@ function pluck(m,t,dur,vel,out){
   g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vel,t+.004); g.gain.exponentialRampToValueAtTime(vel*.35,t+.18); g.gain.exponentialRampToValueAtTime(.0001,t+ring);
   o1.connect(lp); o2.connect(g2).connect(lp); lp.connect(g).connect(out); o1.start(t); o2.start(t); o1.stop(t+ring+.05); o2.stop(t+ring+.05);
 }
-function blip(t,lv,out){ const a=actx,o=a.createOscillator(),g=a.createGain(); o.frequency.value=[900,1150,1500][lv]; g.gain.setValueAtTime([.07,.11,.18][lv],t); g.gain.exponentialRampToValueAtTime(.0001,t+.05); o.connect(g).connect(out); o.start(t); o.stop(t+.06); }
+function blip(t,lv,out){ if(t<GATE) return; const a=actx,o=a.createOscillator(),g=a.createGain(); o.frequency.value=[900,1150,1500][lv]; g.gain.setValueAtTime([.07,.11,.18][lv],t); g.gain.exponentialRampToValueAtTime(.0001,t+.05); o.connect(g).connect(out); o.start(t); o.stop(t+.06); }
 function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
 /* one icon set, drawn at one stroke weight to match the lock */
 /* chord names in display lettering: ♭ and ♯ are set in the same face as the letters, raised and a little smaller,
@@ -2256,7 +2262,7 @@ function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
    (for copying and screen readers); the visible mark is drawn over them. */
 const chordHTML=c=>esc(chordName(c)).replace(/[♭♯]/g,m=>`<span class="acc" data-g="${m==='♭'?'b':'#'}">${m}</span>`);
 const IC={play:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5v9l7.5-4.5z" fill="currentColor"/></svg>',stop:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="8" height="8" rx="1.2" fill="currentColor"/></svg>',left:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8H3.5M7.5 4 3.5 8l4 4"/></svg>',right:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h9.5M8.5 4l4 4-4 4"/></svg>',down:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>',x:'<svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>'};
-function stopAll(){ abReset(); midiAllOff(); clearTimers(); if(actx&&session){ newSession(); } playing=false; document.querySelectorAll('.slot.playing,.fold-row.playing').forEach(e=>e.classList.remove('playing')); $('#play').innerHTML=IC.play+'Play'; arrPlayBtn(); }
+function stopAll(){ abReset(); midiAllOff(); clearTimers(); if(actx&&session){ newSession(); } playing=false; PASSES=[]; PLAYING_ID=null; document.querySelectorAll('.slot.playing,.fold-row.playing').forEach(e=>e.classList.remove('playing')); $('#play').innerHTML=IC.play+'Play'; arrPlayBtn(); }
 function playChart(){
   if(!chords.some(real)){ stopAll(); toast('Add a chord to play: press + Add chord or Generate'); return; }
   abReset(); const a=ac(); clearTimers(); const out=newSession(); playing=true; $('#play').innerHTML=IC.stop+'Stop'; arrPlayBtn();
@@ -2265,23 +2271,48 @@ function playChart(){
 /* one pass through the chart from audio time t. The next pass is queued a little before this one ends and starts exactly
    where it ends, in the same session, so a loop has no gap and ringing notes carry over the seam instead of being cut. */
 const LOOP_AHEAD=.5;
-function playPass(t,out){
-  const a=actx, unit=60/S.tempo*(4/den()), L=barLen(), acc=new Set(ACCENTS[S.meter]); let beat=0;
-  if(S.drone) droneTones(t,chords.reduce((s,c)=>s+c.beats,0)*unit,out);
+/* the passes queued so far (the one playing and the one queued after it), for finding where playback is when the chart changes */
+let PASSES=[];
+/* everything that changes what a pass sounds like; the chart is rescheduled when it differs from the pass's */
+const playSig=()=>JSON.stringify([serialize(),chords.map(c=>[c.id,c.gpin,c.ppin]),melody,melAnd,S.tempo,S.meter,S.instrument,S.pstyle,S.gstyle,S.voicing,S.tuning,S.capo,S.arr,S.arrGroup,S.arrShow,S.arrSeed,S.arrMute,S.showMel,S.melPlay,S.melText,S.drone,S.tonic,S.mode]);
+/* one pass through the chart from audio time t. With `from` (a beat), it starts partway through: notes before that beat are
+   left out and the chord sounding there is struck afresh, so an edit made while playing is heard straight away. */
+function playPass(t,out,from=0){
+  const a=actx, unit=60/S.tempo*(4/den()), L=barLen(), acc=new Set(ACCENTS[S.meter]), total=chords.reduce((s,c)=>s+c.beats,0), start=t+from*unit; let beat=0;
+  PASSES=[...PASSES.filter(p=>p.t+p.total*p.unit>a.currentTime&&p.t<t),{t,unit,total,sig:playSig()}];
+  GATE=from?start-.02:0;
+  if(S.drone) droneTones(start,(total-from)*unit,out);
   const ar=arrOn()?arrange():null, withChords=!ar||!arrMuted(ar.voices.length);
   if(ar) playArr(ar,t,unit,out); else if(S.showMel&&S.melPlay) playMelLine(t,unit,out);
   const part=isPart()&&chords.some(real); if(part&&withChords) playPart(t,unit,out);
   chords.forEach(c=>{
-    const dur=c.beats*unit, v=real(c)?playedVoicing(c):null; if(withChords&&!part) playStyled(c,t,c.beats,unit,out,v,beat);
-    timers.push(setTimeout(()=>{ midiChord(v); $('#nowChord').innerHTML=real(c)?chordHTML(c):'rest'; document.querySelectorAll('.slot.playing,.fold-row.playing').forEach(e=>e.classList.remove('playing')); document.querySelectorAll(`.slot[data-id="${c.id}"],.fold-row[data-ids~="${c.id}"]`).forEach(e=>e.classList.add('playing')); },(t-a.currentTime)*1000));
+    const dur=c.beats*unit;
+    if(beat+c.beats<=from){ beat+=c.beats; t+=dur; return; }
+    const v=real(c)?playedVoicing(c):null, mid=from>beat;
+    if(withChords&&!part) mid?playStyled(c,start,beat+c.beats-from,unit,out,v,from):playStyled(c,t,c.beats,unit,out,v,beat);
+    timers.push(setTimeout(()=>{ midiChord(v); $('#nowChord').innerHTML=real(c)?chordHTML(c):'rest'; markPlaying(c.id); },Math.max(0,((mid?start:t)-a.currentTime)*1000)));
     if(S.click) for(let b=0;b<c.beats;b++){ const bb=(beat+b)%L; blip(t+b*unit,bb===0?2:acc.has(bb)?1:0,out); }
     beat+=c.beats; t+=dur;
   });
+  GATE=0;
   const end=t;
   timers.push(setTimeout(()=>{ if(!playing) return;
     if(S.loop&&chords.some(real)) playPass(Math.max(end,actx.currentTime+.03),out);
     else timers.push(setTimeout(()=>{ if(playing) stopAll(); },Math.max(0,(end-actx.currentTime)*1000)));
   },Math.max(0,(end-a.currentTime-LOOP_AHEAD)*1000)));
+}
+let PLAYING_ID=null;
+function markPlaying(id){ PLAYING_ID=id; document.querySelectorAll('.slot.playing,.fold-row.playing').forEach(e=>e.classList.remove('playing')); if(id!=null) document.querySelectorAll(`.slot[data-id="${id}"],.fold-row[data-ids~="${id}"]`).forEach(e=>e.classList.add('playing')); }
+/* the chart changed while playing: carry on from the same beat with the new chart, rather than finishing the old pass first */
+function resyncPlay(){
+  if(!playing||!actx||!PASSES.length) return;
+  const now=actx.currentTime, cur=[...PASSES].reverse().find(p=>p.t<=now)||PASSES[0];
+  if(cur.sig===playSig()) { markPlaying(PLAYING_ID); return; }
+  if(!chords.some(real)){ stopAll(); return; }
+  const total=chords.reduce((s,c)=>s+c.beats,0), unit=60/S.tempo*(4/den());
+  let b=Math.max(0,(now-cur.t)/cur.unit); if(b>=total) b=0;
+  clearTimers(); PASSES=[]; const out=newSession(), t=now+.05;
+  playPass(t-b*unit,out,b);
 }
 /* the chords around one, for hearing it in context: up to S.hearBack chords before it and the one after it. Unlike the swap
    ideas, which treat the chart as a loop, this never wraps round: the last chord has nothing after it. */
@@ -2309,7 +2340,10 @@ function styleEvents(v,beats,abs=0){
   const L=barLen(), acc=new Set(ACCENTS[S.meter]||[0]), eighth=den()===8, st=styleOf(v), ev=[], near=x=>Math.abs(x-Math.round(x))<1e-6;
   const all=[...v.all].sort((a,b)=>a-b), bass=v.bass, rh=v.gtr?all:[...v.rh].sort((a,b)=>a-b), pos=x=>((abs+x)%L+L)%L;
   const ringTo=list=>{ list.sort((a,b)=>a.at-b.at); list.forEach((e,i)=>{ if(e.dur==null){ const nx=list.slice(i+1).find(x=>x.at>e.at+1e-6); e.dur=(nx?nx.at:beats)-e.at+(nx?.05:0); } }); return list; };
-  if(st==='block'||st==='strum1') return [{at:0,notes:all,dur:beats,gap:v.gtr?.022:.016,vel:1}];
+  /* in a meter built from groups (5/4, 6/8, 7/8 as 2+2+3, …) a held chord would sound the same as 4/4, so it is struck again,
+     more softly, at the start of each group */
+  if(st==='block'||st==='strum1'){ const hits=[0]; if(GROUPED(S.meter)) for(let k=1;k<beats;k++) if(acc.has(pos(k))) hits.push(k);
+    return hits.map((h,i)=>({at:h,notes:all,dur:(hits[i+1]??beats)-h+(hits[i+1]!=null?.05:0),gap:v.gtr?.022:.016,vel:i?.62:1})); }
   if(st==='ballad'){ ev.push({at:0,notes:[bass],dur:beats,vel:1}); const hits=[0]; for(let k=1;k<beats;k++) if(acc.has(pos(k))) hits.push(k);
     hits.forEach((h,i)=>ev.push({at:h,notes:rh,dur:(hits[i+1]??beats)-h,vel:i?.75:.95,gap:.016})); return ev; }
   if(st==='pulse'){ for(let k=0;k<beats;k++){ const p=pos(k); if(k===0||acc.has(p)) ev.push({at:k,notes:[bass],dur:Math.min(2,beats-k),vel:p===0?1:.85}); ev.push({at:k,notes:rh,dur:.8,vel:p===0?.95:.7,gap:.01}); } return ev; }
@@ -2554,11 +2588,19 @@ function gpinOk(c){ const p=c&&c.gpin; if(!real(c)||!p||p.t!==S.tuning||p.cp!==(
 function ppinOk(c){ const p=c&&c.ppin; if(!real(c)||!p||!Number.isInteger(p.bass)||!intsOk(p.rh,21,108)||!p.rh.length) return false;
   const pcs=allPcs(c); return mod(p.bass)===(c.bass??c.root)&&[p.bass,...p.rh].every(m=>pcs.includes(mod(m))); }
 const pinVoicing=c=>({bass:c.ppin.bass,rh:c.ppin.rh.slice(),all:[c.ppin.bass,...c.ppin.rh]});
+/* a pin is heard whichever sound plays it: the piano plays a pinned guitar shape's own notes when the chord has no piano pin,
+   and the guitar strums a pinned piano voicing when it has no guitar pin */
+/* what a new pin's toast adds when playback won't play it as picked */
+function pinNote(c,inst){
+  if(isPart()) return `. ${PIANO_STYLES[S.pstyle].split(':')[0]} writes its own voicings, so pick another playing style to hear it`;
+  if(S.instrument!==inst&&(inst==='guitar'?ppinOk(c):gpinOk(c))) return `. ${S.instrument==='guitar'?'Guitar':'Piano'} sound keeps your ${S.instrument} pick for this chord`;
+  return ''; }
+function pianoPin(c){ if(ppinOk(c)) return pinVoicing(c); if(!gpinOk(c)) return null; const v=shapeVoicing(c.gpin.fr,c.gpin.cp); return {bass:v.bass,rh:v.rh,all:v.all}; }
 function pinShape(c){ const fr=c.gpin.fr.slice(), f=fr.filter(x=>x>0); return {fr,score:0,minF:f.length?Math.min(...f):0,maxF:f.length?Math.max(...f):0,pinned:true,type:'Pinned'}; }
 function shapeVoicing(fr,capo=S.capo||0){ const ms=fr.map((f,i)=>f<0?null:TUNING[i]+f+capo).filter(m=>m!=null).sort((a,b)=>a-b); return {bass:ms[0],rh:ms.slice(1),all:ms,gtr:true}; }
 function playedVoicing(c){
   if(!real(c)) return null;
-  if(S.instrument==='guitar'){ const sh=guitarPlan().get(c.id); if(sh) return shapeVoicing(sh.fr); }
+  if(S.instrument==='guitar'){ if(!gpinOk(c)&&ppinOk(c)) return {...pinVoicing(c),gtr:true}; const sh=guitarPlan().get(c.id); if(sh) return shapeVoicing(sh.fr); }
   return chartPlan().get(c.id)||pianoVoicing(c);
 }
 /* voicings for chords that are not (all) in the chart, e.g. a swap idea between its neighbours: piano uses the smooth
@@ -3590,7 +3632,7 @@ function renderDetail0(){
         const tot=moves.reduce((a,b)=>a+b,0);
         mv=`From ${chordName(pc)}: ${held.length?'holds '+held.map(m=>prettyNote(spell(mod(m)))).join(', ')+'; ':''}${moves.length?`other voices move ${Math.min(...moves)===Math.max(...moves)?Math.max(...moves):Math.min(...moves)+'–'+Math.max(...moves)} half step${Math.max(...moves)>1?'s':''}`:'no voice moves'} (${tot} total).`; }
       const tones=pv0.rh.map(m=>ivLabel(c,Q[c.q].iv.find(i=>mod(c.root+i)===mod(m))??0)).join('·');
-      pvs.unshift({label:ppinOk(c)?'Your pick (playback)':S.voicing==='smooth'?'In context (playback)':'Playback (fixed)',tones,bass:pv0.bass,rh:pv0.rh,all:pv0.all,ctx:1,mv});
+      pvs.unshift({label:ppinOk(c)?'Your pick (playback)':pianoPin(c)?'Your guitar shape (playback)':S.voicing==='smooth'?'In context (playback)':'Playback (fixed)',tones,bass:pv0.bass,rh:pv0.rh,all:pv0.all,ctx:1,mv});
     }
     h+=`<div class="sub-h adv"><h3>Piano · ${pvs.length} voicings</h3>${zoomBtn()}<span class="hint">Green = left-hand bass · gold = right hand</span></div><div class="pv-grid">${pvs.map((v,i)=>`<button type="button" class="pv${v.ctx?' ctx':''}${pickP===i?' picked':''}" data-pv="${i}"><span class="ty">${esc(v.label)}</span><span class="tn">RH ${esc(v.tones)}</span>${v.mv?`<span class="mv">${esc(v.mv)}</span>`:''}${pianoSVG(v,vc)}<span class="pv-notes">Bass <b>${esc(prettyNote(spell(mod(v.bass))))}</b> · RH <b>${v.rh.map(m=>esc(prettyNote(spell(mod(m))))).join(' ')}</b></span></button>`).join('')}</div>`;
     { const pk=pickP!=null&&pvs[pickP]?pvs[pickP]:null, pinned=ppinOk(c)&&vb===cur;
@@ -3822,7 +3864,7 @@ function renderFinder(){
   h+=`</div></div>`;
   el.innerHTML=h; el._res=res;
 }
-function renderAll(){ PLAN=null; guitarPlan.cache=null; renderControls(); renderTension(); if(melSel){ const tot=chords.reduce((a,c)=>a+c.beats,0); if(!S.showMel||!tot) melSel=null; else { const b=Math.min(melSel.b,tot-1); melSel={a:Math.min(melSel.a,tot-1),b,h:melSplit(b)?melSel.h||0:0}; } } renderChart(); renderFormBar(); renderArrBar(); renderMelPad(); renderArrWhy(); renderPartWhy(); renderVLX(); renderDetail(); renderSubs(); renderPalette(); renderFinder(); renderDoor(); renderIdeas(); renderNext(); const pt=serialize(); $('#prog').value=pt; $('#prog').rows=Math.min(14,Math.max(3,pt.split('\n').length+1)); }
+function renderAll(){ PLAN=null; guitarPlan.cache=null; renderControls(); renderTension(); if(melSel){ const tot=chords.reduce((a,c)=>a+c.beats,0); if(!S.showMel||!tot) melSel=null; else { const b=Math.min(melSel.b,tot-1); melSel={a:Math.min(melSel.a,tot-1),b,h:melSplit(b)?melSel.h||0:0}; } } renderChart(); renderFormBar(); renderArrBar(); renderMelPad(); renderArrWhy(); renderPartWhy(); renderVLX(); renderDetail(); renderSubs(); renderPalette(); renderFinder(); renderDoor(); renderIdeas(); renderNext(); const pt=serialize(); $('#prog').value=pt; $('#prog').rows=Math.min(14,Math.max(3,pt.split('\n').length+1));  resyncPlay(); }
 
 /* ============ front door ============ */
 /* a fresh visit opens on an example with some colour in it, and the Create panel opens on "I have chords" */
@@ -3834,7 +3876,8 @@ function guessKey(list){
   const reals=list.filter(real); if(!reals.length) return null; let best=null;
   for(const m of ['ionian','aeolian']) for(let t=0;t<12;t++){ const k={t,m};
     const sc=inKey(k,()=>reals.reduce((a,c)=>a+({dia:2,sec:1,bor:.5}[analyze(c).kind]||0),0))
-      +[reals[0],reals[reals.length-1]].reduce((a,c)=>a+(c.root===t&&Q[c.q].tri===(m==='ionian'?'maj':'min')?1.5:0),0)
+      /* starting or ending on the home chord both count; starting counts a little more, so a two-chord loop like C G reads as I V */
+      +[[reals[0],1.6],[reals[reals.length-1],1.5]].reduce((a,[c,w])=>a+(c.root===t&&Q[c.q].tri===(m==='ionian'?'maj':'min')?w:0),0)
       +(m==='ionian'?.01:0)+(t===S.tonic&&m===S.mode?.02:0);
     if(!best||sc>best.sc) best={k,sc}; }
   return best.k;
@@ -5271,8 +5314,8 @@ function boot(){
     const c0=chords.find(x=>x.id===sel), gx=t.closest('[data-gctx]'), gp=t.closest('[data-gpin]'), px=t.closest('[data-pctx]'), pp=t.closest('[data-ppin]');
     if(gx&&c0){ playInContext(c0,shapeVoicing(el._shapes[+gx.dataset.gctx].fr,el._capo)); return; }
     if(px&&c0){ const v=el._pvs[+px.dataset.pctx]; playInContext(c0,{bass:v.bass,rh:v.rh.slice(),all:v.all.slice()}); return; }
-    if(gp&&c0){ pushHist(); c0.gpin={t:S.tuning,cp:S.capo||0,fr:el._shapes[+gp.dataset.gpin].fr.slice()}; pickG=null; commit(); toast(`Pinned ${fretStr(c0.gpin.fr)} for ${chordName(c0)}${S.instrument==='guitar'?'':'. Switch playback to Guitar sound to hear it in the chart'}`); return; }
-    if(pp&&c0){ const v=el._pvs[+pp.dataset.ppin]; pushHist(); c0.ppin={bass:v.bass,rh:v.rh.slice()}; pickP=null; commit(); toast(`Pinned this voicing for ${chordName(c0)}${S.instrument==='piano'?'':'. Switch playback to Piano sound to hear it in the chart'}`); return; }
+    if(gp&&c0){ pushHist(); c0.gpin={t:S.tuning,cp:S.capo||0,fr:el._shapes[+gp.dataset.gpin].fr.slice()}; pickG=null; commit(); toast(`Pinned ${fretStr(c0.gpin.fr)} for ${chordName(c0)}${pinNote(c0,'guitar')}`); return; }
+    if(pp&&c0){ const v=el._pvs[+pp.dataset.ppin]; pushHist(); c0.ppin={bass:v.bass,rh:v.rh.slice()}; pickP=null; commit(); toast(`Pinned this voicing for ${chordName(c0)}${pinNote(c0,'piano')}`); return; }
     if(t.closest('[data-gunpin]')&&c0){ pushHist(); delete c0.gpin; pickG=null; commit(); toast('Back to the smoothest guitar path'); return; }
     if(t.closest('[data-punpin]')&&c0){ pushHist(); delete c0.ppin; pickP=null; commit(); toast('Back to the smoothest piano voicing'); return; }
     if(gf){ gFilter=gf.dataset.gf; renderDetail(); return; }
