@@ -51,8 +51,10 @@ const check = (name, ok, detail = '') => { results.push(`${ok ? 'PASS' : 'FAIL'}
 // headless Chromium on a machine with no audio device can stall creating an AudioContext; this flag gives it a silent output
 const browser = await chromium.launch({ args: ['--disable-audio-output'] });
 async function openPage(opts = {}) {
-  const { noReveal, ...o } = opts;
+  const { noReveal, firstVisit, ...o } = opts;
   const ctx = await browser.newContext({ acceptDownloads: true, ...o });
+  /* most checks start from the screens a returning visitor sees; firstVisit opts into a brand-new visitor's first screen */
+  if (!opts.firstVisit) await ctx.addInitScript(() => { try { if (!localStorage.getItem('changes-tabs-v1')) localStorage.setItem('changes-tabs-v1', '{}'); } catch (e) {} });
   const page = await ctx.newPage(); page.errors = []; page.setDefaultTimeout(5000);
   // controls now live in tabs, the Create drawer and popovers: reveal one the way a person would before using it
   if (!noReveal) for (const m of ['click', 'fill', 'selectOption', 'check', 'uncheck', 'dblclick', 'setInputFiles', 'press']) {
@@ -1179,6 +1181,68 @@ async function fastInput() {
   await page.uncheck('#midiRec'); await page.evaluate(() => midiInUse(null));
   await ctx.close();
 }
+/* the front door: an example with colour, "I have chords" first, numerals, the progression's why, ideas, Start over, Hear from */
+async function frontDoor() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 }, firstVisit: true });
+  await page.goto(URL_);
+  const first = await page.evaluate(() => ({ chart: chords.map(c => chordName(c)).join(' '), kinds: [...new Set(chords.map(c => analyze(c).kind))].length, ex: !document.querySelector('#exampleNote').hidden, tab: document.querySelector('#tab-mine').getAttribute('aria-selected'), why: document.querySelector('#progWhy').textContent }));
+  check('door: a first visit opens on a labelled example with more than one colour, and on I have chords', first.chart === 'G B7 Em Cm' && first.kinds >= 3 && first.ex && first.tab === 'true' && await page.evaluate(() => document.querySelector('#doorIn').checkVisibility()), JSON.stringify(first));
+  check('door: the example explains itself in a sentence', /B7 \(bar 2\) is the V7 of vi/.test(first.why) && /Cm \(bar 4\) is borrowed from G minor/.test(first.why), first.why);
+  const nums = await page.evaluate(() => { const go = (k, m, t) => { S.tonic = k; S.mode = m; const r = parseProg(t); return r.chords.map(c => chordName(c)).join(' ') + (r.bad.length ? ' BAD' : ''); };
+    const out = [go(0, 'ionian', 'I vi IV V'), go(7, 'ionian', 'ii7 V7 Imaj7 viiø7'), go(0, 'ionian', 'V7/V V7/vi bVII iv I/E'), go(0, 'ionian', '1 6m 4 5 | 2m7 5/7 b7 4maj7'), go(9, 'aeolian', 'i bVI bIII bVII'), go(2, 'ionian', 'C | G\n[Key: E major]\nI | IV'), go(0, 'ionian', 'C Am b7 F')];
+    S.tonic = 7; S.mode = 'ionian'; return out; });
+  check('numerals: Roman numerals, secondary dominants, Nashville numbers and key changes read in the key', nums.join(' | ') === 'C Am F G | Am7 D7 Gmaj7 F♯m7♭5 | D7 E7 B♭ Fm C/E | C Am F G Dm7 G/B B♭ Fmaj7 | Am F C G | C G E A | C Am B7 F', nums.join(' | '));
+  await page.fill('#doorIn', 'C Am F G');
+  const read = await page.textContent('#doorRead');
+  check('door: the box says how it reads the chords and the likeliest key before adding', /Reads as C Am F G, in C major/.test(read) && /replaces the example/.test(read), read);
+  await page.press('#doorIn', 'Enter');
+  const after = await page.evaluate(() => ({ chart: chords.map(c => chordName(c) + ':' + c.beats).join(' '), key: keyName(), ex: document.querySelector('#exampleNote').hidden, box: document.querySelector('#doorIn').value }));
+  check('door: Add replaces the example and sets the key', after.chart === 'C:4 Am:4 F:4 G:4' && after.key === 'C major' && after.ex && after.box === '', JSON.stringify(after));
+  await page.fill('#doorIn', 'ii7 V7'); await page.click('#doorAdd');
+  check('door: numerals are added at the end, in the key', await page.evaluate(() => chords.map(c => chordName(c)).join(' ')) === 'C Am F G Dm7 G7');
+  await page.fill('#doorIn', 'C Xyz');
+  check('door: an unreadable chord is named and nothing is added', /Can’t read “Xyz”/.test(await page.textContent('#doorRead')) && await page.evaluate(() => chords.length) === 6);
+  await page.fill('#doorIn', '');
+  await page.evaluate(() => { sel = chords[1].id; commit(); });
+  await page.check('#doorSev'); await page.click('#doorKeys [data-deg="3"]');
+  check('door: tapping a key chord adds it after the selected one', await page.evaluate(() => chords.map(c => chordName(c)).join(' ')) === 'C Am Fmaj7 F G Dm7 G7');
+  const why = await page.evaluate(() => { chords = parseProg('C | Am | Fm | G').chords; sel = chords[0].id; commit(); const a = document.querySelector('#progWhy').textContent; chords = parseProg('C | Am | F | G').chords; commit(); return [a, document.querySelector('#progWhy').textContent]; });
+  check('why: borrowed chords and the ending are explained', /Fm \(bar 3\) is borrowed from C minor/.test(why[0]) && /ends on the V/.test(why[0]), why[0]);
+  check('why: an all-in-key chart says so', /^Every chord comes from C major/.test(why[1]), why[1]);
+  await page.evaluate(() => { chords = parseProg('C | Am | F | G').chords; sel = chords[0].id; commit(); });
+  const id0 = await page.evaluate(() => ({ n: document.querySelectorAll('#ideas .item').length, first: document.querySelector('#ideas .item .why').textContent, kinds: new Set(document.querySelector('#ideas')._shown.map(x => x.g)).size, chords: new Set(document.querySelector('#ideas')._shown.map(x => x.idx)).size }));
+  await page.click('#ideas [data-idea="more"]');
+  const id1 = await page.evaluate(() => document.querySelector('#ideas .item .why').textContent);
+  check('ideas: three ideas of different kinds, for different chords, and Other ideas moves on', id0.n === 3 && id0.kinds === 3 && id0.chords === 3 && id1 !== id0.first, JSON.stringify({ id0, id1 }));
+  const before = await page.evaluate(() => chords.map(c => chordName(c)).join(' '));
+  await page.click('#ideas [data-idea="use"][data-k="0"]');
+  const used = await page.evaluate(() => chords.map(c => chordName(c)).join(' '));
+  check('ideas: Use swaps the idea in, and undo puts it back', used !== before && (await page.keyboard.press('Control+z'), await page.evaluate(() => chords.map(c => chordName(c)).join(' '))) === before, `${before} → ${used}`);
+  await page.evaluate(() => { S.quiz = true; renderAll(); });
+  check('quiz: the why line and ideas hide while quizzing', await page.evaluate(() => !document.querySelector('#progWhy').checkVisibility() && !document.querySelector('#ideas').checkVisibility()));
+  await page.evaluate(() => { S.quiz = false; renderAll(); melody = [64, -1, 62, null]; commit(); });
+  check('start over: the button says Start over', (await page.textContent('#clearChart')).trim() === 'Start over');
+  await page.evaluate(() => document.querySelector('#clearChart').click());
+  const empty = await page.evaluate(() => ({ n: chords.length, mel: melody.length, note: document.querySelector('#exampleNote').textContent }));
+  await page.keyboard.press('Control+z');
+  check('start over: clears the chords and the tune, says what to do next, and undo brings both back', empty.n === 0 && empty.mel === 0 && /An empty chart/.test(empty.note) && await page.evaluate(() => chords.length === 4 && melody[0] === 64), JSON.stringify(empty));
+  const ctxs = await page.evaluate(() => { chords = parseProg('C | Am | F | G').chords; commit(); const last = ctxAround(3), firstC = ctxAround(0); S.hearBack = 2; const two = ctxAround(3); S.hearBack = 4; const four = ctxAround(2); S.hearBack = 1;
+    const nm = l => l.map(c => chordName(c)).join(' '); return { last: nm(last.before) + '|' + (last.after ? chordName(last.after) : '-'), first: nm(firstC.before) + '|' + chordName(firstC.after), two: nm(two.before), four: nm(four.before) + '|' + chordName(four.after), seq: contextSeq(3, [{ root: 7, q: '7', bass: null }]).length }; });
+  check('hear in context: the last chord is not followed by the first, and Hear from sets how far back', ctxs.last === 'F|-' && ctxs.first === '|Am' && ctxs.two === 'Am F' && ctxs.four === 'C Am|G' && ctxs.seq === 2, JSON.stringify(ctxs));
+  await page.evaluate(() => { sel = chords[3].id; renderAll(); selectTab('right', 'swaps'); });
+  await page.selectOption('#hearBack', '4');
+  const hb = await page.evaluate(() => ({ s: S.hearBack, ctx: document.querySelector('#subs .ctx').textContent }));
+  check('hear in context: the Swap ideas selector saves Hear from, and the last chord says it is at the end', hb.s === 4 && /After F, at the end/.test(hb.ctx), JSON.stringify(hb));
+  const keep = await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; const was = S.vocab; S.vocab = [...PRESETS.Everything];
+    chords = parseProg('C | ? | G').chords; sel = chords[1].id; keepNotes = [7]; const g = keepGroup(1), names = g.items.map(it => chordName(it.chords[0])), allG = g.items.every(it => allPcs(it.chords[0]).includes(7));
+    const noSlash = (S.vocab = S.vocab.filter(f => f !== 'slash'), keepGroup(1).items.filter(it => it.chords[0].bass != null).length); S.vocab = was; keepNotes = []; return { n: names.length, names, noSlash, allG, blurb: g.blurb }; });
+  check('keep note: every chord with G is listed, slash chords over G included, and none when slash chords are off', keep.n > 40 && ['C/G', 'Am/G', 'F/G', 'Em/G', 'D/G'].every(x => keep.names.includes(x)) && keep.allG && keep.noSlash === 0 && /including slash chords over G/.test(keep.blurb), JSON.stringify({ n: keep.n, first: keep.names.slice(0, 12), noSlash: keep.noSlash }));
+  await page.evaluate(() => { S.tonic = 7; S.mode = 'ionian'; });
+  await page.evaluate(() => { S.hearBack = 1; selectTab('left', 'gen'); });
+  await page.reload();
+  check('door: the last door chosen opens next time', await page.evaluate(() => document.querySelector('#tab-gen').getAttribute('aria-selected') === 'true' && document.querySelector('#tab-gen').textContent === 'Let’s play'));
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1300,12 +1364,12 @@ async function layout() {
   await page.setViewportSize({ width: 1024, height: 768 });
   const t0 = await page.evaluate(() => ({ chart: document.querySelector('#rows').checkVisibility(), chord: document.querySelector('#sideRight').checkVisibility(), navTop: document.querySelector('#phoneTabs').getBoundingClientRect().top }));
   await page.click('#tab-p-create'); await page.waitForTimeout(100);
-  const t1 = await page.evaluate(() => ({ gen: document.querySelector('#gen').checkVisibility(), chart: document.querySelector('#rows').checkVisibility(), chord: document.querySelector('#sideRight').checkVisibility() }));
+  const t1 = await page.evaluate(() => ({ gen: [...document.querySelectorAll('#sideLeft [role=tabpanel]')].some(p => p.checkVisibility()), chart: document.querySelector('#rows').checkVisibility(), chord: document.querySelector('#sideRight').checkVisibility() }));
   await page.click('#tab-p-chord');
   check('layout: tablet keeps the chart beside the panel and switches panels from the top bar', t0.chart && t0.chord && t0.navTop < 80 && t1.gen && t1.chart && !t1.chord, JSON.stringify({ t0, t1 }));
   await page.setViewportSize({ width: 390, height: 844 });
   const seen = {};
-  for (const tab of ['p-create', 'p-chord', 'p-tools', 'p-chart']) { await page.click(`#phoneTabs [data-tab="${tab}"]`); seen[tab] = await page.evaluate(() => ({ gen: document.querySelector('#gen').checkVisibility(), detail: document.querySelector('#detail').checkVisibility(), finder: document.querySelector('#finder').checkVisibility(), chart: document.querySelector('#rows').checkVisibility() })); }
+  for (const tab of ['p-create', 'p-chord', 'p-tools', 'p-chart']) { await page.click(`#phoneTabs [data-tab="${tab}"]`); seen[tab] = await page.evaluate(() => ({ gen: [...document.querySelectorAll('#sideLeft [role=tabpanel]')].some(p => p.checkVisibility()), detail: document.querySelector('#detail').checkVisibility(), finder: document.querySelector('#finder').checkVisibility(), chart: document.querySelector('#rows').checkVisibility() })); }
   const one = Object.values(seen).every(v => Object.values(v).filter(Boolean).length === 1);
   const bars = await page.evaluate(() => ({ play: document.querySelector('#play').getBoundingClientRect().bottom, dock: document.querySelector('.dock').getBoundingClientRect().bottom, tabs: document.querySelector('#phoneTabs').getBoundingClientRect().top }));
   check('layout: phone Play bar sits fully above the tab bar', bars.dock <= bars.tabs + 1 && bars.play <= bars.tabs, JSON.stringify(bars));
@@ -1378,7 +1442,7 @@ async function hardening() {
   await page.click('#tab-swaps'); await page.click('#subs [data-use] >> nth=0');
   check('real clicks: Swap ideas tab, then Put in this slot', await page.evaluate(b => serialize() !== b, before));
   await page.setViewportSize({ width: 1024, height: 768 });
-  await page.click('#tab-p-create'); await page.waitForTimeout(100); await noToast(); await page.click('#gen');
+  await page.click('#tab-p-create'); await page.waitForTimeout(100); await noToast(); await page.click('#tab-gen'); await page.click('#gen');
   check('real clicks: tablet Create panel, then Generate', await page.evaluate(() => chords.length > 0));
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1451,6 +1515,7 @@ try {
   await appName();
   await spelling();
   await fastInput();
+  await frontDoor();
   await menus();
   await layout();
   await hardening();

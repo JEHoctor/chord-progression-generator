@@ -187,6 +187,27 @@ body.zoomdiag .pv-grid{grid-template-columns:1fr} body.zoomdiag .pv{overflow-x:a
 .piano svg{width:100%;height:auto;display:block}
 .piano-wrap{overflow-x:auto}
 .empty-note{color:var(--muted);font-size:14px;padding:6px 0}
+.hearback{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hearback select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-xs);height:28px;padding:0 6px;font-size:13px;color:var(--ink)}
+.door-in{display:flex;gap:8px}
+.door-in input{flex:1 1 auto;min-width:0;background:var(--sunk);border:1px solid transparent;border-radius:var(--r-xs);height:38px;padding:0 10px;font-size:15px;font-family:var(--f-mono,inherit);color:var(--ink)}
+.door-read{min-height:1.4em;margin:6px 0 0}
+.door-read.bad{color:var(--t-chr)}
+.door-keyh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.door-keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;margin-top:6px}
+.door-keys button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:7px 9px;border:1px solid var(--line);border-radius:var(--r-xs);background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:inset 3px 0 0 var(--k)}
+.door-keys button:hover{background:var(--sunk)}
+.door-keys b{font-size:16px;letter-spacing:-.01em}
+.door-keys small{font-size:12px;color:var(--muted)}
+.door-more{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.example-note{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;background:var(--sunk);border-radius:var(--r-xs);padding:10px 12px;margin:0 0 10px;font-size:14px}
+.prog-why{margin:12px 0 0;font-size:15px;line-height:1.5;max-width:75ch}
+.ideas{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+.ideas .ideas-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:4px}
+.ideas .ideas-h h3{margin:0;font-size:16px}
+.ideas .ideas-h .btn{margin-left:auto}
+.ideas .bar{font-size:12.5px;color:var(--muted)}
+body.quiz-on .prog-why,body.quiz-on .ideas{display:none}
 .finder-top{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
 .finder-top h2{font-weight:600;font-size:20px}
 .fb-wrap,.kb-wrap{overflow-x:auto;padding-bottom:4px}
@@ -919,7 +940,7 @@ body{padding-bottom:0}
       <h1 data-app-name>Chord Changes</h1>
       <p>Write, generate or harmonize a progression, and every swap idea explains why it works, down to how each voice moves; then export MIDI or notation, share a link, or print a lead sheet.</p>
     </div>
-    <div class="tabs phonetabs" id="phoneTabs" role="tablist" aria-label="Screens" data-tabs="phone"><button type="button" role="tab" id="tab-p-create" aria-controls="sideLeft" data-tab="p-create">Create<small>Generate or harmonize</small></button><button type="button" role="tab" id="tab-p-chart" aria-controls="center" data-tab="p-chart">Chart<small>Your progression</small></button><button type="button" role="tab" id="tab-p-chord" aria-controls="sideRight" data-tab="p-chord">Chord<small>Shapes and swap ideas</small></button><button type="button" role="tab" id="tab-p-tools" aria-controls="tools" data-tab="p-tools">Tools<small>Chord finder, keys and modes</small></button></div>
+    <div class="tabs phonetabs" id="phoneTabs" role="tablist" aria-label="Screens" data-tabs="phone"><button type="button" role="tab" id="tab-p-create" aria-controls="sideLeft" data-tab="p-create">Create<small>Your chords, or new ones</small></button><button type="button" role="tab" id="tab-p-chart" aria-controls="center" data-tab="p-chart">Chart<small>Your progression</small></button><button type="button" role="tab" id="tab-p-chord" aria-controls="sideRight" data-tab="p-chord">Chord<small>Shapes and swap ideas</small></button><button type="button" role="tab" id="tab-p-tools" aria-controls="tools" data-tab="p-tools">Tools<small>Chord finder, keys and modes</small></button></div>
     <nav class="top-actions" aria-label="App">
       <button type="button" class="btn small create-toggle" id="createToggle" aria-expanded="false" aria-controls="sideLeft">Create</button>
       <details class="libmenu" id="library">
@@ -947,8 +968,22 @@ body{padding-bottom:0}
   <div class="app">
     <aside class="side left pane" id="sideLeft" aria-label="Create">
       <div class="side-head"><h2>Create</h2><button type="button" class="btn small drawer-close" id="createClose" aria-label="Close"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
-      <div class="tabs" role="tablist" aria-label="Create" data-tabs="left"><button type="button" role="tab" id="tab-gen" aria-controls="panel-gen" data-tab="gen">Generate</button><button type="button" role="tab" id="tab-melody" aria-controls="panel-melody" data-tab="melody">Harmonize</button><button type="button" role="tab" id="tab-setkey" aria-controls="panel-setkey" data-tab="setkey">Chords allowed</button></div>
-      <div class="tabpanel" role="tabpanel" id="panel-gen" aria-labelledby="tab-gen" data-panel="gen">
+      <div class="tabs" role="tablist" aria-label="Create" data-tabs="left"><button type="button" role="tab" id="tab-mine" aria-controls="panel-mine" data-tab="mine">I have chords</button><button type="button" role="tab" id="tab-gen" aria-controls="panel-gen" data-tab="gen">Let’s play</button><button type="button" role="tab" id="tab-melody" aria-controls="panel-melody" data-tab="melody">Harmonize</button><button type="button" role="tab" id="tab-setkey" aria-controls="panel-setkey" data-tab="setkey">Chords allowed</button></div>
+      <div class="tabpanel" role="tabpanel" id="panel-mine" aria-labelledby="tab-mine" data-panel="mine">
+    <section class="panel mine" aria-label="Start from your chords">
+      <div class="sub-h"><h2>Start from your chords</h2><span class="hint">Type them, tap them or play them in. Then see what each one does, and what else could go there.</span></div>
+      <div class="field"><label class="label" for="doorIn">Type chords</label>
+        <div class="door-in"><input id="doorIn" type="text" spellcheck="false" autocomplete="off" placeholder="C Am F G or I vi IV V"><button class="btn primary" id="doorAdd" type="button">Add</button></div>
+        <p class="hint door-read" id="doorRead" aria-live="polite"></p></div>
+      <div class="field"><div class="door-keyh"><span class="label" id="doorKeyL">Tap a chord in the key</span><label class="check"><input type="checkbox" id="doorSev"> 7ths</label></div>
+        <div class="door-keys" id="doorKeys" role="group" aria-labelledby="doorKeyL"></div>
+        <p class="hint">Each tap plays the chord and adds it after the selected one. With the chart selected, the number keys 1–7 do the same (Shift for 7ths).</p></div>
+      <div class="field"><span class="label">Know the shape, not the name?</span>
+        <div class="door-more"><button class="btn" id="doorShape" type="button">Name a shape on guitar or piano</button><span class="hint" id="doorMidi" hidden>Have a MIDI keyboard? Pick it in <b>MIDI in</b> under the chart.</span></div></div>
+      <p class="hint">Have a tune instead? <button type="button" class="linkbtn" data-door="melody">Harmonize a melody</button>. Want something new? <button type="button" class="linkbtn" data-door="gen">Let’s play</button>.</p>
+    </section>
+      </div>
+      <div class="tabpanel" role="tabpanel" id="panel-gen" aria-labelledby="tab-gen" data-panel="gen" hidden>
     <section class="panel gen" aria-label="Generate a progression">
       <div class="sub-h"><h2>Generate a progression</h2><span class="hint">Mood sets the feeling, genre sets the style. Use either or both.</span></div>
       <div class="field"><span class="label">Mood <span class="opt">pick one, or none</span></span><div class="moods" id="moods" role="group" aria-label="Mood"></div></div>
@@ -1009,7 +1044,7 @@ body{padding-bottom:0}
         <select id="voicing" class="btn" aria-label="Playback voicing"><option value="smooth">Smooth voice leading</option><option value="fixed">Fixed root position</option></select>
         <select id="symStyle" class="btn" aria-label="How chord symbols are written"></select>
         <select id="labelMode" class="btn" aria-label="What the chart shows"></select>
-        <button class="btn" id="clearChart" type="button" title="Remove every chord (you can undo it)">Clear chart</button>
+        <button class="btn" id="clearChart" type="button" title="Clear the chords and the tune (you can undo it)">Start over</button>
         <button class="btn" id="recolor" type="button" title="Rewrite every chord using the chord types in Chords allowed">Apply chords allowed</button>
       </div>
     </div>
@@ -1017,6 +1052,7 @@ body{padding-bottom:0}
     <div class="tension" id="tension"></div>
     <div class="formbar" id="formBar" hidden role="group" aria-label="Song form"></div>
     <div class="arrbar" id="arrBar" hidden role="group" aria-label="Arrange"></div>
+    <div class="example-note" id="exampleNote" hidden></div>
     <div class="rows" id="rows"></div>
     <div class="melpad" id="melPad" hidden role="group" aria-label="Melody notes"></div>
     <div class="melpad arrwhy" id="arrWhy" hidden role="region" aria-label="Why this voicing" aria-live="polite"></div>
@@ -1024,6 +1060,8 @@ body{padding-bottom:0}
     <div class="legend">
       <span class="k-dia">In the key</span><span class="k-bor">Borrowed from a parallel mode</span><span class="k-sec">Secondary / tritone dominant</span><span class="k-chr">Chromatic</span>
     </div>
+    <p class="prog-why" id="progWhy" aria-live="polite" hidden></p>
+    <div class="ideas" id="ideas" hidden></div>
     <div class="vlx-wrap"><div class="toggles"><label class="check"><input type="checkbox" id="vlToggle"> Show voice leading</label><label class="check"><input type="checkbox" id="quizOn"> Quiz me</label><span class="hint" id="quizScore"></span></div><div id="vlx" hidden></div></div>
     <details class="textedit" id="textEdit">
       <summary>Edit as text</summary>
@@ -1301,7 +1339,7 @@ const NUMS={I:0,II:2,III:4,IV:5,V:7,VI:9,VII:11};
 /* tables are plain objects, so keys that come from outside (chord text, share links, saved files) are only accepted when
    they are the table's own entries; "constructor" or "__proto__" never count */
 const ownKey=(o,k)=>typeof k==='string'&&Object.prototype.hasOwnProperty.call(o,k);
-const S={foldForm:true,linkForm:true,arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
+const S={hearBack:1,foldForm:true,linkForm:true,arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
 let chords=[], sel=null, hist=[];
 /* the melody: one entry per beat of the chart, by absolute beat. A MIDI note number starts a note, -1 holds the note
    before it, null is a rest. It is independent of the chords, so moving a chord changes the harmony under the tune.
@@ -1469,13 +1507,39 @@ function parseChord(str){
   const q=look(rest)??look(jazz(rest))??look(jazz(rest).replace(/^mmaj/,'mMaj').replace(/^dimmaj7$/,'dimMaj7')); if(q==null) return null;
   return {root,q,bass:bass===root?null:bass};
 }
+/* Roman numerals (I vi IV V, ii7, V7/V, ♭VII, viiø7) and Nashville numbers (1 6m 4 5, 5/7, ♭7) in a key. Degrees count from the
+   major scale on the tonic, as the chart's own numerals do, so in A minor C is ♭III (or ♭3). Upper case is major, lower case minor;
+   a Nashville number is major unless marked m or -. Returns a chord, or null if the token isn't one. */
+const ROMAN=['I','II','III','IV','V','VI','VII'], MAJ_STEPS=[0,2,4,5,7,9,11];
+function parseNumeral(tok,key,nash){
+  const t=tok.replace(/♭/g,'b').replace(/♯/g,'#');
+  const deg=(acc,d)=>mod(key.t+MAJ_STEPS[d]+(acc==='b'?-1:acc==='#'?1:0));
+  const build=(root,minor,sfx)=>{ const nm=(SHARP[root])+(minor&&!/^(m(?!aj)|-|°|o|dim|ø)/.test(sfx)?'m':'')+sfx;
+    const c=parseChord(nm.replace(/^([A-G]#?)m(ø|°|o|dim)/,'$1$2').replace(/ø7?/,'m7b5')); return c; };
+  let m=!nash&&t.match(/^([b#]?)(VII|VI|IV|V|III|II|I|vii|vi|iv|v|iii|ii|i)([^/]*)(?:\/(.+))?$/);
+  if(m){ const d=ROMAN.indexOf(m[2].toUpperCase()), minor=m[2]!==m[2].toUpperCase();
+    let root=deg(m[1],d), bass=null;
+    if(m[4]){ const tgt=/^[A-Ga-g]/.test(m[4])?null:parseNumeral(m[4],key,false);
+      if(tgt){ root=mod(tgt.root+MAJ_STEPS[d]+(m[1]==='b'?-1:m[1]==='#'?1:0)); }
+      else { const b=m[4].match(/^([A-Ga-g][#b]?)$/); if(!b) return null; bass=pcOf(b[1]); } }
+    const c=build(root,minor,m[3]); if(!c) return null;
+    if(bass!=null&&bass!==c.root) c.bass=bass; return c; }
+  m=t.match(/^([b#]?)([1-7])([^/]*)(?:\/([b#]?[1-7]|[A-Ga-g][#b]?))?$/);
+  if(m){ const root=deg(m[1],+m[2]-1), c=build(root,false,m[3].replace(/^-/,'m')); if(!c) return null;
+    if(m[4]){ const bm=m[4].match(/^([b#]?)([1-7])$/); const bass=bm?deg(bm[1],+bm[2]-1):pcOf(m[4]); if(bass!==c.root) c.bass=bass; }
+    return c; }
+  return null;
+}
+/* does the text use numerals? then a token like b7 is a flat seven, not a B7 chord */
+const NASH_RE=/(^|[\s|])[1-7](?!\d)/;
+const usesNumerals=text=>text.replace(/\[[^\]]*\]/g,' ').split(/[\s|]+/).some(w=>{ w=w.split(':')[0]; const C={t:0,m:'ionian'}; return !!w&&!parseChord(w)&&!!(parseNumeral(w,C,false)||parseNumeral(w,C,true)); });
 function splitBeats(total,n){
   if(n===1) return [total];
   if(total<n) return Array(n).fill(1);
   if(n===2&&total===barLen()) return METERS[S.meter].slice();
   const b=Math.floor(total/n), r=total%n; return Array.from({length:n},(_,i)=>b+(i<r?1:0));
 }
-function parseLine(line,out,bad){
+function parseLine(line,out,bad,key={t:S.tonic,m:S.mode},nash=false){
   const L=barLen(), hasBars=line.includes('|');
   let bars=hasBars?line.split('|'):line.trim().split(/\s+|,(?![^(]*\))/).filter(Boolean);
   if(hasBars){ if(bars[0].trim()==='') bars.shift(); if(bars.length&&bars[bars.length-1].trim()==='') bars.pop(); }
@@ -1486,7 +1550,7 @@ function parseLine(line,out,bad){
     for(const t of toks){
       let [nm,d]=t.split(':'); let c;
       if(nm==='%'&&(items.length||out.length)){ const p=items.length?items[items.length-1]:out[out.length-1]; c={root:p.root,q:p.q,bass:p.bass}; }
-      else c=parseChord(nm);
+      else c=nash&&/^[b#♭♯]?[1-7]/.test(nm)?parseNumeral(nm,key,true):parseChord(nm)??parseNumeral(nm,key,false)??parseNumeral(nm,key,true);
       if(!c){ bad.push(nm); continue; }
       c.beats=d&&+d>0?Math.round(+d):null; items.push(c);
     }
@@ -1496,7 +1560,7 @@ function parseLine(line,out,bad){
   }
 }
 function parseProg(text){
-  const out=[], bad=[]; let sec=null, kc=null;
+  const out=[], bad=[], nash=NASH_RE.test(text); let sec=null, kc=null, key={t:S.tonic,m:S.mode};
   for(const raw of text.split(/\r?\n/)){
     let line=raw.trim(); if(!line) continue;
     /* [Chorus] names a section and [Key: D major] changes key from the next chord; either can lead a line */
@@ -1508,7 +1572,7 @@ function parseProg(text){
       while((km=line.match(/^\[\s*key\s*:?\s*([^\]]+)\]\s*(.*)$/i))){ const k=parseKeyName(km[1]); if(k) kc=k; else bad.push(`[Key: ${km[1].trim()}]`); line=km[2].trim(); }
       if(!line) continue; }
     if(!line) continue;
-    const before=out.length; parseLine(line,out,bad);
+    if(kc) key=kc; const before=out.length; parseLine(line,out,bad,key,nash);
     if(out.length>before){ out[before].br=true; if(sec){ out[before].sec=sec; sec=null; } if(kc){ out[before].kc=kc; kc=null; } }
   }
   return {chords:out,bad};
@@ -2127,6 +2191,12 @@ function playPass(t,out){
     else timers.push(setTimeout(()=>{ if(playing) stopAll(); },Math.max(0,(end-actx.currentTime)*1000)));
   },Math.max(0,(end-a.currentTime-LOOP_AHEAD)*1000)));
 }
+/* the chords around one, for hearing it in context: up to S.hearBack chords before it and the one after it. Unlike the swap
+   ideas, which treat the chart as a loop, this never wraps round: the last chord has nothing after it. */
+function ctxAround(idx){ const before=[]; for(let j=idx-1;j>=0&&before.length<S.hearBack;j--) if(real(chords[j])) before.unshift(chords[j]);
+  const N=chords[idx+1]; return {before,after:real(N)?N:null}; }
+function contextSeq(idx,list){ const {before,after}=ctxAround(idx);
+  return [...before.map(c=>[c,.9]),...list.map(c=>[c,list.length>1?.6:.9]),...(after?[[after,1.3]]:[])]; }
 function audition(seq){
   const a=ac(); stopAll(); const out=newSession(); let t=a.currentTime+.05;
   const plan=seqVoicings(seq.map(x=>x[0]));
@@ -2414,8 +2484,8 @@ function seqVoicings(list,inst=S.instrument){
 /* previous chord, this candidate, next chord, at the chart's tempo */
 function playInContext(c,v){
   stopAll(); const a=ac(), out=newSession(), unit=60/S.tempo*(4/den()), n=chords.length, idx=chords.findIndex(x=>x.id===c.id);
-  const P=n>1?chords[(idx-1+n)%n]:null, N=n>1?chords[(idx+1)%n]:null, inst=v.gtr?'guitar':'piano', keep=S.instrument; S.instrument=inst;
-  let t=a.currentTime+.05; const seq=[[real(P)&&P!==c?P:null,2],[c,3],[real(N)&&N!==c?N:null,3]];
+  const {before,after}=ctxAround(idx), inst=v.gtr?'guitar':'piano', keep=S.instrument; S.instrument=inst;
+  let t=a.currentTime+.05; const seq=[...before.map(x=>[x,2]),[c,3],[after,3]];
   seq.forEach(([x,b])=>{ if(!x) return; strum(x,t,b*unit,out,x===c?v:playedVoicing(x)); t+=b*unit; });
   S.instrument=keep;
 }
@@ -3391,27 +3461,38 @@ function scheduleCapoHint(){
     el.innerHTML=best===(S.capo||0)?'Easiest for this chart':`<button class="btn small" data-capo="${best}">Easiest: ${best?'fret '+best:'no capo'}</button>`;
   },60);
 }
-let keepNotes=[], keepFor=null; const openGroups=new Set();
+let keepNotes=[], keepFor=null, keepShown=8; const openGroups=new Set();
 const allPcs=c=>{ const a=pcsOf(c); if(c.bass!=null&&!a.includes(c.bass)) a.push(c.bass); return a; };
 const hasKeep=c=>real(c)&&keepNotes.every(pc=>allPcs(c).includes(pc));
 function roleOf(c,pc){ if(c.bass===pc&&!pcsOf(c).includes(pc)) return 'bass'; const i=Q[c.q].iv.find(i=>mod(c.root+i)===pc); return i==null?'':ivLabel(c,i); }
 function keepGroup(idx){
   const C=chords[idx], n=chords.length, P=n>1?chords[(idx-1+n)%n]:null, N=n>1?chords[(idx+1)%n]:null, p=real(P)?P:null, nx=real(N)?N:null;
   const sc=scaleSet(), cand=[];
-  for(let r=0;r<12;r++) for(const q in Q){ if(!qOn(q)) continue; const c={root:r,q,bass:null}; if(!hasKeep(c)) continue; if(real(C)&&ckey(c)===ckey(C)) continue;
+  /* with slash chords on, the kept note can also be the bass: under a chord it belongs to (C/G) or one it doesn't (Am/G, F/G) */
+  const basses=famOn('slash')&&keepNotes.length===1?[null,keepNotes[0]]:[null];
+  for(let r=0;r<12;r++) for(const q in Q) for(const bass of basses){ if(!qOn(q)||bass===r) continue; const c={root:r,q,bass}; if(!hasKeep(c)) continue; if(real(C)&&ckey(c)===ckey(C)) continue;
     const a=analyze(c), core=corePcs(c); let s=a.kind==='dia'?3:a.kind==='bor'?1.6:a.kind==='sec'?1.2:0;
+    if(bass!=null) s-=pcsOf(c).includes(bass)?.4:.6;
     if(p) s+=shared(c,p).length*.5; if(nx) s+=shared(c,nx).length*.5; s+=motion(c,nx).s*.8; s-=Math.max(0,Q[q].iv.length-3)*.25;
     if(real(C)&&c.root===C.root) s+=.6; cand.push({c,a,s}); }
   cand.sort((x,y)=>y.s-x.s);
-  const seenPcs=new Set(), perRoot={}, items=[]; let nIn=0,nOut=0;
-  for(const {c,a} of cand){ if(items.length>=15) break; const inKey=a.kind==='dia'; if(inKey?nIn>=10:nOut>=5) continue;
-    const k=c.root+'|'+[...pcsOf(c)].sort().join(), fam=Q[c.q].tri, pr=perRoot[c.root]||[];
-    if(seenPcs.has(k)||pr.length>=2||pr.includes(fam)) continue; seenPcs.add(k); perRoot[c.root]=[...pr,fam]; inKey?nIn++:nOut++;
+  /* in-key chords first, then borrowed and secondary ones, then chromatic; within each, the best chord of each root before the
+     second best of any, so the top of the list isn't one root in many flavours */
+  const tier=x=>x.a.kind==='dia'?0:x.a.kind==='chr'?2:1, nth={};
+  cand.forEach(x=>{ const r=tier(x)+'|'+(x.c.bass??x.c.root); x.rank=nth[r]=(nth[r]??-1)+1; });
+  cand.sort((x,y)=>tier(x)-tier(y)||Math.min(x.rank,2)-Math.min(y.rank,2)||y.s-x.s);
+  const seenPcs=new Set(), items=[];
+  /* every match is listed, best first; the panel shows the first few and "Show more" opens the rest. Two names on one root for
+     the same notes over the same bass (D/G and Dadd11/G, Em/G and E5/G) are listed once, under the simpler name: the fewest notes named (a power chord counts as less plain), then a bass from the chord. */
+  const keyOf=c=>c.root+'|'+(c.bass??c.root)+'|'+[...new Set(allPcs(c))].sort((x,y)=>x-y).join(), simplest={};
+  const plain=c=>Q[c.q].iv.length+(c.q==='5'?2:0)+(c.bass!=null&&!pcsOf(c).includes(c.bass)?.5:0);
+  cand.forEach(x=>{ const k=keyOf(x.c), b=simplest[k]; if(!b||plain(x.c)<plain(b.c)) simplest[k]=x; });
+  for(const x of cand){ const {c,a}=x, k=keyOf(c);
+    if(simplest[k]!==x||seenPcs.has(k)) continue; seenPcs.add(k);
     const mo=motion(c,nx); const kind={dia:'In the key',bor:a.note.split('.')[0],sec:a.note.split(':')[0],chr:'Chromatic'}[a.kind]||'';
     items.push({chords:[c],why:`${kind}${mo.t?'; '+mo.t:''}.`,tag:a.kind}); }
   const names=keepNotes.map(pc=>prettyNote(spell(pc))).join(' + ');
-  items.sort((x,y)=>(x.tag==='dia'?0:1)-(y.tag==='dia'?0:1));
-  return {id:'keep',title:`Every chord with ${names} that fits here`,blurb:'Searched across all roots and the chord families you have switched on, ranked by key fit and how well it connects to its neighbours.',items};
+  return {id:'keep',title:`Every chord with ${names} that fits here`,blurb:`${items.length} chords from every root and the chord families switched on in Chords allowed${famOn('slash')&&keepNotes.length===1?`, including slash chords over ${names}`:''}. The likeliest come first: in the key, then by how smoothly it connects to its neighbours.`,items};
 }
 /* the selected chord's panels speak in the key in force at that chord */
 function renderSubs(){ return inKey(selKey(),renderSubs0); }
@@ -3419,17 +3500,19 @@ function renderSubs0(){
   const el=$('#subs'), idx=chords.findIndex(c=>c.id===sel);
   if(idx<0){ el.innerHTML=`<div class="sub-h"><h3>Swap ideas</h3></div><div class="empty-note">Select a chord, or add an empty slot with “+ Empty bar”, to get ideas for it.</div>`; return; }
   const c=chords[idx]; let {groups,P,N}=suggestions(idx);
-  if(keepFor!==c.id){ keepFor=c.id; keepNotes=[]; openGroups.clear(); }
+  if(keepFor!==c.id){ keepFor=c.id; keepNotes=[]; openGroups.clear(); keepShown=8; }
   if(keepNotes.length){ groups=groups.map(g=>({...g,items:g.items.filter(it=>it.chords.every(hasKeep))})).filter(g=>g.items.length); groups.unshift(keepGroup(idx)); }
-  let h=`<div class="sub-h"><h3>${real(c)?`Swap ideas for ${esc(chordName(c))}`:'Ideas for this empty slot'}</h3><span class="hint">${esc(vocabName())}</span></div>`;
-  h+=`<div class="ctx">${P?`After <b>${esc(chordName(P))}</b>`:'At the start'}${N?`, before <b>${esc(chordName(N))}</b>`:''} · ${c.beats} beat${c.beats>1?'s':''} to fill. <span class="hint">${IC.play} plays it in context.</span></div>`;
+  let h=`<div class="sub-h"><h3>${real(c)?`Swap ideas for ${esc(chordName(c))}`:'Ideas for this empty slot'}</h3><button type="button" class="linkbtn hint" data-door="setkey" title="Choose which chord families ideas can use">${esc(vocabName())}</button></div>`;
+  { const pv=idx>0&&real(chords[idx-1])?chords[idx-1]:null, nx=idx<chords.length-1&&real(chords[idx+1])?chords[idx+1]:null;
+    h+=`<div class="ctx">${pv?`After <b>${esc(chordName(pv))}</b>`:idx===0?'At the start':'After an empty slot'}${nx?`, before <b>${esc(chordName(nx))}</b>`:idx===chords.length-1?', at the end':''} · ${c.beats} beat${c.beats>1?'s':''} to fill.
+      <label class="hearback"><span class="hint">${IC.play} plays it after</span><select id="hearBack" aria-label="How many chords before it to play">${[1,2,4].map(n=>`<option value="${n}"${S.hearBack===n?' selected':''}>${n===1?'the chord':n+' chords'} before it</option>`).join('')}</select></label></div>`; }
   { const own=real(c)?[...new Set(allPcs(c))]:[], extra=keepNotes.filter(pc=>!own.includes(pc));
     h+=`<div class="keep" role="group" aria-label="Notes to keep"><span class="label">Keep note</span>${[...own,...extra].map(pc=>`<button type="button" class="chip" data-keep="${pc}" aria-pressed="${keepNotes.includes(pc)}">${esc(prettyNote(spell(pc)))}${real(c)&&own.includes(pc)?` <small>${esc(roleOf(c,pc))}</small>`:''}</button>`).join('')}
       <select id="keepOther" aria-label="Keep another note"><option value="">+ other note</option>${Array.from({length:12},(_,i)=>mod(S.tonic+i)).filter(pc=>!own.includes(pc)&&!keepNotes.includes(pc)).map(pc=>`<option value="${pc}">${esc(prettyNote(spell(pc)))}</option>`).join('')}</select>
       <span class="hint">${keepNotes.length?`Only ideas containing ${keepNotes.map(pc=>esc(prettyNote(spell(pc)))).join(' and ')}. ${IC.play} plays it as the top note.`:'Pick a note (e.g. your melody note) that every idea must contain.'}</span></div>`; }
   groups.forEach((g,gi)=>{
     h+=`<div class="group" data-gi="${gi}"><div class="group-h"><h3>${esc(g.title)}</h3><p>${esc(g.blurb)}</p></div>`;
-    const lim=g.id==='keep'?8:4, shownItems=openGroups.has(g.id)?g.items:g.items.slice(0,lim);
+    const lim=g.id==='keep'?keepShown:4, shownItems=openGroups.has(g.id)&&g.id!=='keep'?g.items:g.items.slice(0,lim);
     shownItems.forEach((it,ii)=>{
       const names=it.chords.map(x=>`<span class="nm">${chordHTML(x)}</span>`).join('<span class="arrow">→</span>');
       const rns=it.chords.map(x=>analyze(x).num).join(' → ');
@@ -3438,7 +3521,7 @@ function renderSubs0(){
         <div class="why"><span class="tn">${esc(theoryName(c,it,P,N))}.</span> ${esc(explainIdea(c,it,P,N))}</div><div class="vl">${vl.html}</div>
         <div class="btns"><button class="btn small" data-aud="${gi}.${ii}" aria-label="Hear in context">${IC.play}</button><button class="btn small ab" data-ab="${gi}.${ii}" aria-pressed="false" title="Loop the original and this idea, bar by bar">A/B</button><button class="btn small primary" data-use="${gi}.${ii}">Put in this slot</button></div></div>`;
     });
-    if(g.items.length>shownItems.length) h+=`<button type="button" class="btn small more" data-more="${g.id}">Show ${g.items.length-shownItems.length} more</button>`;
+    if(g.items.length>shownItems.length) h+=`<button type="button" class="btn small more" data-more="${g.id}">${g.id==='keep'&&g.items.length-shownItems.length>24?`Show 24 more (${g.items.length-shownItems.length} left)`:`Show ${g.items.length-shownItems.length} more`}</button>`;
     h+='</div>';
   });
   el.innerHTML=h; el._groups=groups; el._ctx={P,N,idx};
@@ -3529,7 +3612,100 @@ function renderFinder(){
   h+=`</div></div>`;
   el.innerHTML=h; el._res=res;
 }
-function renderAll(){ PLAN=null; guitarPlan.cache=null; renderControls(); renderTension(); if(melSel){ const tot=chords.reduce((a,c)=>a+c.beats,0); if(!S.showMel||!tot) melSel=null; else { const b=Math.min(melSel.b,tot-1); melSel={a:Math.min(melSel.a,tot-1),b,h:melSplit(b)?melSel.h||0:0}; } } renderChart(); renderFormBar(); renderArrBar(); renderMelPad(); renderArrWhy(); renderPartWhy(); renderVLX(); renderDetail(); renderSubs(); renderPalette(); renderFinder(); const pt=serialize(); $('#prog').value=pt; $('#prog').rows=Math.min(14,Math.max(3,pt.split('\n').length+1)); }
+function renderAll(){ PLAN=null; guitarPlan.cache=null; renderControls(); renderTension(); if(melSel){ const tot=chords.reduce((a,c)=>a+c.beats,0); if(!S.showMel||!tot) melSel=null; else { const b=Math.min(melSel.b,tot-1); melSel={a:Math.min(melSel.a,tot-1),b,h:melSplit(b)?melSel.h||0:0}; } } renderChart(); renderFormBar(); renderArrBar(); renderMelPad(); renderArrWhy(); renderPartWhy(); renderVLX(); renderDetail(); renderSubs(); renderPalette(); renderFinder(); renderDoor(); renderIdeas(); const pt=serialize(); $('#prog').value=pt; $('#prog').rows=Math.min(14,Math.max(3,pt.split('\n').length+1)); }
+
+/* ============ front door ============ */
+/* a fresh visit opens on an example with some colour in it, and the Create panel opens on "I have chords" */
+const EXAMPLE='G | B7 | Em | Cm';
+const isExample=()=>S.tonic===7&&S.mode==='ionian'&&!melody.some(x=>x!=null)&&chords.map(c=>chordName(c,true)+':'+c.beats+(c.sec||c.kc?'*':'')).join(' ')==='G:4 B7:4 Em:4 Cm:4';
+/* the most likely key for chords typed by name: in-key chords count most, then secondary dominants, then borrowed ones, and a
+   tonic chord at either end tips it */
+function guessKey(list){
+  const reals=list.filter(real); if(!reals.length) return null; let best=null;
+  for(const m of ['ionian','aeolian']) for(let t=0;t<12;t++){ const k={t,m};
+    const sc=inKey(k,()=>reals.reduce((a,c)=>a+({dia:2,sec:1,bor:.5}[analyze(c).kind]||0),0))
+      +[reals[0],reals[reals.length-1]].reduce((a,c)=>a+(c.root===t&&Q[c.q].tri===(m==='ionian'?'maj':'min')?1.5:0),0)
+      +(m==='ionian'?.01:0)+(t===S.tonic&&m===S.mode?.02:0);
+    if(!best||sc>best.sc) best={k,sc}; }
+  return best.k;
+}
+/* what the "I have chords" box will do with its text: replace the example (or an empty chart), or add to the end */
+function doorPlan(text){
+  if(!text.trim()) return null;
+  const replace=!chords.length||isExample(), nums=usesNumerals(text), key=replace?{t:S.tonic,m:S.mode}:keyAt(chords.length-1);
+  const r=inKey(key,()=>parseProg(text)); if(r.bad.length||!r.chords.length) return {bad:r.bad};
+  let k=r.chords[0].kc||(replace&&!nums?guessKey(r.chords):null)||key; if(r.chords[0].kc&&!replace) k=key;
+  return {chords:r.chords,replace,key:k,nums};
+}
+function renderDoorRead(){
+  const el=$('#doorRead'), pl=doorPlan($('#doorIn').value); el.classList.toggle('bad',!!(pl&&pl.bad));
+  if(!pl){ el.textContent='Chord names, Roman numerals or Nashville numbers. Put | between bars, or give each chord a bar.'; return; }
+  if(pl.bad){ el.textContent=pl.bad.length?`Can’t read ${pl.bad.map(b=>`“${b}”`).join(', ')} yet. Try names like Am7 or D/F#, numerals like ii7 or V7/V, or numbers like 6m.`:''; return; }
+  const names=inKey(pl.key,()=>pl.chords.map(c=>chordName(c)).join(' ')), kn=inKey(pl.key,keyName);
+  el.textContent=`Reads as ${names}, in ${kn}${pl.replace&&!pl.nums&&!pl.chords[0].kc?' (the likeliest key; change it from the key line)':''}. ${pl.replace?(chords.length?'Add replaces the example.':'Add starts the chart.'):'Add puts these at the end.'}`;
+}
+function doorAdd(){
+  const pl=doorPlan($('#doorIn').value); if(!pl||pl.bad){ renderDoorRead(); $('#doorIn').focus(); return; }
+  pushHist(); const list=pl.chords; delete list[0].kc;
+  if(pl.replace){ S.tonic=pl.key.t; S.mode=pl.key.m; chords=list; melody=[]; melAnd=[]; }
+  else { list[0].br=true; chords.push(...list); }
+  sel=list[list.length-1].id; $('#doorIn').value=''; commit(); renderDoorRead();
+  toast(`${pl.replace?'Started with':'Added'} ${list.filter(real).map(c=>chordName(c)).join(' ')}`);
+}
+function renderDoor(){
+  const el=$('#doorKeys'); if(!el) return; const idx=Math.max(0,chords.findIndex(x=>x.id===sel)), sev=$('#doorSev').checked;
+  inKey(chords.length?keyAt(idx):homeKey(),()=>{ $('#doorKeyL').textContent=`Tap a chord in ${keyName()}`;
+    el.innerHTML=[0,1,2,3,4,5,6].map(d=>{ const c=diatonic(S.mode,d,sev?4:3); if(!c) return ''; return `<button type="button" class="k-dia" data-deg="${d}" title="Add ${esc(chordName(c))}"><b>${esc(chordName(c))}</b><small>${esc(analyze(c).num)} · ${d+1}</small></button>`; }).join(''); });
+  const ex=$('#exampleNote'); ex.hidden=!(isExample()||!chords.length);
+  if(!ex.hidden) ex.innerHTML=chords.length?`<span><b>This is an example</b>, to show the colours. Replace it with your own chords from <button type="button" class="linkbtn" data-door="mine">I have chords</button>, or get new ones from <button type="button" class="linkbtn" data-door="gen">Let’s play</button>.</span><button type="button" class="btn small" data-door="empty">Start empty</button>`
+    :`<span><b>An empty chart.</b> Type, tap or play your chords in <button type="button" class="linkbtn" data-door="mine">I have chords</button>, or get some from <button type="button" class="linkbtn" data-door="gen">Let’s play</button>.</span>`;
+}
+function openDoor(name){ selectTab('left',name); const pn=$('#panel-'+name); revealEl(pn); if(name==='mine') $('#doorIn').focus({preventScroll:true}); }
+
+/* the whole progression in a sentence or two: its key, the chords from outside it and what they do, and where it ends */
+function progWhy(){
+  const st=chordStarts(), L=barLen(), info=chords.map((c,i)=>({c,i})).filter(x=>real(x.c)).map(x=>inKey(keyAt(x.i),()=>({...x,a:analyze(x.c),key:keyName(),tonic:S.tonic,name:chordName(x.c)})));
+  if(info.length<2) return '';
+  const bar=i=>Math.floor(st[i]/L)+1, keys=[...new Set(info.map(x=>x.key))], uniq=list=>{ const seen=new Set(); return list.filter(x=>!seen.has(x.name)&&seen.add(x.name)); };
+  const names=list=>{ const u=uniq(list), shown=u.slice(0,3).map(x=>`${x.name} (bar ${bar(x.i)})`); return joinList(u.length>3?[...shown,`${u.length-3} more`]:shown); };
+  const out=[], odd=info.filter(x=>x.a.kind!=='dia');
+  out.push(keys.length>1?`It starts in ${keys[0]} and moves to ${joinList(keys.slice(1))}.`:odd.length?`It’s in ${keys[0]}.`:`Every chord comes from ${keys[0]}, so it sounds settled and familiar: ${uniq(info).map(x=>x.a.num).join(' ')}.`);
+  const bor={}; odd.filter(x=>x.a.kind==='bor').forEach(x=>{ const f=(x.a.note.match(/Borrowed from (.+?)\./)||[])[1]||'a parallel mode'; (bor[f]=bor[f]||[]).push(x); });
+  Object.entries(bor).forEach(([f,l])=>out.push(`${names(l)} ${uniq(l).length>1?'are':'is'} borrowed from ${f}: the same home note, with a different colour.`));
+  uniq(odd.filter(x=>x.a.kind==='sec')).slice(0,3).forEach(x=>{ const [fn,tg]=x.a.num.split('/');
+    out.push(fn==='subV'?`${x.name} (bar ${bar(x.i)}) stands in for the V of ${tg} and slides down a half step into it.`:fn.startsWith('vii')?`${x.name} (bar ${bar(x.i)}) climbs a half step into ${tg}.`:`${x.name} (bar ${bar(x.i)}) is the ${fn} of ${tg}, so it pulls toward ${tg}.`); });
+  const chr=odd.filter(x=>x.a.kind==='chr'); if(chr.length) out.push(`${names(chr)} ${uniq(chr).length>1?'come':'comes'} from outside the key: a chromatic surprise.`);
+  const last=info[info.length-1], iv=mod(last.c.root-last.tonic);
+  out.push(iv===0?`It ends at home, on ${last.name}.`:iv===7?`It ends on the V, ${last.name}, so it wants to go round again.`:`It ends away from home, on ${last.name}, so it feels open.`);
+  return out.join(' ');
+}
+/* ideas for the whole chart: the strongest swap idea of a few kinds, spread over different chords. "Other ideas" moves on. */
+let ideasOff=0, ideasCache={k:null,list:[]};
+const IDEA_ORDER=['bor','lead','color','chr','jazz','symm'];
+function progIdeas(){
+  const k=JSON.stringify([chords.map(c=>[c.id,c.root,c.q,c.bass,c.beats,c.kc]),S.tonic,S.mode,S.vocab,S.level]); if(ideasCache.k===k) return ideasCache.list;
+  const cands=[]; chords.slice(0,32).forEach((c,idx)=>{ if(!real(c)) return; inKey(keyAt(idx),()=>{ const {groups,P,N}=suggestions(idx);
+    groups.filter(g=>IDEA_ORDER.includes(g.id)).forEach(g=>{ const it=g.items[0]; if(it) cands.push({idx,id:c.id,g:g.id,it,P,N,rank:IDEA_ORDER.indexOf(g.id)}); }); }); });
+  /* round-robin over the kinds so the list mixes them, and never two ideas for one chord in a row */
+  const byKind=IDEA_ORDER.map(id=>cands.filter(x=>x.g===id)), list=[]; let more=true;
+  for(let r=0;more;r++){ more=false; byKind.forEach(l=>{ if(l[r]){ list.push(l[r]); more=true; } }); }
+  ideasCache={k,list}; return list;
+}
+function renderIdeas(){
+  const el=$('#ideas'), wy=$('#progWhy'), why=chords.filter(real).length>=2?progWhy():'';
+  wy.hidden=!why; wy.textContent=why;
+  const list=chords.filter(real).length>=2?progIdeas():[]; if(!list.length){ el.hidden=true; el.innerHTML=''; return; }
+  /* three ideas that differ in both chord and kind where the chart allows, then in either, then any */
+  const n=Math.min(3,list.length), off=ideasOff%list.length, order=list.map((_,j)=>list[(off+j)%list.length]), shown=[];
+  for(const need of [x=>!shown.some(y=>y.idx===x.idx||y.g===x.g),x=>!shown.some(y=>y.idx===x.idx),()=>true])
+    for(const x of order){ if(shown.length>=n) break; if(!shown.includes(x)&&need(x)) shown.push(x); }
+  const st=chordStarts(), L=barLen();
+  el.hidden=false; el._shown=shown;
+  el.innerHTML=`<div class="ideas-h"><h3>Ideas for this progression</h3><span class="hint">A few swap ideas, from across the chart</span>${list.length>n?'<button type="button" class="btn small" data-idea="more">Other ideas</button>':''}</div>`+
+    shown.map((x,k)=>{ const C=chords[x.idx]; return inKey(keyAt(x.idx),()=>`<div class="item k-${x.it.tag==='jazz'?'jazz':x.it.tag}"><div class="names"><span class="bar">Bar ${Math.floor(st[x.idx]/L)+1}</span><span class="nm">${chordHTML(C)}</span><span class="arrow">→</span>${x.it.chords.map(c=>`<span class="nm">${chordHTML(c)}</span>`).join('<span class="arrow">→</span>')}<span class="rn">${esc(x.it.chords.map(c=>analyze(c).num).join(' → '))}</span></div>
+      <div class="why"><span class="tn">${esc(theoryName(C,x.it,x.P,x.N))}.</span> ${esc(explainIdea(C,x.it,x.P,x.N))}</div>
+      <div class="btns"><button class="btn small" data-idea="hear" data-k="${k}" aria-label="Hear it in context">${IC.play}</button><button class="btn small primary" data-idea="use" data-k="${k}">Use</button></div></div>`); }).join('');
+}
 
 /* ============ edits ============ */
 function replaceAt(idx,list){
@@ -3757,11 +3933,12 @@ function vlSummary(C,it,P,N){
 /* A/B: the chord before, the original, the chord after (bar A), then the same with the idea (bar B), looped until stopped */
 let abState=null;
 function abReset(){ if(!abState) return; const b=abState.btn; if(b&&b.isConnected){ b.setAttribute('aria-pressed','false'); b.textContent='A/B'; } abState.stat?.remove(); abState=null; }
-function abPlay(C,it,P,N,btn){
+function abPlay(C,it,idx,btn){
   const again=abState&&abState.key===btn.dataset.ab; stopAll(); if(again) return;
   const a=ac(), L=barLen(), beat=60/S.tempo*(4/den());
-  const bar=list=>{ const pre=P?1:0, post=N?1:0, parts=splitBeats(Math.max(list.length,L-pre-post),list.length);
-    return [...(P?[[{...P},1]]:[]),...list.map((c,i)=>[{...c},parts[i]]),...(N?[[{...N},1]]:[])]; };
+  const {before,after}=ctxAround(idx);
+  const bar=list=>{ const pre=before.length, post=after?1:0, parts=splitBeats(Math.max(list.length,L-pre-post),list.length);
+    return [...before.map(c=>[{...c},1]),...list.map((c,i)=>[{...c},parts[i]]),...(after?[[{...after},1]]:[])]; };
   const A=bar([real(C)?C:{root:null,q:'',bass:null}]), B=bar(it.chords);
   const stat=document.createElement('span'); stat.className='abstat'; btn.closest('.item').appendChild(stat);
   abState={key:btn.dataset.ab,btn,stat}; btn.setAttribute('aria-pressed','true'); btn.innerHTML=IC.stop+'Stop';
@@ -4256,7 +4433,7 @@ const LIBKEY='changes-library-v1', SNAPKEYS=['tonic','mode','meter','tempo'];
 let LIB={version:1,items:[]}, libCurrent=null;
 /* ============ untrusted state: one gate for settings and chords from saves, library files and share links ============ */
 const isBool=v=>typeof v==='boolean';
-const SANE={tonic:v=>Number.isInteger(v)&&v>=0&&v<12, mode:v=>ownKey(MODES,v), meter:v=>ownKey(METERS,v), tempo:v=>Number.isFinite(+v)&&+v>0&&v!==''&&v!==null&&typeof v!=='boolean',
+const SANE={hearBack:v=>[1,2,4].includes(v), tonic:v=>Number.isInteger(v)&&v>=0&&v<12, mode:v=>ownKey(MODES,v), meter:v=>ownKey(METERS,v), tempo:v=>Number.isFinite(+v)&&+v>0&&v!==''&&v!==null&&typeof v!=='boolean',
   voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), showMel:isBool, melPlay:isBool, foldForm:isBool, linkForm:isBool, arr:v=>ownKey(ARR_STYLES,v), arrGroup:v=>v===''||ownKey(ARR_GROUPS,v), arrShow:isBool, arrSeed:v=>Number.isInteger(v)&&v>=0&&v<1000, arrMute:v=>Array.isArray(v)&&v.length>=5&&v.length<=9&&v.every(isBool), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
   pstyle:v=>ownKey(PIANO_STYLES,v), gstyle:v=>ownKey(GUITAR_STYLES,v), mood:v=>v===''||MOODS.some(m=>m.id===v),
   genres:v=>Array.isArray(v)&&v.length<=20&&v.every(g=>GENRES.some(x=>x.id===g)), vocab:v=>Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)),
@@ -4437,7 +4614,7 @@ function boot(){
   /* a share link in the address wins over the last session; the hash is then cleared so a reload keeps later edits */
   let fromLink=false;
   try{ const d=readShare(location.hash); if(d&&applyShare(d)){ loaded=fromLink=true; history.replaceState(null,'',location.pathname+location.search); } }catch(e){}
-  if(!loaded){ chords=parseProg('Am | D | G | G').chords; sel=chords[1].id; }
+  if(!loaded){ chords=parseProg(EXAMPLE).chords; sel=chords[1].id; }
   libLoad(); initIO();
 
   $('#key').onchange=e=>{ pushHist(); S.tonic=+e.target.value; commit(); };
@@ -4472,8 +4649,11 @@ function boot(){
   $('#recipe').onclick=e=>{ const b=e.target.closest('[data-addfams]'); if(!b) return; S.vocab=[...new Set([...S.vocab,...b.dataset.addfams.split(',')])]; commit(); toast(`Vocabulary updated: ${vocabName()}`); };
   $('#gen').onclick=()=>{ generate(); stopAll(); playChart(); };
   $('#regen').onclick=regenUnlocked;
-  $('#clearChart').onclick=()=>{ if(!chords.length&&!melody.some(x=>x!=null)&&!hasAnd()) return; stopAll(); pushHist(); chords=[]; melody=[]; melAnd=[]; melSel=null; sel=null; commit(); renderMelPad(); toast('Chart cleared',{label:'Undo',fn:undoTo(hist[hist.length-1])}); };
+  $('#clearChart').onclick=()=>{ if(!chords.length&&!melody.some(x=>x!=null)&&!hasAnd()) return; stopAll(); pushHist(); chords=[]; melody=[]; melAnd=[]; melSel=null; sel=null; commit(); renderMelPad(); toast('Cleared: a fresh start',{label:'Undo',fn:undoTo(hist[hist.length-1])}); };
+  let firstVisit=!loaded; try{ if(localStorage.getItem(TAB_KEY)) firstVisit=false; }catch(e){}
   initLayout(); fitScreen();
+  /* a first visit on a wide screen opens Create beside the example, on I have chords */
+  if(firstVisit&&!screenFromHash()&&wideLayout()) selectTab('phone','p-create');
   $('#genreChords').addEventListener('change',e=>{ if(e.target.id==='genreVocab'){ S.genreVocab=e.target.checked; save(); renderControls(); } });
   $('#genreChords').addEventListener('click',e=>{ if(e.target.closest('[data-restyle]')){ restyleChart(); return; } const b=e.target.closest('[data-gchord]'); if(!b) return; const [r,q]=b.dataset.gchord.split('|'); playOne({root:+r,q,bass:null}); });
   $('#soundCheck').onclick=()=>{ const b=$('#soundbox'); if(b.hidden) b._opener=document.activeElement; b.hidden=false; renderSoundBox(); b.querySelector('button')?.focus(); };
@@ -4549,6 +4729,19 @@ function boot(){
     else err.hidden=true;
     if(r.chords.length){ pushHist(); chords=r.chords; const k0=chords[0].kc; if(k0){ S.tonic=k0.t; S.mode=k0.m; delete chords[0].kc; } sel=chords[0].id; commit(); } };
   $('#load').onclick=load; $('#prog').onkeydown=e=>{ if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); load(); } };
+  $('#doorIn').addEventListener('input',renderDoorRead); $('#doorIn').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); doorAdd(); } };
+  $('#doorAdd').onclick=doorAdd; $('#doorSev').onchange=renderDoor; renderDoorRead();
+  $('#doorKeys').onclick=e=>{ const b=e.target.closest('[data-deg]'); if(!b) return; const c=degreeChord(+b.dataset.deg,$('#doorSev').checked); if(!c) return;
+    if(isExample()){ pushHist(); chords=[]; } const n=addChordHere(c); playOne(n); };
+  $('#doorShape').onclick=()=>{ selectTab('tools','finder'); revealEl($('#finder')); };
+  if('requestMIDIAccess' in navigator) $('#doorMidi').hidden=false;
+  document.addEventListener('click',e=>{ const d=e.target.closest('[data-door]'); if(!d) return;
+    if(d.dataset.door==='empty'){ $('#clearChart').click(); return; } openDoor(d.dataset.door); });
+  $('#ideas').onclick=e=>{ const b=e.target.closest('[data-idea]'); if(!b) return; const el=$('#ideas');
+    if(b.dataset.idea==='more'){ ideasOff+=3; renderIdeas(); return; }
+    const x=el._shown[+b.dataset.k]; if(!x) return; const idx=chords.findIndex(c=>c.id===x.id); if(idx<0) return;
+    if(b.dataset.idea==='use'){ const was=chordName(chords[idx]); replaceAt(idx,x.it.chords); toast(`Swapped ${was} for ${x.it.chords.map(c=>chordName(c)).join(' → ')}`); return; }
+    audition(contextSeq(idx,x.it.chords)); };
   $('#addslot').onclick=()=>{ pushHist(); const c={id:uid(),root:null,q:'',bass:null,beats:barLen()}; chords.push(c); sel=c.id; commit(); };
   /* drag a chord to move it, Option/Alt-drop to copy it; the text box is rewritten from the new order. Touch needs a short press
      first so a swipe across the chart still scrolls the page. Line breaks and section labels stay with the chords around them. */
@@ -4769,14 +4962,14 @@ function boot(){
     if(act==='left'&&idx>0) [chords[idx-1],chords[idx]]=[chords[idx],chords[idx-1]];
     if(act==='right'&&idx<chords.length-1) [chords[idx+1],chords[idx]]=[chords[idx],chords[idx+1]];
     commit(); };
-  $('#subs').addEventListener('change',e=>{ if(e.target.id==='keepOther'&&e.target.value!==''){ keepNotes.push(+e.target.value); renderSubs(); } });
-  $('#subs').addEventListener('click',e=>{ const mo=e.target.closest('[data-more]'); if(mo){ openGroups.add(mo.dataset.more); renderSubs(); return; } const k=e.target.closest('[data-keep]'); if(!k) return; const pc=+k.dataset.keep; keepNotes=keepNotes.includes(pc)?keepNotes.filter(x=>x!==pc):[...keepNotes,pc]; renderSubs(); });
+  $('#subs').addEventListener('change',e=>{ if(e.target.id==='hearBack'){ S.hearBack=+e.target.value; save(); return; } if(e.target.id==='keepOther'&&e.target.value!==''){ keepNotes.push(+e.target.value); renderSubs(); } });
+  $('#subs').addEventListener('click',e=>{ const mo=e.target.closest('[data-more]'); if(mo){ if(mo.dataset.more==='keep') keepShown+=24; else openGroups.add(mo.dataset.more); renderSubs(); return; } const k=e.target.closest('[data-keep]'); if(!k) return; const pc=+k.dataset.keep; keepNotes=keepNotes.includes(pc)?keepNotes.filter(x=>x!==pc):[...keepNotes,pc]; renderSubs(); });
   $('#subs').onclick=e=>{ const el=$('#subs'); const ab=e.target.closest('[data-ab]');
-    if(ab){ const [gi,ii]=ab.dataset.ab.split('.').map(Number), it=el._groups[gi].items[ii], {P,N,idx}=el._ctx; abPlay(chords[idx],it,P,N,ab); return; }
+    if(ab){ const [gi,ii]=ab.dataset.ab.split('.').map(Number), it=el._groups[gi].items[ii], {idx}=el._ctx; abPlay(chords[idx],it,idx,ab); return; }
     const u=e.target.closest('[data-use]'), a=e.target.closest('[data-aud]'); const k=(u||a)?.dataset[u?'use':'aud']; if(!k) return;
-    const [gi,ii]=k.split('.').map(Number), it=el._groups[gi].items[ii], {P,N,idx}=el._ctx;
+    const [gi,ii]=k.split('.').map(Number), it=el._groups[gi].items[ii], {idx}=el._ctx;
     if(u){ replaceAt(idx,it.chords); toast(`Swapped in ${it.chords.map(c=>chordName(c)).join(' → ')}`); return; }
-    const seq=[]; if(P) seq.push([P,.9]); it.chords.forEach(c=>seq.push([c,it.chords.length>1?.6:.9])); if(N) seq.push([N,1.3]); audition(seq); };
+    audition(contextSeq(idx,it.chords)); };
   document.querySelector('.palette').onclick=e=>{ const b=e.target.closest('[data-pal]'), m=e.target.closest('[data-mode]');
     if(m){ pushHist(); /* the modes shown are on the selected chord's key: change that key change's mode, or the opening one */
       const i=chords.findIndex(x=>x.id===sel); let j=i; while(j>=1&&!kcOk(chords[j].kc)) j--;
@@ -4806,7 +4999,7 @@ function boot(){
   /* if the saved session can't be shown, start fresh rather than leave the app broken; the old save is kept aside */
   try{ renderAll(); }
   catch(err){ try{ const old=localStorage.getItem('changes-v1'); if(old) localStorage.setItem('changes-v1-unreadable',old); }catch(e){}
-    Object.assign(S,JSON.parse(JSON.stringify(S_DEFAULT))); setTuning(S.tuning); chords=parseProg('Am | D | G | G').chords; sel=chords[0].id; hist=[]; renderAll(); save();
+    Object.assign(S,JSON.parse(JSON.stringify(S_DEFAULT))); setTuning(S.tuning); chords=parseProg(EXAMPLE).chords; sel=chords[0].id; hist=[]; renderAll(); save();
     toast('Your last session couldn’t be opened, so a fresh chart was started. A copy of it was kept in this browser.'); }
   if(fromLink){ save(); toast('Loaded the shared progression'); }
 }

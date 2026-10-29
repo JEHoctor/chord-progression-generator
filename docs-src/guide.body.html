@@ -3,8 +3,8 @@
 
 <h2 id="quick">Quick start</h2>
 <ol class="steps">
-  <li><b>Pick a feeling.</b> In <b>Create → Generate</b>, choose a mood such as Uplifting, Melancholy or Dreamy, and optionally one or more genres (Pop, Rock, Jazz, Lo-fi and the rest each have their own typical chords).</li>
-  <li><b>Press Generate.</b> A progression appears in the chart and starts playing. Press it as often as you like.</li>
+  <li><b>Bring your chords, or get some.</b> The first time you open it, the chart holds a short example to show the colours. In <b>Create → I have chords</b>, type your own (<code>C Am F G</code>, <code>I vi IV V</code> or <code>1 6m 4 5</code>), tap them from the row of chords in your key, or play them on a MIDI keyboard. With no chords in mind, open <b>Let’s play</b>, choose a mood and genres, and press <b>Generate</b>.</li>
+  <li><b>Read what you have.</b> Under the chart, a sentence or two says what the progression does: its key, which chords come from outside it and why, and where it ends. <b>Ideas for this progression</b> offers three swaps from across the chart.</li>
   <li><b>Change anything you don’t like.</b> Tap a chord to hear it, then try one of the swap ideas, or tap the small ▾ next to its name to pick a different chord.</li>
   <li><b>Take it with you.</b> Press Export to download MIDI or notation, copy the chord chart, or print a lead sheet.</li>
 </ol>
@@ -13,7 +13,7 @@
 <p>On a computer the screen has five parts, with your chord chart in the middle:</p>
 <div class="map" aria-label="Screen layout">
   <div class="tb"><b>Top bar</b>Library (save and open) and Help (these guides, Sound check, and About, with a link to the project on GitHub)</div>
-  <div><b>Create</b>Generate a progression or harmonize a melody, and Chords allowed</div>
+  <div><b>Create</b>I have chords (type, tap or play yours), Let’s play (generate new ones), Harmonize a melody, and Chords allowed</div>
   <div class="ct"><b>Chart</b>Your progression. The line under the title (for example “G major · 4/4 · 4 bars”) opens key, mode and time. Below it: Edit as text, and Tools (chord finder, keys and modes)</div>
   <div><b>Chord / Swap ideas</b>Everything about the chord you selected, and what could replace it</div>
   <div class="dk"><b>Play bar</b>Play, the chord now playing, loop, tempo and metronome, sound and playing style, and Export</div>
@@ -21,7 +21,16 @@
 <p>Drag the left edge of the side panel to make it wider or narrower (or focus it and use the arrow keys); double-click the edge to reset it. The chart reflows to fit, choosing how many bars to put on a line, and chord names shrink, or stack the chord type under the root in a short slot, so they stay readable. On a smaller laptop or tablet, Create slides out from the left when you press <b>Create</b>. On a phone, a tab bar under the title switches between <b>Create</b>, <b>Chart</b>, <b>Chord</b> and <b>Tools</b>, one screen at a time.</p>
 
 <h2 id="make">Making a progression</h2>
-<p>Open <b>Create → Generate</b>. (To start from a tune instead, see <a href="#tools">Harmonize a melody</a>.)</p>
+<h3>From your own chords</h3>
+<p>Open <b>Create → I have chords</b> (it is where Create opens until you pick another tab; it remembers the last one).</p>
+<ul>
+  <li><b>Type chords</b> as names (<code>Am7 D/F# Bbmaj7</code>), Roman numerals (<code>I vi ii7 V7</code>, <code>V7/V</code>, <code>♭VII</code>, <code>viiø7</code>) or Nashville numbers (<code>1 6m 4 5</code>, <code>2m7 5/7</code>, <code>b7</code>). Upper-case numerals are major and lower-case minor; a Nashville number is major unless you add <code>m</code> or <code>-</code>. Numerals count from the major scale of the key, as the chart’s own numerals do, so in A minor C is <code>♭III</code> or <code>b3</code>. Before you press <b>Add</b>, the line under the box says how it reads them (“Reads as G Em C A7, in G major”). Add replaces the example chart (or starts an empty one, guessing the key from chord names), and otherwise puts the chords at the end.</li>
+  <li><b>Tap a chord in the key</b>: the seven chords of the key at the selected chord, with their numerals; tick <b>7ths</b> for seventh chords. Each tap plays the chord and adds it after the selected one, or into it if it is an empty slot. The number keys <kbd>1</kbd>–<kbd>7</kbd> do the same from the keyboard.</li>
+  <li><b>Name a shape on guitar or piano</b> opens the Chord finder; <b>MIDI in</b> under the chart takes chords from a MIDI keyboard (see <a href="#tools">More tools</a>).</li>
+</ul>
+<p>The same numerals and Nashville numbers work in <b>Edit as text</b>, in each part’s own key after a <code>[Key: …]</code> line.</p>
+<h3>Starting fresh: Let’s play</h3>
+<p>Open <b>Create → Let’s play</b>. (To start from a tune instead, see <a href="#tools">Harmonize a melody</a>.)</p>
 <ul>
   <li><b>Mood</b> sets the feeling: Uplifting, Melancholy, Dreamy, Dark, Tense, Nostalgic, Epic or Mysterious. Pick one, or none.</li>
   <li><b>Genre</b> sets the style: Pop, Rock, Blues, Jazz, R&amp;B / Neo-soul, Gospel, Funk, Country, Folk, EDM, Metal, Bossa nova, Lo-fi and Film score. Pick several to blend them.</li>
@@ -52,7 +61,7 @@
   <tr><td>Split, insert</td><td>Use the buttons in the Chord panel.</td></tr>
   <tr><td>Change key</td><td>Chart tools → Transpose moves the whole chart (half steps, or straight to a key). To change key part-way through, see <a href="#make">Changing key or mode part-way through</a>.</td></tr>
   <tr><td>Undo</td><td>Chart tools → Undo, or <kbd>⌘Z</kbd> / <kbd>Ctrl+Z</kbd>.</td></tr>
-  <tr><td>Start again</td><td>Chart tools → Clear chart. Undo brings it back.</td></tr>
+  <tr><td>Start again</td><td>Chart tools → <b>Start over</b> clears the chords and the tune; Undo brings both back. While the example chart is showing, <b>Start empty</b> above it does the same.</td></tr>
 </table>
 <h3>Writing a chart as text</h3>
 <p>Open <b>Edit as text</b> under the chart to type or paste a progression, then press Load (or <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd>). Every change you make in the chart is written back here too.</p>
@@ -158,9 +167,13 @@ D | E | F#m | E</pre>
   <li>its <b>theory name</b>, such as “Secondary dominant (V7/vi)” or “Modal interchange”;</li>
   <li>a <b>sentence about this exact swap</b>: which notes it keeps, whether it sounds brighter or darker, and where it goes next;</li>
   <li>a <b>voice-leading line</b>: which notes are held and how far each voice moves from the chord before;</li>
-  <li><b>▶</b> to hear it between its neighbours, <b>A/B</b> to loop the original and the idea bar by bar, and <b>Put in this slot</b> to use it.</li>
+  <li><b>▶</b> to hear it in context, <b>A/B</b> to loop the original and the idea bar by bar, and <b>Put in this slot</b> to use it.</li>
 </ul>
-<p><b>Keep note</b> filters the ideas to those containing a note you choose, for example your melody note.</p>
+<p><b>Hearing it in context.</b> ▶ plays the chord or chords before it, then the idea, then the chord after. The menu at the top of Swap ideas sets how far back it starts: the chord before, 2 chords or 4 chords. Playback never wraps round the ends of the chart: an idea for the last chord stops on the idea, and one for the first chord starts on it. (The ideas themselves still treat the chart as a loop, since a progression usually repeats.)</p>
+<p><b>Keep note</b> lists every chord containing a note you choose, for example your melody note: every root and every chord type that <b>Chords allowed</b> switches on, and, when slash chords are on, slash chords with that note in the bass (C/G, Am/G, F/G and the rest). The likeliest come first: chords in the key, then borrowed and secondary chords, then chromatic ones, the best of each root before the second best of any. The first 8 show, and Show more opens 24 at a time. When two names mean the same notes over the same bass, the plainer one is listed.</p>
+<p>The <b>Chords allowed</b> setting is named at the top of Swap ideas; tap it to change which chord families ideas can use.</p>
+<h3>Ideas for this progression</h3>
+<p>Under the chart, three swap ideas from across the whole chart, each of a different kind (borrowed, leading into the next chord, recolouring, chromatic, jazz) and each for a different chord where the chart allows. ▶ plays it in context, <b>Use</b> swaps it in (Undo takes it back), and <b>Other ideas</b> shows the next three. They are the same ideas as in Swap ideas, so a chord’s full list is a tap away. They hide, with the sentence about the progression, while Quiz me is on.</p>
 
 <h2 id="play">Playing and hearing</h2>
 <ul>
