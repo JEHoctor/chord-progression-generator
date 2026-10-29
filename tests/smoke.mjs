@@ -1243,6 +1243,29 @@ async function frontDoor() {
   check('door: the last door chosen opens next time', await page.evaluate(() => document.querySelector('#tab-gen').getAttribute('aria-selected') === 'true' && document.querySelector('#tab-gen').textContent === 'Let’s play'));
   await ctx.close();
 }
+/* hearing the arrangement a bar or a chord at a time */
+async function hearArr() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  await page.evaluate(() => { S.tonic = 0; S.mode = 'ionian'; chords = parseProg('C | F | G | C').chords; melody = [64, 65, 67, 64, 65, -1, 69, 65, 67, -1, 71, 74, 72, -1, -1, -1]; melAnd = []; S.showMel = true; S.arrShow = true; S.arr = 'strings'; S.arrMute = [false, false, false, false, false, false, false, false, false]; sel = chords[0].id; commit();
+    window.heard = []; const vn = voiceNote; window.voiceNote = (m, t, d, ...r) => { heard.push({ m, t, d }); return vn(m, t, d, ...r); }; const st = strum; window.strummed = 0; window.strum = (...a) => { strummed++; return st(...a); }; window.played1 = 0; const p1 = playOne; window.playOne = (...a) => { played1++; return p1(...a); }; });
+  await page.click(`#rows .slot[data-id="${await page.evaluate(() => chords[1].id)}"]`);
+  const tap = await page.evaluate(() => { const ar = arrange(), notes = ar.lines.reduce((a, l) => a + l.filter(n => n.b < 8 && n.b + n.n > 4).length, 0); return { n: heard.length, notes, strummed, played1, span: Math.max(...heard.map(h => h.t + h.d)) - Math.min(...heard.map(h => h.t)), bar: 4 * 60 / S.tempo }; });
+  check('arrange: tapping a chord plays its bar of the arrangement (every part, and the chord), not just the chord', tap.n === tap.notes && tap.n >= 4 && tap.strummed === 1 && tap.played1 === 0 && Math.abs(tap.span - tap.bar) < 0.05, JSON.stringify(tap));
+  await page.evaluate(() => { heard.length = 0; strummed = 0; S.arrMute[0] = true; S.arrMute[arrange().voices.length] = true; renderAll(); });
+  await page.click(`#rows .slot[data-id="${await page.evaluate(() => chords[2].id)}"]`);
+  const muted = await page.evaluate(() => ({ n: heard.length, strummed, top: heard.some(h => h.m > 80) }));
+  check('arrange: a muted part, and muted chords, stay silent when you tap', muted.strummed === 0 && muted.n > 0, JSON.stringify(muted));
+  await page.evaluate(() => { S.arrMute = [false, false, false, false, false, false, false, false, false]; renderAll(); heard.length = 0; strummed = 0; });
+  await page.click('#rows .acell[data-ab="13"]');
+  await page.click('#arrWhy [data-aw="bar"]');
+  const bar = await page.evaluate(() => ({ n: heard.length, strummed, span: Math.max(...heard.map(h => h.t + h.d)) - Math.min(...heard.map(h => h.t)), bar: 4 * 60 / S.tempo }));
+  check('arrange: Hear the bar in the why card plays the whole bar it is in', bar.n >= 4 && bar.strummed === 1 && Math.abs(bar.span - bar.bar) < 0.05, JSON.stringify(bar));
+  await page.evaluate(() => { S.arrShow = false; renderAll(); played1 = 0; });
+  await page.click(`#rows .slot[data-id="${await page.evaluate(() => chords[0].id)}"]`);
+  check('arrange: with the arrangement off, tapping a chord plays the chord as before', await page.evaluate(() => played1 === 1));
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1516,6 +1539,7 @@ try {
   await spelling();
   await fastInput();
   await frontDoor();
+  await hearArr();
   await menus();
   await layout();
   await hardening();

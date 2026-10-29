@@ -3139,6 +3139,15 @@ function voiceNote(m,t,dur,vel,out,env){
 function playArr(ar,t0,unit,out){ const env=ARR_STYLES[ar.style].env, many=ar.voices.length>4;
   ar.lines.forEach((line,k)=>{ if(arrMuted(k)) return; const vel=k===ar.mel?.15:many?.07:.1, e=ar.voices[k].env||env;
     line.forEach(n=>voiceNote(n.m,t0+n.b*unit,n.n*unit,vel,out,e)); }); }
+/* a stretch of the arrangement on its own, beats b0 to b1: every part that isn't muted (a note already sounding when the stretch
+   starts is played from there), and the chords under it unless they are muted too */
+function arrPlaySpan(b0,b1){
+  const ar=arrange(), unit=60/S.tempo*(4/den()); stopAll(); const out=newSession(), t0=actx.currentTime+.05, env=ARR_STYLES[ar.style].env, many=ar.voices.length>4;
+  ar.lines.forEach((line,k)=>{ if(arrMuted(k)) return; const vel=k===ar.mel?.15:many?.07:.1, e=ar.voices[k].env||env;
+    line.forEach(n=>{ const s=Math.max(n.b,b0), en=Math.min(n.b+n.n,b1); if(en>s+1e-9) voiceNote(n.m,t0+(s-b0)*unit,(en-s)*unit,vel,out,e); }); });
+  if(!arrMuted(ar.voices.length)){ const st=chordStarts(); chords.forEach((c,i)=>{ const s=Math.max(st[i],b0), en=Math.min(st[i]+c.beats,b1); if(en>s&&real(c)) strum(c,t0+(s-b0)*unit,(en-s)*unit,out,playedVoicing(c)); }); }
+}
+const arrPlayChord=c=>{ const i=chords.indexOf(c), st=chordStarts()[i]; arrPlaySpan(st,st+c.beats); };
 /* a voice's note at each beat: {m, s, b0} where s marks the beat the note starts on and b0 is that beat */
 function arrBeatMap(ar,k){ ar.maps=ar.maps||[]; if(ar.maps[k]) return ar.maps[k]; const at=[];
   ar.lines[k].forEach(n=>{ for(let b=Math.ceil(n.b-1e-9);b<n.b+n.n-1e-9;b++) at[b]={m:n.m,s:b===n.b,b0:n.b}; }); return ar.maps[k]=at; }
@@ -3255,7 +3264,7 @@ function renderArrWhy(){
   el.hidden=false;
   el.innerHTML=head+`<div class="aw-stack" role="table" aria-label="The voicing, top to bottom">${rows}</div>
     ${w.jobs?`<ul class="aw-why">${w.jobs.map(r=>`<li>${esc(r)}</li>`).join('')}</ul><p class="aw-sub">Inside the strings</p>`:''}<ul class="aw-why">${w.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>${alt}
-    <div class="mp-acts"><button type="button" class="btn small" data-aw="hear">${IC.play}Hear it</button>${k>0&&ar.picks[k-1]?`<button type="button" class="btn small" data-aw="move">${IC.play}Hear the move</button>`:''}${w.alt?`<button type="button" class="btn small" data-aw="alt">${IC.play}Hear the next best</button>`:''}</div>`;
+    <div class="mp-acts"><button type="button" class="btn small" data-aw="hear">${IC.play}Hear it</button><button type="button" class="btn small" data-aw="bar">${IC.play}Hear the bar</button>${k>0&&ar.picks[k-1]?`<button type="button" class="btn small" data-aw="move">${IC.play}Hear the move</button>`:''}${w.alt?`<button type="button" class="btn small" data-aw="alt">${IC.play}Hear the next best</button>`:''}</div>`;
 }
 /* the notes sounding at a moment: the voicing, or for the orchestra every part's note at that beat */
 const arrMoment=(ar,k)=>{ if(!ar.orch) return ar.picks[k]; const b=ar.events[k]?.b; return b==null?null:ar.voices.map((_,j)=>arrBeatMap(ar,j)[b]?.m??null); };
@@ -4853,6 +4862,7 @@ function boot(){
   $('#arrWhy').addEventListener('click',e=>{ const b=e.target.closest('[data-aw]'); if(!b||arrAt==null) return; const ar=arrange(), k=arrEventAt(ar,arrAt), w=b.dataset.aw;
     if(w==='close'){ arrAt=null; renderArrWhy(); return; }
     if(w==='prev'||w==='next'){ const n=ar.events[k+(w==='prev'?-1:1)]; if(n){ arrAt=n.b; renderArrWhy(); $('#arrWhy').querySelector(`[data-aw="${w}"]`)?.focus(); } return; }
+    if(w==='bar'){ const L=barLen(), b0=Math.floor(arrAt/L)*L; arrPlaySpan(b0,Math.min(b0+L,chords.reduce((a,c)=>a+c.beats,0))); return; }
     if(w==='hear') arrHear([arrMoment(ar,k)]); else if(w==='move') arrHear([arrMoment(ar,k-1),arrMoment(ar,k)]); else if(w==='alt'){ const x=arrWhy(ar,k).alt; if(x) arrHear([ar.picks[k-1],x.v].filter(Boolean)); } });
   $('#rows').addEventListener('click',e=>{ const p=e.target.closest('.pcell'); if(!p) return; e.stopPropagation();
     partAt={h:p.dataset.ph,b:+p.dataset.pb}; melSel=null; arrAt=null; renderChart(); renderMelPad(); renderArrWhy(); renderPartWhy();
@@ -4903,7 +4913,7 @@ function boot(){
        browser's own dblclick can lose its target) */
     const now=Date.now(), dbl=rowsClick.id===b.dataset.id&&now-rowsClick.t<400; rowsClick={id:b.dataset.id,t:now};
     if(dbl){ rowsClick={}; openPicker(b.dataset.id); return; }
-    if(e.target.closest('.lk')){ const c=chords.find(x=>x.id===b.dataset.id); if(c){ pushHist(); delete c.lock; sel=c.id; commit(); toast(`Unlocked ${chordName(c)}`); } return; } sel=b.dataset.id; const c=chords.find(x=>x.id===sel); if(real(c)&&!playing) playOne(c); renderAll(); onb.tap(); };
+    if(e.target.closest('.lk')){ const c=chords.find(x=>x.id===b.dataset.id); if(c){ pushHist(); delete c.lock; sel=c.id; commit(); toast(`Unlocked ${chordName(c)}`); } return; } sel=b.dataset.id; const c=chords.find(x=>x.id===sel); if(real(c)&&!playing){ if(arrOn()) arrPlayChord(c); else playOne(c); } renderAll(); onb.tap(); };
   $('#detail').addEventListener('change',e=>{ if(e.target.id==='capoSel'){ S.capo=+e.target.value; commit(); } if(e.target.id==='tuneSel'){ setTuning(e.target.value); commit(); toast(`Guitar shapes now use ${TUNINGS[S.tuning].name}`); } });
   $('#detail').addEventListener('click',e=>{ const el=$('#detail'), t=e.target;
     const bl=t.closest('[data-b]');
