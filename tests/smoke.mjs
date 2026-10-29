@@ -1530,6 +1530,16 @@ async function liveChord() {
   check('live: no page errors', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 }
+  /* MIDI in and out live in Chart tools; a browser without Web MIDI says so there instead */
+  { const { ctx, page } = await openPage(); await page.goto(URL_);
+    const r = await page.evaluate(() => ({ inTools: !!document.querySelector('#chartTools #midiInWrap') && !!document.querySelector('#chartTools #midiOutWrap'), none: document.querySelector('#midiNone').hidden }));
+    check('midi place: MIDI in and out are in Chart tools, with no "can’t connect" note where Web MIDI exists', r.inTools && r.none, JSON.stringify(r));
+    await ctx.close(); }
+  { const { ctx, page } = await openPage(); await ctx.addInitScript(() => { delete Navigator.prototype.requestMIDIAccess; }); await page.goto(URL_);
+    await page.click('#chartTools #midiNone').catch(() => {});
+    const r = await page.evaluate(() => ({ note: !document.querySelector('#midiNone').hidden && document.querySelector('#midiNone').checkVisibility(), pairs: document.querySelector('#midiInWrap').hidden && document.querySelector('#midiOutWrap').hidden }));
+    check('midi place: without Web MIDI, Chart tools says MIDI keyboards need Chrome or Edge', r.note && r.pairs, JSON.stringify(r));
+    await ctx.close(); }
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];

@@ -365,6 +365,7 @@ body.quiz-on .prog-why,body.quiz-on .ideas{display:none}
 .charchip small{font-weight:500;font-size:calc(12px*var(--fs,1));color:var(--muted);margin-left:5px}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:var(--r-inset);font-size:calc(13.5px*var(--fs,1));font-weight:500;z-index:10;box-shadow:0 12px 32px -12px rgb(0 0 0 / .45)}
 .io-row{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding-top:2px}
+.midi-row{flex:1 1 100%} #chartTools .io-pair select{background:var(--surface);border-color:var(--line);border-radius:999px;padding:0 12px}
 .io-pair{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px}
 #midiHeard{min-width:9ch;font-variant-numeric:tabular-nums}
 .io-pair select{background:var(--sunk);border:1px solid transparent;border-radius:var(--r-xs);height:calc(30px*var(--fs,1));padding:0 8px;font-size:calc(13px*var(--fs,1));max-width:100%}
@@ -1148,6 +1149,11 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
         <select id="labelMode" class="btn" aria-label="What the chart shows"></select>
         <button class="btn" id="clearChart" type="button" title="Clear the chords and the tune (you can undo it)">Start over</button>
         <button class="btn" id="recolor" type="button" title="Rewrite every chord using the chord types in Chords allowed">Apply chords allowed</button>
+        <div class="io-row midi-row" role="group" aria-label="MIDI keyboard">
+        <span class="io-pair" id="midiInWrap" hidden><label class="label" for="midiIn">MIDI in</label><select id="midiIn"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select><label class="check" title="Each chord you play is added to the chart when you let go of the keys"><input type="checkbox" id="midiRec"> Record chords</label><output id="midiHeard" class="hint" aria-live="polite"></output></span>
+        <span class="io-pair" id="midiOutWrap" hidden><label class="label" for="midiOut">MIDI out</label><select id="midiOut"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select></span>
+          <span class="hint" id="midiNone" hidden>MIDI keyboards work in Chrome or Edge. This browser can’t connect to them.</span>
+        </div>
       </div>
     </div>
     <div class="err" id="err" hidden></div>
@@ -1179,8 +1185,6 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
     </details>
     <div class="io-row" role="group" aria-label="Playback extras">
       <button class="btn small" id="soundCheck" type="button" title="Test what your device can play">Sound check</button>
-      <span class="io-pair" id="midiInWrap" hidden><label class="label" for="midiIn">MIDI in</label><select id="midiIn"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select><label class="check" title="Each chord you play is added to the chart when you let go of the keys"><input type="checkbox" id="midiRec"> Record chords</label><output id="midiHeard" class="hint" aria-live="polite"></output></span>
-      <span class="io-pair" id="midiOutWrap" hidden><label class="label" for="midiOut">MIDI out</label><select id="midiOut"><option value="">Off</option><option value="__connect">Connect to MIDI devices…</option></select></span>
     </div>
   </section>
 
@@ -4976,6 +4980,7 @@ function initIO(){
   $('#copyboxDone').onclick=()=>closeBox('#copybox');
   $('#copybox').addEventListener('keydown',e=>{ if(e.key==='Escape') closeBox('#copybox'); });
   document.addEventListener('pointerdown',e=>{ const cb=$('#copybox'); if(!cb.hidden&&!cb.contains(e.target)&&!e.target.closest('#shareLink,#copy,#exportMenu')) cb.hidden=true; });
+  $('#midiNone').hidden='requestMIDIAccess' in navigator;
   if('requestMIDIAccess' in navigator){ $('#midiOutWrap').hidden=false; $('#midiInWrap').hidden=false;
     $('#midiIn').onchange=async e=>{ const v=e.target.value;
       if(v==='__connect'){ e.target.value=''; midiInUse(null); await midiConnect(); return; }
