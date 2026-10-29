@@ -35,10 +35,10 @@ jobs:
         working-directory: tests
         run: npm ci
 
-      # Chromium for most checks, WebKit for the iPhone check
+      # Chromium only: the iPhone audio checks need WebKit on macOS, so they run on a Mac and are skipped here
       - name: Install browsers
         working-directory: tests
-        run: npx playwright install --with-deps chromium webkit
+        run: npx playwright install --with-deps chromium
 
       - name: Smoke tests
         working-directory: tests

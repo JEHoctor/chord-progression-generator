@@ -43,7 +43,7 @@ python3 docs-src/build.py . docs-src
 cd tests && npm ci && npx playwright install chromium webkit && npm test
 ```
 
-CI runs the same suite on every push and pull request. It also fails if the committed help pages don't match a fresh build.
+CI runs the same suite on every push and pull request, except the iPhone audio checks, which need WebKit on macOS and run only on a Mac. It also fails if the committed help pages don't match a fresh build.
 
 **Renaming.** The app's name is the `APP_NAME` constant at the top of the script in `index.html`. The page title, header, exports, messages and help pages all follow it. A test checks that the plain-HTML fallbacks (`<title>`, the header) match the constant, so change those in the same edit. Saved-data keys (`changes-v1`, …) deliberately stay put, so a rename doesn't lose anyone's work.
 

@@ -1635,6 +1635,9 @@ async function phoneDark(tag) {
 
 // iPhone: sound must start from a tap, in the media-playback category so the silent switch doesn't mute it
 async function iphone() {
+  /* these check iOS Safari's audio quirks (the silent switch, the audio session). Playwright's WebKit behaves like Safari on
+     macOS; its Linux build is a different browser with no sound device on CI, so there the checks are skipped, not failed */
+  if (process.platform !== 'darwin' || process.env.SKIP_IPHONE) { results.push('SKIP  iPhone audio checks: they need WebKit on macOS (run the tests on a Mac to include them)'); return; }
   for (const old of [false, true]) {
     const b = await webkit.launch(), ctx = await b.newContext({ ...devices['iPhone 13'] });
     if (old) await ctx.addInitScript(() => { try { Object.defineProperty(Navigator.prototype, 'audioSession', { get: () => undefined, configurable: true }); } catch (e) {} });
@@ -1684,5 +1687,6 @@ try {
 } catch (e) { check('test run finished without throwing', false, e.stack); }
 await browser.close(); server.close();
 console.log(results.join('\n'));
-console.log(failures ? `\n${failures} FAILED` : `\nall ${results.length} checks passed`);
+const skipped = results.filter(r => r.startsWith('SKIP')).length;
+console.log(failures ? `\n${failures} FAILED` : `\nall ${results.length - skipped} checks passed${skipped ? `, ${skipped} skipped` : ''}`);
 process.exit(failures ? 1 : 0);
