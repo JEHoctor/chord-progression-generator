@@ -643,6 +643,7 @@ body.resizing-chord,body.resizing-chord *{cursor:ew-resize!important;user-select
 .keychg .kc-row{display:flex;gap:8px;flex-wrap:wrap}
 .keychg .kc-row select{flex:1 1 120px;min-width:0}
 .keychg .hint{margin:0}
+.slot .kc-auto{font-weight:800;margin-right:1px}
 .kc-tag{font-size:calc(13px*var(--fs,1));letter-spacing:.05em;padding:3px 8px 2px;background:var(--spike);color:#141414;border-radius:var(--r-xs)}
 .keychg select{background:var(--sunk);border:1.5px solid transparent;border-radius:var(--r-xs);height:calc(38px*var(--fs,1));padding:0 10px}
 .keychg select:hover{border-color:var(--line)}
@@ -951,7 +952,7 @@ select.btn{border-radius:var(--r-pill)}
 @media (pointer:coarse){ .mcell{height:calc(40px*var(--fs,1))} }
 /* a container can't restyle itself, so narrow slots are marked by markNarrow() */
 .slot.narrow{padding:6px 12px 6px 6px}
-@container (max-width:84px){ .slot .cr{display:none} }
+@container (max-width:84px){ .slot .cr{font-size:calc(12px*var(--fs,1));overflow:hidden;text-overflow:clip;max-width:100%} }
 .ic{width:1em;height:1em;flex:none;vertical-align:-.14em}
 .acc{position:relative;display:inline-block;width:.4em;-webkit-text-fill-color:transparent}
 .acc[data-g="#"]{width:.46em}
@@ -1156,6 +1157,7 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
         <select id="voicing" class="btn" aria-label="Playback voicing"><option value="smooth">Smooth voice leading</option><option value="fixed">Fixed root position</option></select>
         <select id="symStyle" class="btn" aria-label="How chord symbols are written"></select>
         <select id="labelMode" class="btn" aria-label="What the chart shows"></select>
+        <label class="check" title="Read a chord in the key it’s heading for when the chart moves key by a V7 or ii–V without a written key change"><input type="checkbox" id="centresOn"> Find key centres</label>
         <button class="btn" id="clearChart" type="button" title="Clear the chords and the tune (you can undo it)">Start over</button>
         <button class="btn" id="recolor" type="button" title="Rewrite every chord using the chord types in Chords allowed">Apply chords allowed</button>
         <div class="io-row midi-row" role="group" aria-label="MIDI keyboard">
@@ -1461,7 +1463,7 @@ const NUMS={I:0,II:2,III:4,IV:5,V:7,VI:9,VII:11};
 /* tables are plain objects, so keys that come from outside (chord text, share links, saved files) are only accepted when
    they are the table's own entries; "constructor" or "__proto__" never count */
 const ownKey=(o,k)=>typeof k==='string'&&Object.prototype.hasOwnProperty.call(o,k);
-const S={focus:false,hearIn:true,textSize:1,colors:{},keyHome:false,keyColors:null,colorBy:'kind',simple:false,simpleTheory:false,vocabFull:null,hearBack:1,foldForm:true,linkForm:true,arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
+const S={centres:true,focus:false,hearIn:true,textSize:1,colors:{},keyHome:false,keyColors:null,colorBy:'kind',simple:false,simpleTheory:false,vocabFull:null,hearBack:1,foldForm:true,linkForm:true,arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
 let chords=[], sel=null, hist=[];
 /* the melody: one entry per beat of the chart, by absolute beat. A MIDI note number starts a note, -1 holds the note
    before it, null is a rest. It is independent of the chords, so moving a chord changes the harmony under the tune.
@@ -1502,7 +1504,59 @@ function diatonic(modeKey,d,size){
 const keyStack=[];
 const homeKey=()=>keyStack.length?keyStack[0]:{t:S.tonic,m:S.mode};
 const kcOk=k=>!!k&&typeof k==='object'&&Number.isInteger(k.t)&&k.t>=0&&k.t<12&&ownKey(MODES,k.m);
-function keyAt(i,list=chords){ for(let j=Math.min(i,list.length-1);j>=1;j--){ const k=list[j]&&list[j].kc; if(kcOk(k)) return k; } return homeKey(); }
+/* the key set for chord i: the last key change at or before it, or the opening key */
+function keySetAt(i,list=chords){ for(let j=Math.min(i,list.length-1);j>=1;j--){ const k=list[j]&&list[j].kc; if(kcOk(k)) return k; } return homeKey(); }
+/* the key chord i is heard in: a key centre the chart moves to by itself (see keyCentres), or else the key set for it */
+function keyAt(i,list=chords){ if(list===chords&&S.centres){ const k=keyCentres().at.get(i); if(k) return k; } return keySetAt(i,list); }
+/* ---- key centres: keys the chart moves through without a written key change ----
+   A dominant 7th resolving down a 5th to a major or minor chord tonicizes that chord, and a ii before it (m7 or m7♭5)
+   makes it a ii–V–I. When the chord it lands on is outside the key in force, and the chart either does this with a ii
+   or lands on two or more different outside chords this way, the stretch is read in the new key: from the ii (or the
+   V) to the landing chord, and on through any chords that belong to that key. That is how jazz musicians read tunes
+   that change key every bar or two (Giant Steps, Have You Met Miss Jones), and it stops a lone V/♭III in a pop song
+   being called a key change. Only pitch arithmetic is used here, since the chord-naming helpers ask keyAt in turn. */
+/* where a heard key centre begins (or the chart comes back to its key), the numeral is prefixed with the key, as in
+   Roman-numeral analysis: “G: V7 I” */
+const keyShort=k=>inKey(k,()=>prettyNote(tonicName()))+(modeFam(k.m)==='minor'?'m':'');
+function centreNote(i){
+  if(i<0||!S.centres) return ''; const k=keyCentres().at.get(i); if(!k) return '';
+  const r=keyCentres().runs.find(r=>i>=r.i0&&i<=r.i1||r.i0>r.i1&&(i>=r.i0||i<=r.i1));
+  return esc(` The chart moves to ${keyLabel(k)} here without a written key change, through ${r&&r.ii?'a ii–V':'its V7'}, so this chord is read in that key. (Turn off Find key centres in Chart tools to read everything in ${keyLabel(keySetAt(i))}.)`); }
+function centreTag(i){
+  if(!S.centres||!real(chords[i])||!keyCentres().runs.length) return '';
+  let j=i-1; while(j>=0&&!real(chords[j])) j--;
+  const k=keyAt(i), p=j>=0?keyAt(j):null;
+  if(p?p.t===k.t&&p.m===k.m:!keyCentres().at.has(i)) return '';
+  return `<b class="kc-auto" title="Heard in ${esc(keyLabel(k))}">${esc(keyShort(k))}:</b> `; }
+function keyCentres(){
+  const sig=JSON.stringify([homeKey(),chords.map(c=>[c.root,c.q,c.bass,c.kc])]);
+  if(keyCentres.c&&keyCentres.c.sig===sig) return keyCentres.c;
+  const at=new Map(), runs=[], idx=chords.map((c,i)=>i).filter(i=>real(chords[i]));
+  const scale=k=>new Set(MODES[k.m].sc.map(x=>mod(k.t+x))), fits=(c,set)=>corePcs(c).every(p=>set.has(p));
+  const isDom=c=>!!Q[c.q].dom, tonicLike=c=>!Q[c.q].dom&&(Q[c.q].tri==='maj'||Q[c.q].tri==='min');
+  const cands=[];
+  /* the last chord leads round to the first, as the chart loops */
+  for(let n=0;n<idx.length&&idx.length>2;n++){ const wrap=n+1===idx.length, D=chords[idx[n]], T=chords[idx[wrap?0:n+1]];
+    if(!isDom(D)||!tonicLike(T)||mod(T.root-D.root)!==5||D.bass!=null&&D.bass!==D.root) continue;
+    const home=keySetAt(idx[n]); if(fits(T,scale(home))||T.root===home.t) continue;
+    /* a minor 7th that goes on to its own V7 is the ii of the next ii–V in a chain, not a new home */
+    const after=wrap?null:chords[idx[(n+2)%idx.length]];
+    if(Q[T.q].tri==='min'&&after&&isDom(after)&&mod(after.root-T.root)===5) continue;
+    const k={t:T.root,m:Q[T.q].tri==='min'?'harmonic':'ionian'}, P=n>0?chords[idx[n-1]]:null;
+    const ii=!!P&&mod(P.root-T.root)===2&&(Q[P.q].tri==='min'||Q[P.q].tri==='dim')&&!isDom(P);
+    cands.push({k,from:ii?n-1:n,to:wrap?n:n+1,ii,wrap}); }
+  const targets=new Set(cands.map(c=>c.k.t+c.k.m));
+  const keep=cands.filter(c=>c.ii||targets.size>=2);
+  const mark=(c,from,to,stop)=>{ const set=scale(c.k);
+    while(to+1<stop&&fits(chords[idx[to+1]],set)&&!kcOk(chords[idx[to+1]].kc)) to++;
+    for(let n=from;n<=to;n++) if(!at.has(idx[n])) at.set(idx[n],c.k);
+    runs.push({k:c.k,i0:idx[from],i1:idx[to],ii:c.ii}); };
+  /* a ii–V at the end that lands on the first chord puts the opening in that key too */
+  keep.filter(c=>c.wrap).forEach(c=>mark(c,0,0,keep[0]&&!keep[0].wrap?keep[0].from:idx.length));
+  keep.forEach((c,ci)=>mark(c,c.from,c.to,c.wrap?c.to+1:keep[ci+1]?keep[ci+1].from:idx.length));
+  runs.sort((a,b)=>a.i0-b.i0);
+  keyCentres.c={sig,at,runs}; return keyCentres.c;
+}
 function inKey(k,fn){
   if(!k||(k.t===S.tonic&&k.m===S.mode)) return fn();
   keyStack.push({t:S.tonic,m:S.mode}); S.tonic=k.t; S.mode=k.m;
@@ -2815,7 +2869,7 @@ function renderChart(){
       const jb=S.simple||S.colorBy==='job'?jobOf(c):null; const cls=['slot','k-'+a.kind]; if(jb) cls.push('j-'+jb); if(!real(c)) cls.push('empty'); if(tie) cls.push('tie'); if(c.id===sel) cls.push('sel'); const lk=real(c)&&c.lock; if(lk) cls.push('locked'); const out=real(c)&&(fitQ(c.q)!==c.q||(c.bass!=null&&!famOn('slash'))); if(out) cls.push('out');
       const kh=jb==='home'&&S.keyHome?keyColor(keyAt(i).t):null;
       html+=`<button type="button" class="${cls.join(' ')}" data-id="${c.id}" style="grid-column:${s-r0+1} / span ${e-s}${kh?`;--k:${kh};--k-ink:${inkFor(kh)}`:''}" aria-label="${esc(chordName(c))}, ${c.beats} beats${real(c)&&c.lock?', locked':''}${out?', outside Chords allowed':''}">
-        <span class="cn" ${slotName(c,a)}${tie?'':'<span class="cpk" title="Pick a chord (or double-click, or press E)">'+IC.down+'</span>'}</span>${tie?'':`${S.simple?`<span class="cr">${esc(jb?CHORD_JOBS[jb].name+(S.simpleTheory?' · '+a.num:''):'')}</span>`:S.labels==='names'?'':`<span class="cr">${esc(S.labels==='numerals'?chordName(c):a.num)}</span>`}<span class="cb">${c.beats}</span>`}${e===starts[i]+c.beats?'<span class="rz" title="Drag to change the length (Shift: trade beats with the next chord)"></span>':''}${lk&&!tie?'<svg class="lk" viewBox="0 0 12 12" aria-hidden="true"><title>Locked: click to unlock</title><rect x="2" y="5.5" width="8" height="6" rx="1.2" fill="currentColor"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>':''}</button>`;
+        <span class="cn" ${slotName(c,a)}${tie?'':'<span class="cpk" title="Pick a chord (or double-click, or press E)">'+IC.down+'</span>'}</span>${tie?'':`${S.simple?`<span class="cr">${esc(jb?CHORD_JOBS[jb].name+(S.simpleTheory?' · '+a.num:''):'')}</span>`:S.labels==='names'?'':`<span class="cr">${centreTag(i)}${esc(S.labels==='numerals'?chordName(c):a.num)}</span>`}<span class="cb">${c.beats}</span>`}${e===starts[i]+c.beats?'<span class="rz" title="Drag to change the length (Shift: trade beats with the next chord)"></span>':''}${lk&&!tie?'<svg class="lk" viewBox="0 0 12 12" aria-hidden="true"><title>Locked: click to unlock</title><rect x="2" y="5.5" width="8" height="6" rx="1.2" fill="currentColor"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>':''}</button>`;
     });
     /* the "+ Add chord" tile sits after the last chord, in the last row if there is room */
     if(row===rowList[rowList.length-1]){ const used=Math.min(total,r1)-r0; if(rowBeats-used>=1) html+=addTile(used+1,Math.min(L,rowBeats-used)); else tileNewRow=true; }
@@ -3624,7 +3678,7 @@ function renderDetail0(){
   let start=0; for(let i=0;i<idx;i++) start+=chords[i].beats;
   const barN=Math.floor(start/L)+1, beatN=start%L+1;
   const lenTxt=c.beats%L===0?`${c.beats/L} bar${c.beats/L>1?'s':''} of ${meterText()}`:`${c.beats}/${L} of a bar`;
-  let h=`<div class="dhead"><span class="dname">${chordHTML(c)}</span><span class="dnum">${esc(a.num)}</span>${a.kind!=='empty'?`<span class="pill k-${a.kind}">${{dia:'In key',bor:'Borrowed',sec:'Secondary',chr:'Chromatic'}[a.kind]}</span>`:''}<span class="dnote">${esc(a.note)}</span></div>`;
+  let h=`<div class="dhead"><span class="dname">${chordHTML(c)}</span><span class="dnum">${esc(a.num)}</span>${a.kind!=='empty'?`<span class="pill k-${a.kind}">${{dia:'In key',bor:'Borrowed',sec:'Secondary',chr:'Chromatic'}[a.kind]}</span>`:''}<span class="dnote">${esc(a.note)}${centreNote(chords.indexOf(c))}</span></div>`;
   if(!S.simple&&S.colorBy==='job'&&real(c)){ const j=jobOf(c); h+=`<p class="job-line"><span class="jpill j-${j}">${CHORD_JOBS[j].name}</span> ${esc(jobSentence(c))}</p>`; }
   if(S.simple&&real(c)){ const j=jobOf(c); h+=`<p class="simple-why"><span class="jpill j-${j}">${CHORD_JOBS[j].name}</span> ${esc(jobSentence(c))}</p>`; }
   if(real(c)) h+=`<div class="tones">${Q[c.q].iv.map(i=>`<span class="tone">${esc(prettyNote(spellTone(c,mod(c.root+i))))}<small>${ivLabel(c,i)}</small></span>`).join('')}${c.bass!=null&&!pcsOf(c).includes(c.bass)?`<span class="tone">${esc(prettyNote(spell(c.bass)))}<small>bass</small></span>`:''}</div>`;
@@ -3982,7 +4036,11 @@ function progWhy(){
   const bar=i=>Math.floor(st[i]/L)+1, keys=[...new Set(info.map(x=>x.key))], uniq=list=>{ const seen=new Set(); return list.filter(x=>!seen.has(x.name)&&seen.add(x.name)); };
   const names=list=>{ const u=uniq(list), shown=u.slice(0,3).map(x=>`${x.name} (bar ${bar(x.i)})`); return joinList(u.length>3?[...shown,`${u.length-3} more`]:shown); };
   const out=[], odd=info.filter(x=>x.a.kind!=='dia');
-  out.push(keys.length>1?`It starts in ${keys[0]} and moves to ${joinList(keys.slice(1))}.`:odd.length?`It’s in ${keys[0]}.`:`Every chord comes from ${keys[0]}, so it sounds settled and familiar: ${uniq(info).map(x=>x.a.num).join(' ')}.`);
+  const kc=S.centres?keyCentres():null, heard=kc&&kc.runs.length&&!chords.some((c,i)=>i>0&&kcOk(c.kc));
+  if(heard){ const tons=[...new Set(info.map(x=>x.tonic))], third=tons.some(t=>tons.includes(mod(t+4))&&tons.includes(mod(t+8)));
+    out.push(`It moves through ${keys.length} key centres without a written key change, ${joinList(keys)}, reaching each through its V7${kc.runs.some(r=>r.ii)?' or a ii–V':''}. Each chord is read in the key it’s heading for, so a ${kc.runs.some(r=>r.ii)?'ii–V–I':'V–I'} shows as just that.`);
+    if(third) out.push('The centres are a major third apart, splitting the octave in three, so the home note keeps jumping by thirds: these are Coltrane changes, as in Giant Steps.'); }
+  else out.push(keys.length>1?`It starts in ${keys[0]} and moves to ${joinList(keys.slice(1))}.`:odd.length?`It’s in ${keys[0]}.`:`Every chord comes from ${keys[0]}, so it sounds settled and familiar: ${uniq(info).map(x=>x.a.num).join(' ')}.`);
   const bor={}; odd.filter(x=>x.a.kind==='bor').forEach(x=>{ const f=(x.a.note.match(/Borrowed from (.+?)\./)||[])[1]||'a parallel mode'; (bor[f]=bor[f]||[]).push(x); });
   Object.entries(bor).forEach(([f,l])=>out.push(`${names(l)} ${uniq(l).length>1?'are':'is'} borrowed from ${f}: the same home note, with a different colour.`));
   uniq(odd.filter(x=>x.a.kind==='sec')).slice(0,3).forEach(x=>{ const [fn,tg]=x.a.num.split('/');
@@ -4908,7 +4966,7 @@ let LIB={version:1,items:[]}, libCurrent=null;
 /* ============ untrusted state: one gate for settings and chords from saves, library files and share links ============ */
 const isBool=v=>typeof v==='boolean';
 const SANE={textSize:v=>TEXT_SIZES.some(t=>t.v===v), colors:v=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.entries(v).every(([k,x])=>ownKey(DEF_COLORS,k)&&HEX_RE.test(x)), keyHome:v=>typeof v==='boolean', keyColors:v=>v===null||Array.isArray(v)&&v.length===12&&v.every(x=>HEX_RE.test(x)), colorBy:v=>v==='kind'||v==='job', simple:v=>typeof v==='boolean', simpleTheory:v=>typeof v==='boolean', vocabFull:v=>v===null||Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)), hearBack:v=>[1,2,4].includes(v), tonic:v=>Number.isInteger(v)&&v>=0&&v<12, mode:v=>ownKey(MODES,v), meter:v=>ownKey(METERS,v), tempo:v=>Number.isFinite(+v)&&+v>0&&v!==''&&v!==null&&typeof v!=='boolean',
-  focus:isBool, hearIn:isBool, voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), showMel:isBool, melPlay:isBool, foldForm:isBool, linkForm:isBool, arr:v=>ownKey(ARR_STYLES,v), arrGroup:v=>v===''||ownKey(ARR_GROUPS,v), arrShow:isBool, arrSeed:v=>Number.isInteger(v)&&v>=0&&v<1000, arrMute:v=>Array.isArray(v)&&v.length>=5&&v.length<=9&&v.every(isBool), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
+  centres:isBool, focus:isBool, hearIn:isBool, voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), showMel:isBool, melPlay:isBool, foldForm:isBool, linkForm:isBool, arr:v=>ownKey(ARR_STYLES,v), arrGroup:v=>v===''||ownKey(ARR_GROUPS,v), arrShow:isBool, arrSeed:v=>Number.isInteger(v)&&v>=0&&v<1000, arrMute:v=>Array.isArray(v)&&v.length>=5&&v.length<=9&&v.every(isBool), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
   pstyle:v=>ownKey(PIANO_STYLES,v), gstyle:v=>ownKey(GUITAR_STYLES,v), mood:v=>v===''||MOODS.some(m=>m.id===v),
   genres:v=>Array.isArray(v)&&v.length<=20&&v.every(g=>GENRES.some(x=>x.id===g)), vocab:v=>Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)),
   bars:v=>[4,8,12,16].includes(v), rhythm:v=>['bar','half','mixed','slow'].includes(v), level:v=>[0,1,2].includes(v), surprise:v=>Number.isFinite(v)&&v>=0&&v<=100,
@@ -5209,6 +5267,7 @@ function boot(){
   $('#doorIn').addEventListener('input',renderDoorRead); $('#doorIn').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); doorAdd(); } };
   $('#simpleToggle').onclick=()=>setSimple(!S.simple);
   $('#dockMore').onclick=()=>{ const on=!document.body.classList.contains('dock-open'); document.body.classList.toggle('dock-open',on); $('#dockMore').setAttribute('aria-expanded',String(on)); $('#dockMore').textContent=on?'Less':'More'; };
+  $('#centresOn').checked=S.centres; $('#centresOn').onchange=e=>{ S.centres=e.target.checked; commit(); toast(S.centres?'Chords are read in the key they’re heading for':'Every chord is read in the key set for it'); };
   $('#focusBtn').onclick=()=>setFocus(!S.focus);
   window.addEventListener('resize',applyFocus);
   $('#textSize').onclick=()=>{ const i=TEXT_SIZES.findIndex(t=>t.v===S.textSize); S.textSize=TEXT_SIZES[(i+1)%TEXT_SIZES.length].v; applyTextSize(); renderAll(); save(); toast(`Text size: ${TEXT_SIZES.find(t=>t.v===S.textSize).name}`); };
@@ -5524,7 +5583,7 @@ function transpose(n){
 function vocabName(){ const vk=[...S.vocab].sort().join(); const p=Object.keys(PRESETS).find(k=>[...PRESETS[k]].sort().join()===vk); return p?'Chords allowed: '+p:'Chords allowed: '+['triads',...FAMS.filter(f=>!f.fixed&&famOn(f.id)).map(f=>f.name)].join(', '); }
 function undo(){ const s=hist.pop(); if(!s) return; syncedTop=hist[hist.length-1]??null; restoreSnap(s); }
 /* which view you're in isn't an edit, so undo leaves it (and the chord families it set) as they are */
-const VIEW_KEYS=['focus','hearIn','textSize','simple','simpleTheory','vocab','vocabFull','colorBy','colors','keyHome','keyColors'];
+const VIEW_KEYS=['centres','focus','hearIn','textSize','simple','simpleTheory','vocab','vocabFull','colorBy','colors','keyHome','keyColors'];
 function restoreSnap(s){ const d=JSON.parse(s), keep=Object.fromEntries(VIEW_KEYS.map(k=>[k,S[k]])); Object.assign(S,d.S,keep); setTuning(S.tuning); chords=d.chords; sel=d.sel; melody=d.melody||[]; melAnd=d.melAnd||[]; commit(); }
 /* an Undo offered in a toast reverts that action, even if other edits happened since: it restores the snapshot taken just before it */
 function undoTo(snap){ return ()=>{ const i=hist.lastIndexOf(snap); if(i>=0) hist.length=i; syncedTop=hist[hist.length-1]??null; restoreSnap(snap); }; }

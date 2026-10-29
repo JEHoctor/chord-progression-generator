@@ -137,6 +137,12 @@ footer{max-width:1180px;margin:56px auto 0;color:var(--muted);font-size:14px;bor
 <h3>Changing key or mode part-way through</h3>
 <p>Select the first chord of the bar where the new key starts, and in the Chord panel choose the key and mode under <b>Key from bar …</b>. It works for a bridge in a new key, a last-chorus lift up a step, or a switch of mode on the same home note (C major to C Mixolydian, say). From that bar on, the chart’s colours, Roman numerals, swap ideas, the chord picker and note spelling all follow the new key, and the panel says in words what kind of move it is. A label such as <b>Key: D major</b> marks the change in the chart, and the key line under the title lists every key the chart passes through. Choose <b>No change</b> to remove it.</p>
 <p>Key changes go with the chart when you transpose, save, share, print or export MusicXML (which gets a new key signature at that bar). <b>Regenerate unlocked</b> keeps them and writes the new chords in each part’s key; <b>Generate</b> starts a fresh chart in one key.</p>
+<h3 id="centres">Key centres you don’t write down</h3>
+<p>Jazz tunes often change key every bar or two without a written key change, each new key reached through its own V7 or a ii–V. With <b>Find key centres</b> on (in Chart tools; it starts on), the app spots this: when a V7 resolves to a major or minor chord outside the key, and there is a ii before it or the chart does it to two or more different chords, that stretch is read in the key it’s heading for, through any chords that belong to that key. Where a centre starts, the numeral is prefixed with its key, as in Roman-numeral analysis: <b>G: V7 I</b>. The summary under the chart names the centres, and calls them Coltrane changes when they are a major third apart.</p>
+<p>It leaves alone what isn’t a key change: a single V7 into a borrowed chord in a pop song, borrowing from the parallel minor, and a minor 7th that is only the ii of the next ii–V in a chain. A key change you write yourself always wins.</p>
+<p><b>Trying it with Giant Steps.</b> In <b>I have chords</b> (or Edit as text), type one bar between each <span class="mono">|</span>; two chords in a bar share it, two beats each:</p>
+<p class="mono">B D7 | G Bb7 | Eb | Am7 D7<br>G Bb7 | Eb F#7 | B | Fm7 Bb7<br>Eb | Am7 D7 | G | C#m7 F#7<br>B | Fm7 Bb7 | Eb | C#m7 F#7</p>
+<p>The tune is played at about 280 beats a minute, faster than the app’s top tempo of 240; set 140 and hear it at half speed, which is how it’s usually practised anyway.</p>
 
 <h2 id="edit">Editing the chart</h2>
 <table>

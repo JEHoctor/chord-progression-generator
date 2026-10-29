@@ -1610,6 +1610,35 @@ async function feedbackRound2() {
   check('round 2: no page errors', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 }
+async function keyCentresSuite() {
+  const { ctx, page } = await openPage({ viewport: { width: 1400, height: 1000 } });
+  await page.goto(URL_);
+  const r = await page.evaluate(() => {
+    const read = t => { chords = parseProg(t).chords; renderAll(); return chords.map((c, i) => chordName(c) + ':' + analyze(c).num + ':' + analyze(c).kind).join(' '); };
+    const o = {}; S.tonic = 3; S.mode = 'ionian'; S.centres = true;
+    o.gs = read('B D7 | G Bb7 | Eb | Am7 D7\nG Bb7 | Eb F#7 | B | Fm7 Bb7\nEb | Am7 D7 | G | C#m7 F#7\nB | Fm7 Bb7 | Eb | C#m7 F#7');
+    o.tags = [...document.querySelectorAll('#rows .kc-auto')].map(x => x.textContent).slice(0, 5).join(' ');
+    o.why = document.querySelector('#progWhy').textContent;
+    S.tonic = 0; o.lone = read('C | Bb7 | Eb | G7'); o.dia = read('C | Gm7 C7 | F | G7'); o.iiV = read('C | Ebm7 Ab7 | Db | G7');
+    o.plainTags = document.querySelectorAll('#rows .kc-auto').length;
+    S.tonic = 7; o.parallel = read('Gmaj7 | D7 | Gm7 | C7'); o.chain = read('Gmaj7 | E7 A7 | Dm7 G7 | Cmaj7'); S.tonic = 0;
+    S.centres = false; o.off = read('C | Ebm7 Ab7 | Db | G7'); S.centres = true;
+    chords = parseProg('C | F\n[Key: Eb major]\nEb | Bb7 | Eb').chords; renderAll(); o.written = chords.map(c => analyze(c).num).join(' ');
+    return o;
+  });
+  check('centres: Giant Steps reads as V7–I and ii–V–I into B, G and E♭, every chord in its key, spelled E♭ not D♯', !/sec|bor|chr/.test(r.gs) && /E♭:I:dia/.test(r.gs) && !/D♯/.test(r.gs) && /^B:I:dia D7:V7:dia G:I:dia B♭7:V7:dia/.test(r.gs), r.gs);
+  check('centres: the chart marks where each centre starts, as in Roman-numeral analysis (B: I, G: V7, E♭: V7 …)', r.tags === 'B: G: E♭: G: E♭:', r.tags);
+  check('centres: the summary names the centres and calls them Coltrane changes', /3 key centres/.test(r.why) && /Coltrane changes/.test(r.why), r.why);
+  check('centres: a lone V7 of ♭III in a pop song stays a secondary dominant, not a key change', /E♭:♭III:bor/.test(r.lone) && !/E♭:I:/.test(r.lone), r.lone);
+  check('centres: a ii–V to a chord already in the key changes nothing', /Gm7:v7:bor C7:V7\/IV:sec F:IV:dia/.test(r.dia) || !/D♭|G♭/.test(r.dia), r.dia);
+  check('centres: a ii–V–I to a chord outside the key is read in that key (D♭: ii7 V7 I)', /E♭m7:ii7:dia A♭7:V7:dia D♭:I:dia G7:V7:dia/.test(r.iiV), r.iiV);
+  check('centres: borrowing from the parallel minor (D7 → Gm7 in G) is not a key change', !/G:i|harmonic/.test(r.parallel) && /Gm7:i7:bor|Gm7:i7/.test(r.parallel), r.parallel);
+  check('centres: a minor 7th that is the ii of the next ii–V (E7 A7 Dm7 G7 C) is not taken as a new home', !/Dm7:i7:dia/.test(r.chain), r.chain);
+  check('centres: turning Find key centres off reads everything in the key set for it', !/D♭:I:dia/.test(r.off), r.off);
+  check('centres: a written key change still decides the key', r.written === 'I IV I V7 I', r.written);
+  check('centres: no page errors', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1897,6 +1926,7 @@ try {
   await liveChord();
   await focusMode();
   await feedbackRound2();
+  await keyCentresSuite();
   await menus();
   await layout();
   await hardening();
