@@ -1266,6 +1266,48 @@ async function hearArr() {
   check('arrange: with the arrangement off, tapping a chord plays the chord as before', await page.evaluate(() => played1 === 1));
   await ctx.close();
 }
+/* Simple view: plain chords, Home / Away / Pull / Surprise, and what could come next */
+async function simpleView() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  const JAZZ = await page.evaluate(() => PRESETS.Jazz.join());
+  await page.evaluate(() => { S.vocab = [...PRESETS.Jazz]; selectTab('right', 'swaps'); renderAll(); });
+  await page.click('[data-simple]');
+  const on = await page.evaluate(() => ({ cls: document.body.classList.contains('simple'), pressed: document.querySelector('#simpleToggle').getAttribute('aria-pressed'), vocab: S.vocab.length, saved: (S.vocabFull || []).join(), hidden: ['.arr-toggle', '.mel-toggle', '#tension', '#tab-swaps', '#tab-melody', '#tab-setkey', '#ideas', '#textEdit'].filter(q => document.querySelector(q)?.checkVisibility()), right: document.querySelector('#tab-chord').getAttribute('aria-selected'), next: document.querySelector('#nextPick').checkVisibility(), legend: document.querySelector('.simple-legend').checkVisibility() }));
+  check('simple: the switch hides the advanced tools, keeps plain triads, and shows the jobs legend and next-chord chooser', on.cls && on.pressed === 'true' && on.vocab === 0 && on.saved === JAZZ && on.hidden.length === 0 && on.right === 'true' && on.next && on.legend, JSON.stringify(on));
+  await page.evaluate(() => { S.tonic = 7; S.mode = 'ionian'; chords = parseProg('G | C | D | Em | Am | Bm | B7 | Cm').chords; sel = chords[2].id; commit(); });
+  const jobs = await page.evaluate(() => ({ jobs: chords.map(c => jobOf(c)).join(' '), labels: [...document.querySelectorAll('#rows .slot .cr')].map(e => e.textContent).join(' '), cls: document.querySelector('#rows .slot').classList.contains('j-home') }));
+  check('simple: each chord gets its job (Home, Away, Pull, Surprise) as its colour and label', jobs.jobs === 'home away pull home away home pull surprise' && jobs.labels === 'Home Away Pull Home Away Home Pull Surprise' && jobs.cls, JSON.stringify(jobs));
+  const why = await page.evaluate(() => [2, 6, 7].map(i => jobSentence(chords[i])));
+  check('simple: the Chord panel says what the chord does in plain words', /^D is Pull in G major: it leans back toward G/.test(why[0]) && /B7 is a Pull, but not toward home: it leans toward Em/.test(why[1]) && /borrowed from G minor/.test(why[2]) && await page.evaluate(() => /D is Pull/.test(document.querySelector('#detail .simple-why').textContent) && !document.querySelector('#detail .dnum').checkVisibility()), why.join(' | '));
+  const n1 = await page.evaluate(() => ({ title: document.querySelector('#nextPick h3').textContent, names: document.querySelector('#nextPick')._opts.map(o => o.job + ':' + o.name).join(' ') }));
+  check('simple: after D (Pull) it offers G (Home), C (Away) and D7 (Pull)', n1.title === 'What comes after D?' && n1.names === 'home:G away:C pull:D7', JSON.stringify(n1));
+  await page.evaluate(() => { sel = chords[6].id; renderAll(); });
+  const n2 = await page.evaluate(() => document.querySelector('#nextPick')._opts.map(o => o.name).join(' ') + ' | ' + document.querySelector('#nextPick .np p').textContent);
+  check('simple: after B7 the Home choice is Em, where it leans', /^Em C D \| B7 → Em: the pull resolves where it was leaning/.test(n2), n2);
+  await page.evaluate(() => { chords = parseProg('G').chords; sel = chords[0].id; commit(); });
+  await page.click('#nextPick [data-np="add"][data-k="1"]');
+  await page.click('#nextPick [data-np="add"][data-k="2"]');
+  await page.click('#nextPick [data-np="add"][data-k="0"]');
+  check('simple: Add builds the song one chord at a time (G → C → D → G)', await page.evaluate(() => chords.map(c => chordName(c)).join(' ')) === 'G C D G');
+  await page.check('#simpleTheory');
+  const th = await page.evaluate(() => ({ label: document.querySelector('#rows .slot:nth-of-type(3) .cr')?.textContent || [...document.querySelectorAll('#rows .slot .cr')].map(e => e.textContent)[2], why: jobSentence(chords[2]), dnum: document.querySelector('#detail .dnum').checkVisibility() }));
+  check('simple: Show me the theory adds the numerals and the theory terms', th.label === 'Pull · V' && /In theory terms it’s V\./.test(th.why) && th.dnum, JSON.stringify(th));
+  await page.uncheck('#simpleTheory');
+  await page.evaluate(() => document.activeElement.blur());
+  await page.keyboard.press('Control+z');
+  check('simple: undo takes back the chord but keeps you in Simple view', await page.evaluate(() => S.simple && chords.length === 3));
+  await page.evaluate(() => { selectTab('left', 'gen'); });
+  await page.click('#gen');
+  const gen = await page.evaluate(() => ({ simple: S.simple, triads: chords.filter(real).every(c => Q[c.q].iv.length === 3 && c.bass == null), n: chords.length }));
+  check('simple: Generate makes plain triads', gen.simple && gen.triads && gen.n >= 4, JSON.stringify(gen));
+  await page.click('#simpleToggle');
+  const off = await page.evaluate(() => ({ cls: document.body.classList.contains('simple'), vocab: S.vocab.join(), saved: S.vocabFull, swaps: getComputedStyle(document.querySelector('#tab-swaps')).display !== 'none', labels: document.querySelector('#rows .slot .cr').textContent }));
+  check('simple: switching back restores the chord families and the full tools', !off.cls && off.vocab === JAZZ && off.saved === null && off.swaps && !/Home|Away|Pull/.test(off.labels), JSON.stringify(off));
+  await page.reload();
+  check('simple: the choice is remembered', await page.evaluate(() => !S.simple && !document.body.classList.contains('simple')));
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1540,6 +1582,7 @@ try {
   await fastInput();
   await frontDoor();
   await hearArr();
+  await simpleView();
   await menus();
   await layout();
   await hardening();
