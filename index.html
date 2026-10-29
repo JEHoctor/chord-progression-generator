@@ -188,9 +188,13 @@ body.zoomdiag .pv-grid{grid-template-columns:1fr} body.zoomdiag .pv{overflow-x:a
 .piano-wrap{overflow-x:auto}
 .empty-note{color:var(--muted);font-size:14px;padding:6px 0}
 .simple-legend,.nextpick,.simple-why,.simple-only{display:none}
-body.simple .simple-legend{display:flex}
+body.jobcolors .simple-legend{display:flex}
+body.jobcolors .legend:not(.simple-legend){display:none}
+.colorby{display:inline-flex;align-items:center;gap:6px;font-size:13px;margin-top:6px}
+body.simple .colorby{display:none}
+.colorby .seg button{font-size:13px}
 body.simple .simple-why{display:block}
-body.simple .simple-only{display:inline}
+body.simple .simple-only{display:inline-flex}
 body.simple .nextpick:not([hidden]){display:block}
 body.simple :is(#formBar,#arrBar,.arr-toggle,.mel-toggle,.ctools-toggle,#chartTools,#tension,.vlx-wrap,.legend:not(.simple-legend),#textEdit,#ideas,#progWhy,#melPad,#arrWhy,#partWhy,
   #tab-melody,#tab-setkey,#tab-swaps,#panel-melody,#panel-setkey,#panel-swaps,[data-tab="p-tools"],#tools,
@@ -198,12 +202,14 @@ body.simple :is(#formBar,#arrBar,.arr-toggle,.mel-toggle,.ctools-toggle,#chartTo
   .field:has(#doorShape),.mine p.hint:has([data-door="melody"]),
   #midiOutWrap,#detail .tunefind,#detail .keychg,#detail .sub-h.adv,#detail .builder,#detail .bassrow,#detail .twins,#detail .dnote,#detail .pill){display:none!important}
 body.simple:not(.theory) #detail .dnum{display:none}
-body.simple .j-home{--k:var(--t-home)} body.simple .j-away{--k:var(--t-bor)} body.simple .j-pull{--k:var(--t-sec)} body.simple .j-surprise{--k:var(--t-chr)}
+body.jobcolors .j-home{--k:var(--t-home)} body.jobcolors .j-away{--k:var(--t-bor)} body.jobcolors .j-pull{--k:var(--t-sec)} body.jobcolors .j-surprise{--k:var(--t-chr)}
 .simple-legend span::before{background:var(--k)!important;box-shadow:none!important}
 .simple-legend .check{margin-left:auto;font-size:13px}
 .simple-toggle[aria-pressed=true]{background:var(--spike);border-color:var(--spike);color:#141414}
 .jpill{display:inline-block;align-self:flex-start;padding:2px 8px;border-radius:999px;font-size:13px;font-weight:700;background:var(--k);color:#141414}
 .simple-why{font-size:15px;line-height:1.5;margin:8px 0 12px}
+.job-line{font-size:14px;line-height:1.5;margin:6px 0 10px;color:var(--muted)}
+body.jobcolors .job-line .jpill,body.jobcolors .simple-why .jpill{color:#141414}
 .nextpick{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
 .nextpick h3{margin:0 0 2px;font-size:18px}
 .nextpick .np-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:10px 0}
@@ -1101,7 +1107,8 @@ body{padding-bottom:0}
     <div class="legend">
       <span class="k-dia">In the key</span><span class="k-bor">Borrowed from a parallel mode</span><span class="k-sec">Secondary / tritone dominant</span><span class="k-chr">Chromatic</span>
     </div>
-    <div class="legend simple-legend" aria-label="What the colours mean"><span class="j-home"><b>Home</b> rests</span><span class="j-away"><b>Away</b> travels</span><span class="j-pull"><b>Pull</b> leans home</span><span class="j-surprise"><b>Surprise</b> from outside the key</span><label class="check"><input type="checkbox" id="simpleTheory"> Show me the theory</label></div>
+    <div class="legend simple-legend" aria-label="What the colours mean"><span class="j-home"><b>Home</b> rests</span><span class="j-away"><b>Away</b> travels</span><span class="j-pull"><b>Pull</b> leans home</span><span class="j-surprise"><b>Surprise</b> from outside the key</span><label class="check simple-only"><input type="checkbox" id="simpleTheory"> Show me the theory</label></div>
+    <div class="colorby" role="group" aria-label="Colour the chords by"><span class="label">Colour by</span><span class="seg"><button type="button" data-colorby="kind" aria-pressed="false" title="In the key, borrowed, secondary or chromatic">Where it’s from</button><button type="button" data-colorby="job" aria-pressed="false" title="Home, Away, Pull or Surprise">Its job</button></span></div>
     <div class="nextpick" id="nextPick" hidden></div>
     <p class="prog-why" id="progWhy" aria-live="polite" hidden></p>
     <div class="ideas" id="ideas" hidden></div>
@@ -1382,7 +1389,7 @@ const NUMS={I:0,II:2,III:4,IV:5,V:7,VI:9,VII:11};
 /* tables are plain objects, so keys that come from outside (chord text, share links, saved files) are only accepted when
    they are the table's own entries; "constructor" or "__proto__" never count */
 const ownKey=(o,k)=>typeof k==='string'&&Object.prototype.hasOwnProperty.call(o,k);
-const S={simple:false,simpleTheory:false,vocabFull:null,hearBack:1,foldForm:true,linkForm:true,arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
+const S={colorBy:'kind',simple:false,simpleTheory:false,vocabFull:null,hearBack:1,foldForm:true,linkForm:true,arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
 let chords=[], sel=null, hist=[];
 /* the melody: one entry per beat of the chart, by absolute beat. A MIDI note number starts a note, -1 holds the note
    before it, null is a rest. It is independent of the chords, so moving a chord changes the harmony under the tune.
@@ -2563,7 +2570,7 @@ function hearKey(){
   if(home&&turn) audition([[home,.9],[turn,.9],[home,1.4]]);
 }
 function renderControls(){
-  document.body.classList.toggle('simple',!!S.simple); document.body.classList.toggle('theory',!!S.simpleTheory); $('#simpleToggle').setAttribute('aria-pressed',String(!!S.simple)); $('#simpleTheory').checked=!!S.simpleTheory;
+  document.body.classList.toggle('simple',!!S.simple); document.body.classList.toggle('jobcolors',!!S.simple||S.colorBy==='job'); document.querySelectorAll('[data-colorby]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.colorby===S.colorBy))); document.body.classList.toggle('theory',!!S.simpleTheory); $('#simpleToggle').setAttribute('aria-pressed',String(!!S.simple)); $('#simpleTheory').checked=!!S.simpleTheory;
   $('#key').value=S.tonic; $('#mode').value=S.mode; $('#meter').value=S.meter; $('#tempo').value=S.tempo; $('#symStyle').value=S.sym; $('#labelMode').value=S.labels; $('#melToggle').setAttribute('aria-pressed',String(!!S.showMel)); $('#arrToggle').setAttribute('aria-pressed',String(arrOn()));
   $('#bars').value=S.bars; $('#rhythm').value=S.rhythm; $('#lockmode').checked=S.lock; $('#loop').checked=S.loop; $('#click').setAttribute('aria-pressed',String(!!S.click));
   const vk=[...S.vocab].sort().join(); document.querySelectorAll('#presets button').forEach(b=>b.setAttribute('aria-pressed',[...PRESETS[b.dataset.p]].sort().join()===vk));
@@ -2684,7 +2691,7 @@ function renderChart(){
     chords.forEach((c,i)=>{
       const s=Math.max(starts[i],r0), e=Math.min(starts[i]+c.beats,r1); if(e<=s) return;
       const tie=s>starts[i], a=analyze(c);
-      const jb=S.simple?jobOf(c):null; const cls=['slot','k-'+a.kind]; if(jb) cls.push('j-'+jb); if(!real(c)) cls.push('empty'); if(tie) cls.push('tie'); if(c.id===sel) cls.push('sel'); const lk=real(c)&&c.lock; if(lk) cls.push('locked'); const out=real(c)&&(fitQ(c.q)!==c.q||(c.bass!=null&&!famOn('slash'))); if(out) cls.push('out');
+      const jb=S.simple||S.colorBy==='job'?jobOf(c):null; const cls=['slot','k-'+a.kind]; if(jb) cls.push('j-'+jb); if(!real(c)) cls.push('empty'); if(tie) cls.push('tie'); if(c.id===sel) cls.push('sel'); const lk=real(c)&&c.lock; if(lk) cls.push('locked'); const out=real(c)&&(fitQ(c.q)!==c.q||(c.bass!=null&&!famOn('slash'))); if(out) cls.push('out');
       html+=`<button type="button" class="${cls.join(' ')}" data-id="${c.id}" style="grid-column:${s-r0+1} / span ${e-s}" aria-label="${esc(chordName(c))}, ${c.beats} beats${real(c)&&c.lock?', locked':''}${out?', outside Chords allowed':''}">
         <span class="cn" ${slotName(c,a)}${tie?'':'<span class="cpk" title="Pick a chord (or double-click, or press E)">'+IC.down+'</span>'}</span>${tie?'':`${S.simple?`<span class="cr">${esc(jb?CHORD_JOBS[jb].name+(S.simpleTheory?' · '+a.num:''):'')}</span>`:S.labels==='names'?'':`<span class="cr">${esc(S.labels==='numerals'?chordName(c):a.num)}</span>`}<span class="cb">${c.beats}</span>`}${e===starts[i]+c.beats?'<span class="rz" title="Drag to change the length (Shift: trade beats with the next chord)"></span>':''}${lk&&!tie?'<svg class="lk" viewBox="0 0 12 12" aria-hidden="true"><title>Locked: click to unlock</title><rect x="2" y="5.5" width="8" height="6" rx="1.2" fill="currentColor"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>':''}</button>`;
     });
@@ -3479,6 +3486,7 @@ function renderDetail0(){
   const barN=Math.floor(start/L)+1, beatN=start%L+1;
   const lenTxt=c.beats%L===0?`${c.beats/L} bar${c.beats/L>1?'s':''} of ${meterText()}`:`${c.beats}/${L} of a bar`;
   let h=`<div class="dhead"><span class="dname">${chordHTML(c)}</span><span class="dnum">${esc(a.num)}</span>${a.kind!=='empty'?`<span class="pill k-${a.kind}">${{dia:'In key',bor:'Borrowed',sec:'Secondary',chr:'Chromatic'}[a.kind]}</span>`:''}<span class="dnote">${esc(a.note)}</span></div>`;
+  if(!S.simple&&S.colorBy==='job'&&real(c)){ const j=jobOf(c); h+=`<p class="job-line"><span class="jpill j-${j}">${CHORD_JOBS[j].name}</span> ${esc(jobSentence(c))}</p>`; }
   if(S.simple&&real(c)){ const j=jobOf(c); h+=`<p class="simple-why"><span class="jpill j-${j}">${CHORD_JOBS[j].name}</span> ${esc(jobSentence(c))}</p>`; }
   if(real(c)) h+=`<div class="tones">${Q[c.q].iv.map(i=>`<span class="tone">${esc(prettyNote(spellTone(c,mod(c.root+i))))}<small>${ivLabel(c,i)}</small></span>`).join('')}${c.bass!=null&&!pcsOf(c).includes(c.bass)?`<span class="tone">${esc(prettyNote(spell(c.bass)))}<small>bass</small></span>`:''}</div>`;
   if(real(c)&&(c.q==='dim7'||c.q==='aug')){ const st=c.q==='dim7'?3:4; const tw=[st,2*st,3*st].filter(k=>k<12).map(k=>mod(c.root+k));
@@ -3887,7 +3895,7 @@ function jobSentence0(c){
     t=tg===S.tonic?`${n} is Pull in ${k}: it leans back toward ${h}, and your ear wants ${h} next.`:`${n} is a Pull, but not toward home: it leans toward ${tc?chordName0(tc):noteNm(tg)}, so try that chord next.`; }
   else { const f=(a.note.match(/Borrowed from (.+?)\./)||[])[1];
     t=f?`${n} is a Surprise: it isn’t in ${k}. It’s borrowed from ${f}, so it sounds like ${k} with a shadow over it.`:`${n} is a Surprise: it comes from outside ${k}, a twist your ear doesn’t expect.`; }
-  return S.simpleTheory?`${t} In theory terms it’s ${a.num}. ${a.note}`:t;
+  return S.simple&&S.simpleTheory?`${t} In theory terms it’s ${a.num}. ${a.note}`:t;
 }
 const jobSentence=localized(jobSentence0);
 /* three choices for the next chord, one of each job, from the key at the selected chord */
@@ -4651,7 +4659,7 @@ const LIBKEY='changes-library-v1', SNAPKEYS=['tonic','mode','meter','tempo'];
 let LIB={version:1,items:[]}, libCurrent=null;
 /* ============ untrusted state: one gate for settings and chords from saves, library files and share links ============ */
 const isBool=v=>typeof v==='boolean';
-const SANE={simple:v=>typeof v==='boolean', simpleTheory:v=>typeof v==='boolean', vocabFull:v=>v===null||Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)), hearBack:v=>[1,2,4].includes(v), tonic:v=>Number.isInteger(v)&&v>=0&&v<12, mode:v=>ownKey(MODES,v), meter:v=>ownKey(METERS,v), tempo:v=>Number.isFinite(+v)&&+v>0&&v!==''&&v!==null&&typeof v!=='boolean',
+const SANE={colorBy:v=>v==='kind'||v==='job', simple:v=>typeof v==='boolean', simpleTheory:v=>typeof v==='boolean', vocabFull:v=>v===null||Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)), hearBack:v=>[1,2,4].includes(v), tonic:v=>Number.isInteger(v)&&v>=0&&v<12, mode:v=>ownKey(MODES,v), meter:v=>ownKey(METERS,v), tempo:v=>Number.isFinite(+v)&&+v>0&&v!==''&&v!==null&&typeof v!=='boolean',
   voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), showMel:isBool, melPlay:isBool, foldForm:isBool, linkForm:isBool, arr:v=>ownKey(ARR_STYLES,v), arrGroup:v=>v===''||ownKey(ARR_GROUPS,v), arrShow:isBool, arrSeed:v=>Number.isInteger(v)&&v>=0&&v<1000, arrMute:v=>Array.isArray(v)&&v.length>=5&&v.length<=9&&v.every(isBool), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
   pstyle:v=>ownKey(PIANO_STYLES,v), gstyle:v=>ownKey(GUITAR_STYLES,v), mood:v=>v===''||MOODS.some(m=>m.id===v),
   genres:v=>Array.isArray(v)&&v.length<=20&&v.every(g=>GENRES.some(x=>x.id===g)), vocab:v=>Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)),
@@ -4949,6 +4957,7 @@ function boot(){
   $('#load').onclick=load; $('#prog').onkeydown=e=>{ if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); load(); } };
   $('#doorIn').addEventListener('input',renderDoorRead); $('#doorIn').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); doorAdd(); } };
   $('#simpleToggle').onclick=()=>setSimple(!S.simple);
+  document.addEventListener('click',e=>{ const b=e.target.closest('[data-colorby]'); if(!b) return; S.colorBy=b.dataset.colorby; renderAll(); save(); });
   $('#simpleTheory').onchange=e=>{ S.simpleTheory=e.target.checked; renderAll(); save(); };
   $('#nextPick').onclick=e=>{ const b=e.target.closest('[data-np]'); if(!b) return; const o=$('#nextPick')._opts[+b.dataset.k]; if(!o) return;
     const cur=chords.find(c=>c.id===sel)||chords[chords.length-1];

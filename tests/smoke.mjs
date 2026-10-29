@@ -1378,6 +1378,24 @@ async function melodyInput() {
   check('melody input: black-key buttons show both names', /D♭C♯/.test(btns) && /F♯G♭/.test(btns) && /B♭A♯/.test(btns), btns);
   await ctx.close();
 }
+/* the job colours (Home, Away, Pull, Surprise) as an option in the full view */
+async function colorByJob() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 1000 } });
+  await page.goto(URL_);
+  await page.evaluate(() => { S.tonic = 7; S.mode = 'ionian'; chords = parseProg('G | C | D | Cm').chords; sel = chords[2].id; selectTab('phone', 'p-chord'); commit(); });
+  const before = await page.evaluate(() => ({ job: document.querySelector('#rows .slot').classList.contains('j-home'), legend: document.querySelector('.legend:not(.simple-legend)').checkVisibility(), pressed: document.querySelector('[data-colorby="kind"]').getAttribute('aria-pressed') }));
+  await page.click('[data-colorby="job"]');
+  const after = await page.evaluate(() => { const sl = [...document.querySelectorAll('#rows .slot')]; return { cls: sl.map(x => [...x.classList].find(c => c.startsWith('j-'))).join(' '), colors: sl.map(x => getComputedStyle(x).getPropertyValue('--k').trim()).join(' '), nums: sl.map(x => x.querySelector('.cr').textContent).join(' '), jl: document.querySelector('.simple-legend').checkVisibility(), kl: document.querySelector('.legend:not(.simple-legend)').checkVisibility(), theory: document.querySelector('#simpleTheory').checkVisibility(), pill: document.querySelector('#detail .job-line')?.textContent, swaps: getComputedStyle(document.querySelector('#tab-swaps')).display !== 'none', simple: S.simple }; });
+  check('colour by job: the full view can colour chords Home / Away / Pull / Surprise and keep its numerals and tools', !before.job && before.legend && before.pressed === 'true' && after.cls === 'j-home j-away j-pull j-surprise' && /var\(--t-home\)|#34C77B/i.test(after.colors.split(' ')[0]) && after.nums === 'I IV V iv' && after.jl && !after.kl && !after.theory && /^Pull D is Pull in G major/.test(after.pill) && after.swaps && !after.simple, JSON.stringify({ before, after }));
+  await page.reload();
+  check('colour by job: the choice is remembered', await page.evaluate(() => S.colorBy === 'job' && document.body.classList.contains('jobcolors')));
+  await page.evaluate(() => { S.quiz = true; renderAll(); });
+  check('colour by job: the quiz still hides the colours', await page.evaluate(() => getComputedStyle(document.querySelector('#rows .slot')).getPropertyValue('--k').trim() === getComputedStyle(document.documentElement).getPropertyValue('--t-dia').trim() || /t-dia/.test(getComputedStyle(document.querySelector('#rows .slot')).getPropertyValue('--k'))));
+  await page.evaluate(() => { S.quiz = false; renderAll(); });
+  await page.click('[data-colorby="kind"]');
+  check('colour by job: Where it’s from brings the source colours back', await page.evaluate(() => !document.body.classList.contains('jobcolors') && document.querySelector('.legend:not(.simple-legend)').checkVisibility()));
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1655,6 +1673,7 @@ try {
   await simpleView();
   await tuneIdeasSuite();
   await melodyInput();
+  await colorByJob();
   await menus();
   await layout();
   await hardening();
