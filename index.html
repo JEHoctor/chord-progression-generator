@@ -506,6 +506,12 @@ body[data-ptab=p-create] #sideLeft,body[data-ptab=p-tools] #tools,body[data-ptab
 .tools .tabpanel>.panel{border:0;padding:0;background:none}
 .tabpanel{display:flex;flex-direction:column;gap:16px}
 .tabpanel[hidden]{display:none}
+/* Focus: the menus and the side panel step aside and the chart takes the whole window; the Play bar stays */
+body.focus .topbar,body.focus .pane,body.focus .sizer{display:none!important}
+body.focus .app{margin-left:0;grid-template-columns:minmax(0,1fr);border-top-left-radius:0}
+body.focus .dock{left:0}
+.focus-btn[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+@media (max-width:759px){ .focus-btn{display:none!important} }
 /* tablet: the rail becomes a top bar; the side panel narrows */
 @media (max-width:1199px){
   .top-actions{flex-wrap:wrap;justify-content:flex-end}
@@ -1141,7 +1147,7 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
     <p class="hint cycle-note" id="cycleNote" hidden></p>
   </section>
       </div></details></div>
-      <span class="chead-acts"><details class="keymenu colmenu" id="colorMenu"><summary class="btn small" title="Colour the chords by where they come from or by their job, and choose the colours"><span class="sw" aria-hidden="true"><i class="cm1"></i><i class="cm2"></i><i class="cm3"></i></span>Colours</summary><div class="colpop" id="colorPop"></div></details><button class="btn small" id="undo" type="button">Undo</button><button type="button" class="btn small mel-toggle" id="melToggle" aria-pressed="false" title="Show a melody lane under the chords: one note per beat, coloured against each chord">♪ Melody</button><button type="button" class="btn small arr-toggle" id="arrToggle" aria-pressed="false" title="Arrange the melody for voices or strings: three more parts stacked around the tune">Arrange</button><button type="button" class="btn small ctools-toggle" id="ctoolsToggle" aria-expanded="false" aria-controls="chartTools">Chart tools</button></span>
+      <span class="chead-acts"><button type="button" class="btn small focus-btn" id="focusBtn" aria-pressed="false" title="Hide the side menus so the chart fills the window (\)"><span id="focusLabel">Focus</span></button><details class="keymenu colmenu" id="colorMenu"><summary class="btn small" title="Colour the chords by where they come from or by their job, and choose the colours"><span class="sw" aria-hidden="true"><i class="cm1"></i><i class="cm2"></i><i class="cm3"></i></span>Colours</summary><div class="colpop" id="colorPop"></div></details><button class="btn small" id="undo" type="button">Undo</button><button type="button" class="btn small mel-toggle" id="melToggle" aria-pressed="false" title="Show a melody lane under the chords: one note per beat, coloured against each chord">♪ Melody</button><button type="button" class="btn small arr-toggle" id="arrToggle" aria-pressed="false" title="Arrange the melody for voices or strings: three more parts stacked around the tune">Arrange</button><button type="button" class="btn small ctools-toggle" id="ctoolsToggle" aria-expanded="false" aria-controls="chartTools">Chart tools</button></span>
       <div class="transport" id="chartTools">
         <span class="xpose" role="group" aria-label="Transpose"><span class="label">Transpose</span><button class="btn small" id="tdown" type="button" aria-label="Down a half step">−½</button><button class="btn small" id="tup" type="button" aria-label="Up a half step">+½</button><select id="tto" aria-label="Transpose to key"></select></span>
         <select id="voicing" class="btn" aria-label="Playback voicing"><option value="smooth">Smooth voice leading</option><option value="fixed">Fixed root position</option></select>
@@ -1452,7 +1458,7 @@ const NUMS={I:0,II:2,III:4,IV:5,V:7,VI:9,VII:11};
 /* tables are plain objects, so keys that come from outside (chord text, share links, saved files) are only accepted when
    they are the table's own entries; "constructor" or "__proto__" never count */
 const ownKey=(o,k)=>typeof k==='string'&&Object.prototype.hasOwnProperty.call(o,k);
-const S={hearIn:true,textSize:1,colors:{},keyHome:false,keyColors:null,colorBy:'kind',simple:false,simpleTheory:false,vocabFull:null,hearBack:1,foldForm:true,linkForm:true,arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
+const S={focus:false,hearIn:true,textSize:1,colors:{},keyHome:false,keyColors:null,colorBy:'kind',simple:false,simpleTheory:false,vocabFull:null,hearBack:1,foldForm:true,linkForm:true,arr:'strings',arrGroup:'',arrShow:false,arrSeed:0,arrMute:[false,false,false,false,false,false,false,false,false],showMel:false,melPlay:true,melPlace:'end',sym:'classic',labels:'both',pstyle:'block',gstyle:'strum1',genreVocab:false,instrument:'piano',tuning:'standard',quiz:false,drone:false,droneMode:'dorian',melText:'',melRate:1,surprise:30,showVL:false,genres:[],voicing:'smooth',vocab:['sus','add','seventh','symm','slash'],capo:0,tonic:7,mode:'ionian',meter:'4/4',tempo:88,level:1,mood:'uplift',bars:4,rhythm:'bar',lock:false,loop:true,click:false};
 let chords=[], sel=null, hist=[];
 /* the melody: one entry per beat of the chart, by absolute beat. A MIDI note number starts a note, -1 holds the note
    before it, null is a rest. It is independent of the chords, so moving a chord changes the harmony under the tune.
@@ -2672,8 +2678,12 @@ function hearKey(){
   const home=diatonic(S.mode,0,3), turn=d>0?diatonic(S.mode,d,/7$/.test(sig)?4:3):diatonic(S.mode,4,3);
   if(home&&turn) audition([[home,.9],[turn,.9],[home,1.4]]);
 }
+/* Focus hides the menus and side panel on screens wide enough to have them beside the chart (phones show one screen at a time anyway) */
+function applyFocus(){ const on=!!S.focus&&innerWidth>=760; document.body.classList.toggle('focus',on);
+  const b=$('#focusBtn'); if(b){ b.setAttribute('aria-pressed',String(on)); $('#focusLabel').textContent=on?'Show panels':'Focus'; b.title=on?'Bring back the menus and side panel (\\)':'Hide the side menus so the chart fills the window (\\)'; } }
+function setFocus(on){ S.focus=on; applyFocus(); save(); requestAnimationFrame(fitDock); }
 function renderControls(){
-  applyTextSize(); document.body.classList.toggle('simple',!!S.simple); document.body.classList.toggle('jobcolors',!!S.simple||S.colorBy==='job'); applyColors(); if($('#colorMenu').open) renderColorMenu();
+  applyFocus(); applyTextSize(); document.body.classList.toggle('simple',!!S.simple); document.body.classList.toggle('jobcolors',!!S.simple||S.colorBy==='job'); applyColors(); if($('#colorMenu').open) renderColorMenu();
   { const job=!!S.simple||S.colorBy==='job', ks=job?['home','away','pull']:['dia','bor','sec']; document.querySelectorAll('#colorMenu summary .sw i').forEach((x,n)=>x.style.setProperty('--k',`var(--t-${ks[n]})`)); } document.querySelectorAll('[data-colorby]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.colorby===S.colorBy))); document.body.classList.toggle('theory',!!S.simpleTheory); $('#simpleToggle').setAttribute('aria-pressed',String(!!S.simple)); $('#simpleTheory').checked=!!S.simpleTheory;
   $('#key').value=S.tonic; $('#mode').value=S.mode; $('#meter').value=S.meter; $('#tempo').value=S.tempo; $('#symStyle').value=S.sym; $('#labelMode').value=S.labels; $('#melToggle').setAttribute('aria-pressed',String(!!S.showMel)); $('#arrToggle').setAttribute('aria-pressed',String(arrOn()));
   $('#bars').value=S.bars; $('#rhythm').value=S.rhythm; $('#lockmode').checked=S.lock; $('#loop').checked=S.loop; $('#click').setAttribute('aria-pressed',String(!!S.click));
@@ -4153,6 +4163,8 @@ function setDrawer(open){ document.body.classList.toggle('drawer-open',open); $(
 /* makes a control visible wherever it lives: its tab, the Create drawer, the Library popover or the phone screen */
 function revealEl(el){
   if(!el) return;
+  /* something in a hidden menu or panel was asked for: bring them back */
+  if(S.focus&&el.closest('.pane,.topbar')) setFocus(false);
   /* open enclosing <details>, except the one whose own summary is being clicked (that click toggles it) */
   const own=el.closest('summary')?.parentElement;
   for(let d=el.closest('details');d;d=d.parentElement&&d.parentElement.closest('details')) if(!d.open&&d!==own) d.open=true;
@@ -4863,7 +4875,7 @@ let LIB={version:1,items:[]}, libCurrent=null;
 /* ============ untrusted state: one gate for settings and chords from saves, library files and share links ============ */
 const isBool=v=>typeof v==='boolean';
 const SANE={textSize:v=>TEXT_SIZES.some(t=>t.v===v), colors:v=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.entries(v).every(([k,x])=>ownKey(DEF_COLORS,k)&&HEX_RE.test(x)), keyHome:v=>typeof v==='boolean', keyColors:v=>v===null||Array.isArray(v)&&v.length===12&&v.every(x=>HEX_RE.test(x)), colorBy:v=>v==='kind'||v==='job', simple:v=>typeof v==='boolean', simpleTheory:v=>typeof v==='boolean', vocabFull:v=>v===null||Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)), hearBack:v=>[1,2,4].includes(v), tonic:v=>Number.isInteger(v)&&v>=0&&v<12, mode:v=>ownKey(MODES,v), meter:v=>ownKey(METERS,v), tempo:v=>Number.isFinite(+v)&&+v>0&&v!==''&&v!==null&&typeof v!=='boolean',
-  hearIn:isBool, voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), showMel:isBool, melPlay:isBool, foldForm:isBool, linkForm:isBool, arr:v=>ownKey(ARR_STYLES,v), arrGroup:v=>v===''||ownKey(ARR_GROUPS,v), arrShow:isBool, arrSeed:v=>Number.isInteger(v)&&v>=0&&v<1000, arrMute:v=>Array.isArray(v)&&v.length>=5&&v.length<=9&&v.every(isBool), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
+  focus:isBool, hearIn:isBool, voicing:v=>v==='smooth'||v==='fixed', sym:v=>ownKey(SYM_STYLES,v), melPlace:v=>ownKey(MEL_PLACES,v), showMel:isBool, melPlay:isBool, foldForm:isBool, linkForm:isBool, arr:v=>ownKey(ARR_STYLES,v), arrGroup:v=>v===''||ownKey(ARR_GROUPS,v), arrShow:isBool, arrSeed:v=>Number.isInteger(v)&&v>=0&&v<1000, arrMute:v=>Array.isArray(v)&&v.length>=5&&v.length<=9&&v.every(isBool), labels:v=>ownKey(LABEL_MODES,v), capo:v=>Number.isInteger(v)&&v>=0&&v<=7, tuning:v=>ownKey(TUNINGS,v), instrument:v=>v==='piano'||v==='guitar',
   pstyle:v=>ownKey(PIANO_STYLES,v), gstyle:v=>ownKey(GUITAR_STYLES,v), mood:v=>v===''||MOODS.some(m=>m.id===v),
   genres:v=>Array.isArray(v)&&v.length<=20&&v.every(g=>GENRES.some(x=>x.id===g)), vocab:v=>Array.isArray(v)&&v.length<=20&&v.every(f=>FAMS.some(x=>x.id===f)),
   bars:v=>[4,8,12,16].includes(v), rhythm:v=>['bar','half','mixed','slow'].includes(v), level:v=>[0,1,2].includes(v), surprise:v=>Number.isFinite(v)&&v>=0&&v<=100,
@@ -5165,6 +5177,8 @@ function boot(){
   $('#doorIn').addEventListener('input',renderDoorRead); $('#doorIn').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); doorAdd(); } };
   $('#simpleToggle').onclick=()=>setSimple(!S.simple);
   $('#dockMore').onclick=()=>{ const on=!document.body.classList.contains('dock-open'); document.body.classList.toggle('dock-open',on); $('#dockMore').setAttribute('aria-expanded',String(on)); $('#dockMore').textContent=on?'Less':'More'; };
+  $('#focusBtn').onclick=()=>setFocus(!S.focus);
+  window.addEventListener('resize',applyFocus);
   $('#textSize').onclick=()=>{ const i=TEXT_SIZES.findIndex(t=>t.v===S.textSize); S.textSize=TEXT_SIZES[(i+1)%TEXT_SIZES.length].v; applyTextSize(); renderAll(); save(); toast(`Text size: ${TEXT_SIZES.find(t=>t.v===S.textSize).name}`); };
   document.addEventListener('click',e=>{ const b=e.target.closest('[data-colorby]'); if(!b) return; S.colorBy=b.dataset.colorby; renderAll(); save(); });
   $('#colorMenu').addEventListener('toggle',()=>{ if($('#colorMenu').open) renderColorMenu(); });
@@ -5447,6 +5461,7 @@ function boot(){
     if(e.target.matches('input,select,textarea')||e.target.closest('[role=tablist],[role=menu],[role=dialog],.cpick,.libpop')) return;
     if((e.metaKey||e.ctrlKey)&&e.key==='z'){ e.preventDefault(); undo(); return; }
     if(e.key===' '&&!e.target.closest('button')){ e.preventDefault(); playing?stopAll():playChart(); }
+    if(e.key==='\\'&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&innerWidth>=760){ e.preventDefault(); setFocus(!S.focus); toast(S.focus?'Focus: press \\ or Show panels to bring the menus back':'Menus and side panel are back'); return; }
     const idx=chords.findIndex(c=>c.id===sel);
     /* Option/Alt + arrow moves the selected chord, the keyboard version of dragging */
     if(e.altKey&&(e.key==='ArrowLeft'||e.key==='ArrowRight')&&idx>=0){ e.preventDefault(); const j=idx+(e.key==='ArrowRight'?1:-1);
@@ -5476,7 +5491,7 @@ function transpose(n){
 function vocabName(){ const vk=[...S.vocab].sort().join(); const p=Object.keys(PRESETS).find(k=>[...PRESETS[k]].sort().join()===vk); return p?'Chords allowed: '+p:'Chords allowed: '+['triads',...FAMS.filter(f=>!f.fixed&&famOn(f.id)).map(f=>f.name)].join(', '); }
 function undo(){ const s=hist.pop(); if(!s) return; syncedTop=hist[hist.length-1]??null; restoreSnap(s); }
 /* which view you're in isn't an edit, so undo leaves it (and the chord families it set) as they are */
-const VIEW_KEYS=['hearIn','textSize','simple','simpleTheory','vocab','vocabFull','colorBy','colors','keyHome','keyColors'];
+const VIEW_KEYS=['focus','hearIn','textSize','simple','simpleTheory','vocab','vocabFull','colorBy','colors','keyHome','keyColors'];
 function restoreSnap(s){ const d=JSON.parse(s), keep=Object.fromEntries(VIEW_KEYS.map(k=>[k,S[k]])); Object.assign(S,d.S,keep); setTuning(S.tuning); chords=d.chords; sel=d.sel; melody=d.melody||[]; melAnd=d.melAnd||[]; commit(); }
 /* an Undo offered in a toast reverts that action, even if other edits happened since: it restores the snapshot taken just before it */
 function undoTo(snap){ return ()=>{ const i=hist.lastIndexOf(snap); if(i>=0) hist.length=i; syncedTop=hist[hist.length-1]??null; restoreSnap(snap); }; }

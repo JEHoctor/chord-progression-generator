@@ -1560,6 +1560,26 @@ async function liveChord() {
     const r = await page.evaluate(() => ({ note: !document.querySelector('#midiNone').hidden && document.querySelector('#midiNone').checkVisibility(), pairs: document.querySelector('#midiInWrap').hidden && document.querySelector('#midiOutWrap').hidden }));
     check('midi place: without Web MIDI, Chart tools says MIDI keyboards need Chrome or Edge', r.note && r.pairs, JSON.stringify(r));
     await ctx.close(); }
+async function focusMode() {
+  const { ctx, page } = await openPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(URL_);
+  const look = () => page.evaluate(() => ({ focus: document.body.classList.contains('focus'), rail: document.querySelector('.topbar').checkVisibility(), pane: [...document.querySelectorAll('.pane')].some(p => p.checkVisibility()), chartW: Math.round(document.querySelector('.center').getBoundingClientRect().width), dockL: Math.round(document.querySelector('#dock').getBoundingClientRect().left), label: document.querySelector('#focusLabel').textContent, pressed: document.querySelector('#focusBtn').getAttribute('aria-pressed') }));
+  const before = await look();
+  await page.click('#focusBtn'); const on = await look();
+  check('focus: Focus hides the menus and side panel, and the chart and Play bar take the whole width', !before.focus && before.rail && on.focus && !on.rail && !on.pane && on.chartW > before.chartW + 300 && on.dockL === 0 && on.label === 'Show panels' && on.pressed === 'true', JSON.stringify({ before, on }));
+  await page.reload(); await page.waitForTimeout(200);
+  check('focus: it is remembered after a reload', (await look()).focus);
+  await page.evaluate(() => document.querySelector('#rows .slot').focus()); await page.keyboard.press('\\');
+  const off = await look();
+  check('focus: \\ brings the panels back', !off.focus && off.rail && off.pane && off.label === 'Focus', JSON.stringify(off));
+  await page.keyboard.press('\\'); await page.evaluate(() => revealEl(document.querySelector('#sideRight .panel') || document.querySelector('#sideRight')));
+  check('focus: asking for something in a side panel brings the panels back', !(await look()).focus);
+  await ctx.close();
+  const p2 = await openPage({ viewport: { width: 390, height: 844 } }); await p2.page.goto(URL_);
+  check('focus: phones have no Focus button (they show one screen at a time already)', await p2.page.evaluate(() => !document.querySelector('#focusBtn').checkVisibility()));
+  check('focus: no page errors', page.errors.length === 0 && p2.page.errors.length === 0, page.errors.concat(p2.page.errors).join(' | '));
+  await p2.ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1845,6 +1865,7 @@ try {
   await textSize();
   await playbackFeedback();
   await liveChord();
+  await focusMode();
   await menus();
   await layout();
   await hardening();
