@@ -390,6 +390,23 @@ body.quiz-on .prog-why,body.quiz-on .ideas{display:none}
 @media (max-width:520px){.lib-item{grid-template-columns:minmax(0,1fr)} .lib-item .lb{grid-column:1;grid-row:auto;justify-content:flex-start}}
 .toast{display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px)}
 .toast-act{background:none;border:0;color:var(--accent);font-weight:600;padding:0;text-decoration:underline;cursor:pointer}
+.search-veil{position:fixed;inset:0;z-index:70;background:rgb(0 0 0 / .35)}
+.searchbox{position:fixed;left:50%;top:12vh;transform:translateX(-50%);width:min(600px,calc(100vw - 32px));max-height:72vh;display:flex;flex-direction:column;z-index:71;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 60px -20px rgb(0 0 0 / .55);overflow:hidden}
+.searchbox[hidden],.search-veil[hidden]{display:none}
+#searchIn{font:inherit;font-size:calc(18px*var(--fs,1));padding:16px 18px;border:0;border-bottom:1px solid var(--line);background:transparent;color:inherit;outline:none}
+#searchList{list-style:none;margin:0;padding:6px;overflow:auto}
+#searchList li{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:calc(15px*var(--fs,1))}
+#searchList li small{color:var(--muted);font-size:calc(13px*var(--fs,1));text-align:right;flex:none;max-width:45%}
+#searchList li[aria-selected=true]{background:var(--ink);color:var(--bg)} #searchList li[aria-selected=true] small{color:inherit;opacity:.75}
+#searchList .s-empty{cursor:default;color:var(--muted)}
+.search-tip{margin:0;padding:8px 14px 10px;border-top:1px solid var(--line)}
+.top-actions .search-btn{background:none;color:var(--stage-ink);border-color:#3A3A37;justify-content:flex-start;gap:6px}
+.top-actions .search-btn:hover{background:var(--stage-2)}
+.search-btn kbd{margin-left:auto;font:600 calc(12px*var(--fs,1))/1 var(--f-mono);opacity:.7}
+@media (max-width:759px){ .search-btn kbd,.search-tip{display:none} }
+/* where search sent you: a ring that fades */
+.found{outline:3px solid var(--spike)!important;outline-offset:3px;animation:found 2.4s ease-out forwards}
+@keyframes found{0%,60%{outline-color:var(--spike)}100%{outline-color:transparent}}
 .copybox{position:fixed;left:50%;top:20%;transform:translateX(-50%);width:min(520px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;z-index:60;box-shadow:0 24px 60px -20px rgb(0 0 0 / .5);display:flex;flex-direction:column;gap:10px}
 .copybox p{margin:0;font-size:calc(14px*var(--fs,1))}
 .copybox textarea{width:100%;font-family:var(--f-mono);font-size:calc(12.5px*var(--fs,1));background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-xs);padding:8px;resize:vertical}
@@ -1053,6 +1070,7 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
     </div>
     <div class="tabs phonetabs" id="phoneTabs" role="tablist" aria-label="Screens" data-tabs="phone"><button type="button" role="tab" id="tab-p-create" aria-controls="sideLeft" data-tab="p-create">Create<small>Your chords, or new ones</small></button><button type="button" role="tab" id="tab-p-chart" aria-controls="center" data-tab="p-chart">Chart<small>Your progression</small></button><button type="button" role="tab" id="tab-p-chord" aria-controls="sideRight" data-tab="p-chord">Chord<small>Shapes and swap ideas</small></button><button type="button" role="tab" id="tab-p-tools" aria-controls="tools" data-tab="p-tools">Tools<small>Chord finder, keys and modes</small></button></div>
     <nav class="top-actions" aria-label="App">
+      <button type="button" class="btn small search-btn" id="searchBtn" title="Search for any setting or action" aria-haspopup="dialog"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>Search <kbd id="searchKey">⌘K</kbd></button>
       <button type="button" class="btn small textsize" id="textSize" title="Make the text and buttons bigger"><span class="ts-a" aria-hidden="true">A<b>A</b></span> <span id="textSizeLabel">Text: Normal</span></button>
       <button type="button" class="btn small simple-toggle" id="simpleToggle" aria-pressed="false" title="Simple view: plain chords, what each one does, and what could come next">Simple view</button>
       <button type="button" class="btn small create-toggle" id="createToggle" aria-expanded="false" aria-controls="sideLeft">Create</button>
@@ -1258,6 +1276,8 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
 <div id="printSheet" class="ps" aria-hidden="true"></div>
 <div class="cpick" id="cpick" role="dialog" aria-label="Pick a chord" hidden></div>
 <div class="copybox soundbox" id="soundbox" role="dialog" aria-label="Sound check" hidden></div>
+<div class="search-veil" id="searchVeil" hidden></div>
+<div class="searchbox" id="searchBox" role="dialog" aria-modal="true" aria-label="Search the app" hidden><input id="searchIn" type="search" role="combobox" aria-expanded="true" aria-controls="searchList" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="What are you looking for? (try “tempo”, “MIDI”, “capo”)"><ul id="searchList" role="listbox" aria-label="Results"></ul><p class="hint search-tip">↑ ↓ to choose · Enter to go · Esc to close</p></div>
 
 <script>
 /* the app's name, in one place: the page title, header, MIDI, MusicXML, messages, file names and the help pages (docs-src/build.py reads it from here).
@@ -2738,6 +2758,105 @@ function hearKey(){
   const sig=MODES[S.mode].ch, d=['I','II','III','IV','V','VI','VII'].indexOf(sig.replace(/^[b#]/,'').replace(/7$/,'').toUpperCase());
   const home=diatonic(S.mode,0,3), turn=d>0?diatonic(S.mode,d,/7$/.test(sig)?4:3):diatonic(S.mode,4,3);
   if(home&&turn) audition([[home,.9],[turn,.9],[home,1.4]]);
+}
+/* ============ search: find any setting or action by name ============ */
+/* Each entry is a name, other words people might use, where it lives, and what happens: a function to run, '#id' to
+   take you to a control (opening whatever menu, tab or panel holds it, and ringing it), or 'guide#…' to open that part of
+   the help. Matching is by word starts, so "temp" finds Tempo and "midi k" finds MIDI keyboard. */
+const clickIt=id=>()=>$(id).click();
+const SEARCH=[
+  ['Play or stop','start stop playback space','Play bar',()=>playing?stopAll():playChart()],
+  ['Tempo','bpm speed fast slow','Play bar','#tempo'],
+  ['Metronome','click count beat','Play bar','#click'],
+  ['Loop','repeat round','Play bar','#loop'],
+  ['Sound: piano or guitar','instrument timbre','Play bar','#instrument'],
+  ['Playing style','strum arpeggio ballad pulse fingerpicking stride jazz broadway rhythm pattern','Play bar','#pstyle'],
+  ['Undo','back revert mistake','Above the chart',()=>undo()],
+  ['Start over','clear empty new blank reset delete all','Chart tools','#clearChart'],
+  ['Key and mode','key signature tonic major minor change key','Under the chart title','#key'],
+  ['Time signature','meter 3/4 6/8 7/8 waltz odd time talam taal','Under the chart title','#meter'],
+  ['Hear the key','scale tonic','Under the chart title','#hearKey'],
+  ['Transpose','change key up down half step capo','Chart tools','#tup'],
+  ['Transpose to a key','move key','Chart tools','#tto'],
+  ['Smooth voice leading or root position','voicing inversions','Chart tools','#voicing'],
+  ['How chord symbols are written','symbols notation maj7 triangle','Chart tools','#symStyle'],
+  ['Chord names or numerals','roman numerals labels nashville','Chart tools','#labelMode'],
+  ['Find key centres','coltrane giant steps ii-v key change analysis','Chart tools','#centresOn'],
+  ['Apply chords allowed','rewrite vocabulary','Chart tools','#recolor'],
+  ['MIDI keyboard in','midi input controller live chord record','Chart tools','#midiIn'],
+  ['Hear what I play','midi monitor sound keyboard','Chart tools','#midiHear'],
+  ['MIDI out to a music app','daw logic ableton garageband output','Chart tools','#midiOut'],
+  ['Colours','colour color by job theme hue','Above the chart','#colorMenu'],
+  ['Focus: hide the side menus','fullscreen distraction hide panels','Above the chart',()=>setFocus(!S.focus)],
+  ['Melody lane','tune notes melody','Above the chart','#melToggle'],
+  ['Arrange','close harmony choir barbershop strings quartet orchestra drop 2 voices','Above the chart','#arrToggle'],
+  ['Edit as text','type paste chart text','Under the chart','#textEdit'],
+  ['Show voice leading','voices moving','Under the chart','#vlToggle'],
+  ['Quiz me','test ear training','Under the chart','#quizOn'],
+  ['Name a section','verse chorus bridge song form','Song form','#formBar'],
+  ['Sound check','no sound silent audio iphone mute','Under the chart','#soundCheck'],
+  ['I have chords','type my chords enter numbers numerals','Create','#doorIn'],
+  ['Generate a progression','new random mood genre make','Create','#tab-gen'],
+  ['Mood','happy sad dark uplifting','Create → Generate','#moods'],
+  ['Genre','jazz pop funk blues rock film gospel style','Create → Generate','#genres'],
+  ['Predictable or surprising','surprise outside chords','Create → Generate','#surprise'],
+  ['Length','bars how many 4 8 12 16','Create → Generate','#bars'],
+  ['Chord changes per bar','rhythm harmonic rhythm','Create → Generate','#rhythm'],
+  ['Drone vamp','sa pa drone raga indian','Create → Generate','#droneOn'],
+  ['Harmonize a melody','chords for my tune','Create','#tab-melody'],
+  ['Chords allowed','vocabulary sevenths sus slash extensions','Create','#tab-setkey'],
+  ['Chord finder','name a chord frets keys identify what chord','Tools','#tab-finder'],
+  ['Keys and modes','scale diatonic chords dorian mixolydian','Tools','#tab-modes'],
+  ['Swap ideas','substitutions replace alternatives','Chord panel','#tab-swaps'],
+  ['Guitar tuning','drop d open tuning','Chord panel','#tuneSel'],
+  ['Capo','capo fret','Chord panel','#capoSel'],
+  ['Text size','bigger larger font zoom read','Menu','#textSize'],
+  ['Simple view','beginner easy','Menu',()=>setSimple(!S.simple)],
+  ['Library: save this progression','save name keep','Menu','#libName'],
+  ['Open a share link','paste code','Menu','#shareIn'],
+  ['Copy chart as text','copy paste','Export',clickIt('#copy')],
+  ['Download MIDI','midi file daw','Export',clickIt('#midiExport')],
+  ['Download MIDI with bass line','midi bass','Export',clickIt('#midiExportBass')],
+  ['Download notation (MusicXML)','musescore sibelius finale dorico sheet music score','Export',clickIt('#xmlExport')],
+  ['Copy share link','share send url','Export',clickIt('#shareLink')],
+  ['Print lead sheet','pdf print','Export',clickIt('#printBtn')],
+  ['Help: how to use it','guide manual','Help','guide#quick'],
+  ['Help: keyboard shortcuts','keys hotkeys','Help','guide#keys'],
+  ['Help: if you hear nothing','no sound','Help','guide#sound'],
+  ['Help: key centres','coltrane giant steps','Help','guide#centres'],
+  ['Help: arranging','voices orchestra','Help','guide#arrange'],
+  ['Help: your data','privacy storage','Help','guide#privacy'],
+];
+let searchHits=[], searchAt=0;
+function searchFind(q){
+  const ws=q.toLowerCase().split(/[\s,]+/).filter(Boolean); if(!ws.length) return SEARCH.slice(0,8);
+  return SEARCH.map(e=>{ const title=e[0].toLowerCase(), words=(title+' '+e[1]+' '+e[2]).toLowerCase().split(/[^a-z0-9/♭♯-]+/);
+      let sc=0; for(const w of ws){ const hit=words.findIndex(x=>x.startsWith(w)); if(hit<0) return null; sc+=title.split(/[^a-z0-9]+/).some(x=>x.startsWith(w))?2:1; }
+      if(title.startsWith(ws[0])) sc+=2; return {e,sc}; })
+    .filter(Boolean).sort((a,b)=>b.sc-a.sc).map(x=>x.e).slice(0,10);
+}
+function renderSearch(){
+  const q=$('#searchIn').value; searchHits=searchFind(q); searchAt=Math.min(searchAt,Math.max(0,searchHits.length-1));
+  $('#searchList').innerHTML=searchHits.length?searchHits.map((e,i)=>`<li role="option" id="sr${i}" data-sr="${i}" aria-selected="${i===searchAt}"><span>${esc(e[0])}</span><small>${esc(e[2])}</small></li>`).join('')
+    :`<li class="s-empty" role="option" aria-disabled="true">Nothing called “${esc(q)}”. Try another word, or the Help menu.</li>`;
+  $('#searchIn').setAttribute('aria-activedescendant',searchHits.length?'sr'+searchAt:'');
+  document.getElementById('sr'+searchAt)?.scrollIntoView({block:'nearest'});
+}
+function openSearch(){ $('#searchVeil').hidden=false; $('#searchBox').hidden=false; $('#searchIn').value=''; searchAt=0; renderSearch(); $('#searchIn').focus(); }
+function closeSearch(){ $('#searchVeil').hidden=true; $('#searchBox').hidden=true; }
+function goSearch(e){
+  closeSearch(); const go=e[3];
+  if(typeof go==='function'){ go(); return; }
+  if(go.startsWith('guide#')){ window.open('guide.html#'+go.slice(6),'_blank','noopener'); return; }
+  let el=$(go); if(!el) return;
+  revealEl(el); if(!el.checkVisibility()&&S.simple){ setSimple(false); revealEl(el); }
+  /* on a compact Play bar the rest of the controls are behind More */
+  if(!el.checkVisibility()&&el.closest('.dock-opts')&&$('#dockMore').checkVisibility()&&$('#dockMore').getAttribute('aria-expanded')!=='true') $('#dockMore').click();
+  if(!el.checkVisibility()){ toast(`${e[0]} isn’t available on this screen right now`); return; }
+  const ring=el.matches('details')?el.querySelector('summary'):el.closest('label')||el;
+  if(el.matches('details')) el.open=true;
+  requestAnimationFrame(()=>{ ring.scrollIntoView({block:'center',behavior:'smooth'}); ring.classList.remove('found'); void ring.offsetWidth; ring.classList.add('found'); setTimeout(()=>ring.classList.remove('found'),2600);
+    (el.matches('[role=tab]')?el:el.matches('details')?el.querySelector('summary'):el).focus({preventScroll:true}); if(el.matches('[role=tab]')) el.click(); });
 }
 /* Focus hides the menus and side panel on screens wide enough to have them beside the chart (phones show one screen at a time anyway) */
 function applyFocus(){ const on=!!S.focus&&innerWidth>=760; document.body.classList.toggle('focus',on);
@@ -5269,6 +5388,14 @@ function boot(){
   $('#dockMore').onclick=()=>{ const on=!document.body.classList.contains('dock-open'); document.body.classList.toggle('dock-open',on); $('#dockMore').setAttribute('aria-expanded',String(on)); $('#dockMore').textContent=on?'Less':'More'; };
   $('#centresOn').checked=S.centres; $('#centresOn').onchange=e=>{ S.centres=e.target.checked; commit(); toast(S.centres?'Chords are read in the key they’re heading for':'Every chord is read in the key set for it'); };
   $('#focusBtn').onclick=()=>setFocus(!S.focus);
+  $('#searchKey').textContent=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent)?'⌘K':'Ctrl K';
+  $('#searchBtn').onclick=openSearch; $('#searchVeil').onclick=closeSearch;
+  $('#searchIn').oninput=()=>{ searchAt=0; renderSearch(); };
+  $('#searchIn').onkeydown=e=>{ if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); if(searchHits.length){ searchAt=(searchAt+(e.key==='ArrowDown'?1:-1)+searchHits.length)%searchHits.length; renderSearch(); } }
+    else if(e.key==='Enter'){ e.preventDefault(); if(searchHits[searchAt]) goSearch(searchHits[searchAt]); } else if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); closeSearch(); $('#searchBtn').focus(); } };
+  $('#searchList').onclick=e=>{ const li=e.target.closest('[data-sr]'); if(li) goSearch(searchHits[+li.dataset.sr]); };
+  document.addEventListener('keydown',e=>{ if((e.metaKey||e.ctrlKey)&&!e.altKey&&e.key.toLowerCase()==='k'){ e.preventDefault(); $('#searchBox').hidden?openSearch():closeSearch(); return; }
+    if(e.key==='/'&&$('#searchBox').hidden&&!e.target.matches('input,select,textarea,[contenteditable]')){ e.preventDefault(); openSearch(); } },true);
   window.addEventListener('resize',applyFocus);
   $('#textSize').onclick=()=>{ const i=TEXT_SIZES.findIndex(t=>t.v===S.textSize); S.textSize=TEXT_SIZES[(i+1)%TEXT_SIZES.length].v; applyTextSize(); renderAll(); save(); toast(`Text size: ${TEXT_SIZES.find(t=>t.v===S.textSize).name}`); };
   document.addEventListener('click',e=>{ const b=e.target.closest('[data-colorby]'); if(!b) return; S.colorBy=b.dataset.colorby; renderAll(); save(); });

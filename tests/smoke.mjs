@@ -1639,6 +1639,34 @@ async function keyCentresSuite() {
   check('centres: no page errors', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 }
+async function searchSuite() {
+  const { ctx, page } = await openPage({ viewport: { width: 1400, height: 900 } });
+  await page.goto(URL_);
+  const open = () => page.evaluate(() => !document.querySelector('#searchBox').hidden && document.activeElement === document.querySelector('#searchIn'));
+  await page.click('#searchBtn'); const byBtn = await open(); await page.keyboard.press('Escape'); const closed = await page.evaluate(() => document.querySelector('#searchBox').hidden);
+  await page.keyboard.press('Control+k'); const byKey = await open(); await page.keyboard.press('Escape');
+  await page.evaluate(() => document.body.focus()); await page.keyboard.press('/'); const bySlash = await open();
+  check('search: the Search button, Ctrl/⌘ K and / all open it with the cursor in the box; Esc closes it', byBtn && closed && byKey && bySlash);
+  await page.keyboard.type('midi k'); const first = await page.evaluate(() => document.querySelector('#searchList [aria-selected=true]').textContent);
+  check('search: words match by their starts, best first ("midi k" finds the MIDI keyboard)', /^MIDI keyboard in/.test(first), first);
+  await page.keyboard.press('Enter'); await page.waitForTimeout(150);
+  const went = await page.evaluate(() => ({ shut: document.querySelector('#searchBox').hidden, tools: document.querySelector('.chart-card').classList.contains('show-tools'), focus: document.activeElement.id, ring: !!document.querySelector('.found') }));
+  check('search: Enter takes you to the control, opening Chart tools, focusing it and ringing it', went.shut && went.tools && went.focus === 'midiIn' && went.ring, JSON.stringify(went));
+  await page.keyboard.press('Control+k'); await page.keyboard.type('tempo'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowUp');
+  check('search: arrow keys move through the results', await page.evaluate(() => document.querySelector('#searchList [aria-selected=true]').textContent.startsWith('Tempo')));
+  await page.fill('#searchIn', 'focus hide'); await page.keyboard.press('Enter');
+  check('search: an action runs straight away (Focus hides the side menus)', await page.evaluate(() => document.body.classList.contains('focus')));
+  await page.keyboard.press('\\');
+  await page.keyboard.press('Control+k'); await page.keyboard.type('zzqx');
+  check('search: no match says so', await page.evaluate(() => /Nothing called “zzqx”/.test(document.querySelector('#searchList').textContent)));
+  await page.keyboard.press('Escape');
+  const guide = await page.evaluate(() => { let url = null; const o = window.open; window.open = u => { url = u; }; goSearch(SEARCH.find(e => e[3] === 'guide#keys')); window.open = o; return url; });
+  check('search: help topics open that part of the guide', guide === 'guide.html#keys', String(guide));
+  const all = await page.evaluate(async () => { const bad = []; for (const e of SEARCH) { if (typeof e[3] !== 'string' || !e[3].startsWith('#')) continue; const el = document.querySelector(e[3]); if (!el) { bad.push(e[0]); continue; } goSearch(e); await new Promise(r => setTimeout(r, 30)); if (!el.checkVisibility()) bad.push(e[0]); } setSimple(false); return bad; });
+  check('search: every place search can take you exists and is shown when you get there', all.length === 0, all.join(', '));
+  check('search: no page errors', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+}
 async function appName() {
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const name = src.match(/const APP_NAME='([^']+)'/)?.[1];
@@ -1927,6 +1955,7 @@ try {
   await focusMode();
   await feedbackRound2();
   await keyCentresSuite();
+  await searchSuite();
   await menus();
   await layout();
   await hardening();
