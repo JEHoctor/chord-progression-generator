@@ -43,7 +43,7 @@ Capabilities (shipped):
 - Synth playback with piano and guitar playing styles.
 
 Constraints future work must keep:
-- **One HTML file.** No build step, no libraries, plain JavaScript. The help pages (`guide.html`, `how-it-works.html`) are built from `docs-src/` with `python3 docs-src/build.py . docs-src`.
+- **One HTML file.** No build step, no libraries, plain JavaScript. The app is one HTML file; a manifest, a service worker and icons are separate static files used only for install and offline. The help pages (`guide.html`, `how-it-works.html`) are built from `docs-src/` with `python3 docs-src/build.py . docs-src`.
 - **No server, no tracking.** State lives only in localStorage (`changes-v1`, `changes-library-v1`, `changes-quiz-v1`, plus layout preferences). Nothing is sent anywhere.
 - **Phone to desktop.** Every capability must work on phone, tablet and desktop.
 

@@ -1,5 +1,16 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Chord Changes Workbench</title>
+<meta name="description" content="A songwriting workbench for chord progressions. Hear them, see why each chord works, try alternatives and arrangements, and take the result into your music app.">
+<meta name="theme-color" content="#141414">
+<meta property="og:title" content="Chord Changes Workbench">
+<meta property="og:description" content="A songwriting workbench for chord progressions. Hear them, see why each chord works, try alternatives and arrangements, and take the result into your music app.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ssk0011.github.io/chord-progression-generator/">
+<meta property="og:image" content="https://ssk0011.github.io/chord-progression-generator/icons/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23141414'/%3E%3Crect x='6' y='8' width='20' height='4' fill='%23D4D4CE'/%3E%3Crect x='6' y='14' width='14' height='4' fill='%23FFD21F'/%3E%3Crect x='6' y='20' width='20' height='4' fill='%23FF4D8D'/%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
 /* Big Shoulders Display, Public Sans and the ♭ ♯ ♮ of Noto Music, Latin subsets embedded so the app needs no font server
    and works offline. All three are under the SIL Open Font License 1.1. */
@@ -1362,6 +1373,26 @@ const Q={
   'm7add11':{iv:[0,3,7,10,17],d:'m7(add11)',tri:'min',lvl:2,omit:[7]},
   'sus6/9':{iv:[0,7,9,14],d:'6/9sus',tri:'sus',lvl:1},
   '6/9sus4':{iv:[0,5,7,9,14],d:'6/9sus4',tri:'sus',lvl:2,omit:[7]},
+  'maj11':{iv:[0,4,7,11,14,17],d:'maj11',tri:'maj',lvl:2,omit:[7,14]},
+  'maj9#11':{iv:[0,4,7,11,14,18],d:'maj9#11',tri:'maj',lvl:2,omit:[7]},
+  'maj13#11':{iv:[0,4,7,11,14,18,21],d:'maj13#11',tri:'maj',lvl:2,omit:[7,14]},
+  'mMaj11':{iv:[0,3,7,11,14,17],d:'m(maj11)',tri:'min',lvl:2,omit:[7,14]},
+  'mMaj13':{iv:[0,3,7,11,14,21],d:'m(maj13)',tri:'min',lvl:2,omit:[7,14]},
+  'maj7b5':{iv:[0,4,6,11],d:'maj7b5',tri:'maj',lvl:2},
+  'm7#5':{iv:[0,3,8,10],d:'m7#5',tri:'min',lvl:2},
+  'm9b5':{iv:[0,3,6,10,14],d:'m9b5',tri:'dim',lvl:2},
+  'm11b5':{iv:[0,3,6,10,14,17],d:'m11b5',tri:'dim',lvl:2,omit:[14]},
+  '7b9#5':{iv:[0,4,8,10,13],d:'7b9#5',tri:'aug',lvl:2,dom:1},
+  '7#9#5':{iv:[0,4,8,10,15],d:'7#9#5',tri:'aug',lvl:2,dom:1},
+  '7b9b5':{iv:[0,4,6,10,13],d:'7b9b5',tri:'maj',lvl:2,dom:1},
+  '7#9b5':{iv:[0,4,6,10,15],d:'7#9b5',tri:'maj',lvl:2,dom:1},
+  '7b9#11':{iv:[0,4,7,10,13,18],d:'7b9#11',tri:'maj',lvl:2,omit:[7],dom:1},
+  '7#9#11':{iv:[0,4,7,10,15,18],d:'7#9#11',tri:'maj',lvl:2,omit:[7],dom:1},
+  '9b5':{iv:[0,4,6,10,14],d:'9b5',tri:'maj',lvl:2,dom:1},
+  '9b13':{iv:[0,4,7,10,14,20],d:'9b13',tri:'maj',lvl:2,omit:[7],dom:1},
+  '13#9':{iv:[0,4,10,15,21],d:'13#9',tri:'maj',lvl:2,dom:1},
+  '13b5':{iv:[0,4,6,10,21],d:'13b5',tri:'maj',lvl:2,dom:1},
+  '7sus4b9':{iv:[0,5,7,10,13],d:'7sus4b9',tri:'sus',lvl:2,omit:[7],dom:1},
   '6sus4':{iv:[0,5,7,9],d:'6sus4',tri:'sus',lvl:1},
   'sus4add9':{iv:[0,5,7,14],d:'sus4(add9)',tri:'sus',lvl:1,omit:[7]},
   'maj7sus2':{iv:[0,2,7,11],d:'maj7sus2',tri:'sus',lvl:1,omit:[7]},
@@ -1369,7 +1400,7 @@ const Q={
   '9#5':{iv:[0,4,8,10,14],d:'9#5',tri:'aug',lvl:2,dom:1},
 };
 const ALIAS={'M':'','maj':'','major':'','min':'m','mi':'m','-':'m','o':'dim','°':'dim','+':'aug','sus':'sus4','add2':'add9','madd2':'madd9','M7':'maj7','Maj7':'maj7','ma7':'maj7','Δ':'maj7','Δ7':'maj7','-7':'m7','min7':'m7','mi7':'m7','ø':'m7b5','ø7':'m7b5','-7b5':'m7b5','min7b5':'m7b5','o7':'dim7','°7':'dim7','mmaj7':'mMaj7','-maj7':'mMaj7','7sus':'7sus4','aug7':'7#5','+7':'7#5','69':'6/9','M9':'maj9','Maj9':'maj9','-9':'m9','min9':'m9','-11':'m11','min11':'m11','M7#11':'maj7#11','alt':'7alt','-6':'m6','min6':'m6'};
-Object.assign(ALIAS,{'+maj7':'maj7#5','augmaj7':'maj7#5','maj7+5':'maj7#5','aug9':'9#5','9+5':'9#5','m7-5':'m7b5','7+5':'7#5','-13':'m13','min13':'m13','mi13':'m13','M13':'maj13','Maj13':'maj13','Δ13':'maj13','mmaj9':'mMaj9','-maj9':'mMaj9','9sus':'9sus4','13sus':'13sus4','-69':'m6/9','m69':'m6/9','min6/9':'m6/9','7-5':'7b5','7+11':'7#11','9+11':'9#11','7-13':'7b13','13-9':'13b9','13+11':'13#11','°maj7':'dimMaj7','omaj7':'dimMaj7','dim(maj7)':'dimMaj7','dimmaj7':'dimMaj7','power':'5','no3':'5','-add11':'madd11',
+Object.assign(ALIAS,{'+maj7':'maj7#5','augmaj7':'maj7#5','maj7+5':'maj7#5','aug9':'9#5','9+5':'9#5','m7-5':'m7b5','7+5':'7#5','-13':'m13','min13':'m13','mi13':'m13','M13':'maj13','Maj13':'maj13','Δ13':'maj13','mmaj9':'mMaj9','-maj9':'mMaj9','9sus':'9sus4','13sus':'13sus4','-69':'m6/9','m69':'m6/9','min6/9':'m6/9','7-5':'7b5','7+11':'7#11','7+9':'7#9','7-9':'7b9','7#5b9':'7b9#5','7+5b9':'7b9#5','7b9+5':'7b9#5','7#5#9':'7#9#5','7#9+5':'7#9#5','7b5b9':'7b9b5','7b5#9':'7#9b5','7#11b9':'7b9#11','7#11#9':'7#9#11','9-13':'9b13','9-5':'9b5','13+9':'13#9','13-5':'13b5','M7#11':'maj7#11','M9#11':'maj9#11','M13#11':'maj13#11','maj#11':'maj7#11','M11':'maj11','M7b5':'maj7b5','m7+5':'m7#5','add13':'6','ø9':'m9b5','ø11':'m11b5','sus9':'9sus4','sus13':'13sus4','sus7b9':'7sus4b9','7susb9':'7sus4b9','omit3':'5','9+11':'9#11','7-13':'7b13','13-9':'13b9','13+11':'13#11','°maj7':'dimMaj7','omaj7':'dimMaj7','dim(maj7)':'dimMaj7','dimmaj7':'dimMaj7','power':'5','no3':'5','-add11':'madd11',
   /* parenthesised extensions, e.g. Gmaj7(9), Em7(9), D7(13) — parens are stripped before lookup */
   'maj79':'maj9','M79':'maj9','Δ9':'maj9','m79':'m9','-79':'m9','min79':'m9','79':'9','m711':'m11','-711':'m11','m7911':'m11','711':'11','713':'13','7913':'13','maj713':'maj13','maj7913':'maj13','m713':'m13','m7913':'m13','mmaj79':'mMaj9','7sus49':'9sus4','7sus413':'13sus4','7b9b13':'7alt','7#9#5':'7alt','7#9b13':'7alt','maj7add9':'maj9','m7add9':'m9','7add9':'9','6add9':'6/9','m6add9':'m6/9','maj7#5':'maj7#5','m7add11':'m7add11','-7add11':'m7add11','7sus':'7sus4','7add13':'13','713b9':'13b9','7b913':'13b9','7#1113':'13#11','79#11':'9#11','add4':'add11','madd4':'madd11','-add4':'madd11','-add11':'madd11','m-add11':'madd11','minadd11':'madd11','minadd9':'madd9','m-add9':'madd9','sus69':'sus6/9','sus6/9':'sus6/9','69sus':'sus6/9','6/9sus':'sus6/9','69sus2':'sus6/9','6/9sus2':'sus6/9','sus26/9':'sus6/9','6sus2':'sus6/9','sus2add6':'sus6/9','69sus4':'6/9sus4','sus46/9':'6/9sus4','sus469':'6/9sus4','6/9sus4':'6/9sus4','sus46':'6sus4','add9sus4':'sus4add9','sus4add2':'sus4add9','sus24':'sus4add9','sus2sus4':'sus4add9','sus2/4':'sus4add9','Maj7sus2':'maj7sus2','M7sus2':'maj7sus2','Maj7sus4':'maj7sus4','M7sus4':'maj7sus4','maj7sus':'maj7sus4'});
 for(const k in Q) ALIAS[k]=k;
@@ -1395,8 +1426,8 @@ const FAMS=[
   {id:'sus',name:'Sus',ex:'Csus4 C6/9sus',qs:['sus2','sus4','7sus2','sus4add9','6sus4','sus6/9','6/9sus4','maj7sus2','maj7sus4','7sus4','9sus4','13sus4']},
   {id:'add',name:'Add & 6',ex:'Cadd9 C6/9',qs:['add9','madd9','add11','madd11','6','m6','6/9','m6/9']},
   {id:'seventh',name:'7ths',ex:'Cmaj7 Cm7',qs:['maj7','7','m7','m7b5','mMaj7']},
-  {id:'ext',name:'9 · 11 · 13',ex:'Cm9 Cm13',qs:['maj9','9','m9','11','m11','m7add11','maj13','13','m13','mMaj9','maj7#11']},
-  {id:'alt',name:'Altered',ex:'C7♭9 C13♯11',qs:['7b9','7#9','7alt','7b5','7#11','9#11','7b13','13b9','13#11']},
+  {id:'ext',name:'9 · 11 · 13',ex:'Cm9 Cm13',qs:['maj9','9','m9','11','m11','m7add11','maj13','13','m13','mMaj9','maj7#11','maj11','maj9#11','maj13#11','mMaj11','mMaj13']},
+  {id:'alt',name:'Altered',ex:'C7♭9 C13♯11',qs:['7b9','7#9','7alt','7b5','7#11','9#11','7b13','13b9','13#11','maj7b5','m7#5','m9b5','m11b5','7b9#5','7#9#5','7b9b5','7#9b5','7b9#11','7#9#11','9b5','9b13','13#9','13b5','7sus4b9']},
   {id:'symm',name:'Dim & aug',ex:'C°7 C7♯5',qs:['dim7','dimMaj7','7#5','maj7#5','9#5']},
   {id:'slash',name:'Slash',ex:'C/E',qs:[]},
 ];
@@ -1405,7 +1436,7 @@ const PRESETS={Simple:['sus','add'],Color:['sus','add','seventh','symm','slash']
 const famOn=f=>f==='triad'||S.vocab.includes(f);
 const qOn=q=>famOn(Q[q].fam);
 const lvl=()=>famOn('ext')||famOn('alt')?2:famOn('seventh')?1:0;
-const DEGRADE={'7sus2':'sus2','m7add11':'m7','sus6/9':'sus2','6/9sus4':'6sus4','6sus4':'sus4','sus4add9':'sus4','maj7sus2':'sus2','maj7sus4':'sus4','5':'','sus2':'','sus4':'','7sus4':'7','9sus4':'7sus4','13sus4':'9sus4','add9':'','madd9':'m','add11':'add9','madd11':'madd9','6':'','m6':'m','6/9':'6','m6/9':'m6','maj7':'','7':'','m7':'m','m7b5':'dim','mMaj7':'m','maj9':'maj7','9':'7','m9':'m7','11':'9sus4','m11':'m9','maj13':'maj9','13':'9','m13':'m11','mMaj9':'mMaj7','maj7#11':'maj7','7b9':'7','7#9':'7','7alt':'7b9','7b5':'7','7#11':'7','9#11':'9','7b13':'7','13b9':'13','13#11':'13','dim7':'dim','dimMaj7':'dim','7#5':'7','maj7#5':'maj7','9#5':'7#5'};
+const DEGRADE={'7sus2':'sus2','m7add11':'m7','sus6/9':'sus2','6/9sus4':'6sus4','6sus4':'sus4','sus4add9':'sus4','maj7sus2':'sus2','maj7sus4':'sus4','5':'','sus2':'','sus4':'','7sus4':'7','9sus4':'7sus4','13sus4':'9sus4','add9':'','madd9':'m','add11':'add9','madd11':'madd9','6':'','m6':'m','6/9':'6','m6/9':'m6','maj7':'','7':'','m7':'m','m7b5':'dim','mMaj7':'m','maj9':'maj7','9':'7','m9':'m7','11':'9sus4','m11':'m9','maj13':'maj9','13':'9','m13':'m11','mMaj9':'mMaj7','maj7#11':'maj7','7b9':'7','7#9':'7','7alt':'7b9','7b5':'7','7#11':'7','9#11':'9','7b13':'7','13b9':'13','13#11':'13','dim7':'dim','dimMaj7':'dim','7#5':'7','maj7#5':'maj7','9#5':'7#5','maj11':'maj9','maj9#11':'maj9','maj13#11':'maj13','mMaj11':'mMaj9','mMaj13':'mMaj9','maj7b5':'maj7','m7#5':'m7','m9b5':'m7b5','m11b5':'m9b5','7b9#5':'7b9','7#9#5':'7#9','7b9b5':'7b9','7#9b5':'7#9','7b9#11':'7b9','7#9#11':'7#9','9b5':'9','9b13':'9','13#9':'13','13b5':'13','7sus4b9':'7sus4'};
 function fitQ(q){ let g=0; while(!qOn(q)&&g++<8) q=DEGRADE[q]??''; return q; }
 function fitC(c){ if(!real(c)) return c; const q=fitQ(c.q); return {...c,q,bass:famOn('slash')?c.bass:null}; }
 const BORROW_ORDER=['aeolian','dorian','mixolydian','phrygian','lydian','ionian','harmonic','melodic','locrian'];
@@ -1674,7 +1705,7 @@ function chordName0(c,ascii){
 const chordName=localized(chordName0);
 const keyName=()=>prettyNote(tonicName())+' '+MODES[S.mode].short;
 
-const NUMSFX={'':'','m':'','dim':'°','aug':'+','sus2':'sus2','sus4':'sus4','6':'6','m6':'6','add9':'add9','madd9':'add9','maj7':'maj7','7':'7','m7':'7','m7b5':'ø7','dim7':'°7','mMaj7':'(maj7)','7sus4':'7sus4','7#5':'+7','6/9':'6/9','maj9':'maj9','9':'9','m9':'9','m11':'11','13':'13','maj7#11':'maj7♯11','7b9':'7♭9','7#9':'7♯9','7alt':'7alt','m13':'13','maj13':'maj13','mMaj9':'(maj9)','11':'11','9sus4':'9sus4','13sus4':'13sus4','add11':'add11','madd11':'add11','m6/9':'6/9','7b5':'7♭5','7#11':'7♯11','9#11':'9♯11','7b13':'7♭13','13b9':'13♭9','13#11':'13♯11','dimMaj7':'°(maj7)','5':'5','maj7#5':'+maj7','9#5':'+9'};
+const NUMSFX={'maj11':'maj11','maj9#11':'maj9♯11','maj13#11':'maj13♯11','mMaj11':'(maj11)','mMaj13':'(maj13)','maj7b5':'maj7♭5','m7#5':'7♯5','m9b5':'ø9','m11b5':'ø11','7b9#5':'7♭9♯5','7#9#5':'7♯9♯5','7b9b5':'7♭9♭5','7#9b5':'7♯9♭5','7b9#11':'7♭9♯11','7#9#11':'7♯9♯11','9b5':'9♭5','9b13':'9♭13','13#9':'13♯9','13b5':'13♭5','7sus4b9':'7sus4♭9','':'','m':'','dim':'°','aug':'+','sus2':'sus2','sus4':'sus4','6':'6','m6':'6','add9':'add9','madd9':'add9','maj7':'maj7','7':'7','m7':'7','m7b5':'ø7','dim7':'°7','mMaj7':'(maj7)','7sus4':'7sus4','7#5':'+7','6/9':'6/9','maj9':'maj9','9':'9','m9':'9','m11':'11','13':'13','maj7#11':'maj7♯11','7b9':'7♭9','7#9':'7♯9','7alt':'7alt','m13':'13','maj13':'maj13','mMaj9':'(maj9)','11':'11','9sus4':'9sus4','13sus4':'13sus4','add11':'add11','madd11':'add11','m6/9':'6/9','7b5':'7♭5','7#11':'7♯11','9#11':'9♯11','7b13':'7♭13','13b9':'13♭9','13#11':'13♯11','dimMaj7':'°(maj7)','5':'5','maj7#5':'+maj7','9#5':'+9'};
 function numeral0(c,plain){
   if(!real(c)) return '?';
   const map=['I','bII','II','bIII','III','IV',S.mode==='locrian'?'bV':'#IV','V','bVI','VI','bVII','VII'];
@@ -4876,7 +4907,8 @@ function melodySuggest(){
 /* A piano grand staff in MusicXML 4.0, which Finale, Sibelius, MuseScore and Dorico all open: chord symbols over the
    voicings the piano plays (pins included), key and time signatures, tempo, section rehearsal marks with a new line for
    each section, and ties where a chord runs across a bar line. Notes from middle C up go on the treble staff. */
-const MXL_KIND={'':'major',m:'minor',dim:'diminished',aug:'augmented',sus2:'suspended-second',sus4:'suspended-fourth','5':'power',
+const MXL_KIND={'maj11':'major-11th','maj9#11':'major-ninth','maj13#11':'major-13th','mMaj11':'major-minor','mMaj13':'major-minor','maj7b5':'major-seventh','m7#5':'minor-seventh','m9b5':'half-diminished','m11b5':'half-diminished','7b9#5':'augmented-seventh','7#9#5':'augmented-seventh','7b9b5':'dominant','7#9b5':'dominant','7b9#11':'dominant','7#9#11':'dominant','9b5':'dominant-ninth','9b13':'dominant-ninth','13#9':'dominant-13th','13b5':'dominant-13th','7sus4b9':'dominant',
+  '':'major',m:'minor',dim:'diminished',aug:'augmented',sus2:'suspended-second',sus4:'suspended-fourth','5':'power',
   '6':'major-sixth',m6:'minor-sixth','6/9':'major-sixth','m6/9':'minor-sixth',add9:'major',madd9:'minor',add11:'major',madd11:'minor',
   maj7:'major-seventh','7':'dominant',m7:'minor-seventh',m7b5:'half-diminished',dim7:'diminished-seventh',mMaj7:'major-minor',mMaj9:'major-minor',
   '7#5':'augmented-seventh','9#5':'augmented-seventh','maj7#5':'major-seventh',maj9:'major-ninth','9':'dominant-ninth',m9:'minor-ninth',
@@ -5325,7 +5357,18 @@ function initIO(){
 }
 
 /* ============ boot ============ */
+/* install and offline: only on a real site (https or a local server), never in a frame such as the artifact viewer, and the app
+   runs the same if any of this is blocked. A new version takes over quietly and waits for the next reload, so no edit is lost. */
+function registerWorker(){
+  try{ if(!('serviceWorker' in navigator)||window.top!==window) return;
+    if(location.protocol!=='https:'&&!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
+    const had=!!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(had) toast('Updated, reload to use the new version'); });
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }catch(e){}
+}
 function boot(){
+  registerWorker();
   document.title=APP_TITLE; document.querySelectorAll('[data-app-name]').forEach(el=>el.textContent=APP_NAME);
   $('#key').innerHTML=KEYLABEL.map((k,i)=>`<option value="${i}">${k}</option>`).join('');
   $('#mode').innerHTML=MODE_GROUPS.map(([g,ks])=>`<optgroup label="${g}">${ks.map(k=>`<option value="${k}">${MODE_LABEL[k]}</option>`).join('')}</optgroup>`).join('');
@@ -5746,7 +5789,7 @@ function boot(){
        browser's own dblclick can lose its target) */
     const now=Date.now(), dbl=rowsClick.id===b.dataset.id&&now-rowsClick.t<400; rowsClick={id:b.dataset.id,t:now};
     if(dbl){ rowsClick={}; openPicker(b.dataset.id); return; }
-    if(e.target.closest('.lk')){ const c=chords.find(x=>x.id===b.dataset.id); if(c){ pushHist(); delete c.lock; sel=c.id; commit(); toast(`Unlocked ${chordName(c)}`); } return; } sel=b.dataset.id; const c=chords.find(x=>x.id===sel); if(real(c)&&!playing){ if(arrOn()) arrPlayChord(c); else playOne(c); } renderAll(); onb.tap(); };
+    if(e.target.closest('.lk')){ const c=chords.find(x=>x.id===b.dataset.id); if(c){ pushHist(); delete c.lock; sel=c.id; commit(); toast(`Unlocked ${chordName(c)}`); } return; } sel=b.dataset.id; const c=chords.find(x=>x.id===sel); if(real(c)&&!playing){ if(arrOn()) arrPlayChord(c); else playOne(c); } renderAll(); };
   $('#detail').addEventListener('change',e=>{ if(e.target.id==='capoSel'){ S.capo=+e.target.value; commit(); } if(e.target.id==='tuneSel'){ setTuning(e.target.value); commit(); toast(`Guitar shapes now use ${TUNINGS[S.tuning].name}`); } });
   $('#detail').addEventListener('click',e=>{ const el=$('#detail'), t=e.target;
     const bl=t.closest('[data-b]');

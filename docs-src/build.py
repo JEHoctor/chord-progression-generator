@@ -1,4 +1,4 @@
-import re, sys, pathlib
+import hashlib, re, sys, pathlib
 OUT = pathlib.Path(sys.argv[1])
 # the app's name comes from index.html (const APP_NAME), so a rename is one line there; {APP} in the page bodies stands for it
 APP = re.search(r"const APP_NAME='([^']+)'", (OUT / 'index.html').read_text()).group(1)
@@ -83,4 +83,9 @@ page('guide.html', 'How to use {APP}', 'A tour of {APP}: making, editing, hearin
 (pathlib.Path(sys.argv[2]) / 'guide.body.html').read_text())
 page('how-it-works.html', 'How {APP} works', 'The music theory and code behind {APP}: analysis, generation, voice leading, guitar shapes, sound and file formats.', 'how-it-works.html',
 (pathlib.Path(sys.argv[2]) / 'hood.body.html').read_text())
+# the offline copy's version: any change to what it stores makes browsers fetch a fresh copy
+sw = OUT / 'sw.js'
+if sw.exists():
+    h = hashlib.sha256(b''.join((OUT / f).read_bytes() for f in ['index.html', 'guide.html', 'how-it-works.html', 'manifest.webmanifest'])).hexdigest()[:12]
+    sw.write_text(re.sub(r"const VERSION='[^']*';", f"const VERSION='{h}';", sw.read_text()))
 print('built')

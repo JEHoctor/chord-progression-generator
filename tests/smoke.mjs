@@ -12,9 +12,10 @@ const PHASES = process.argv.slice(2).length ? process.argv.slice(2).map(Number) 
 
 // ---------- tiny static server ----------
 const server = http.createServer((req, res) => {
-  const p = path.join(ROOT, decodeURIComponent(req.url.split('?')[0].split('#')[0]));
+  let p = path.join(ROOT, decodeURIComponent(req.url.split('?')[0].split('#')[0]));
+  if (fs.existsSync(p) && fs.statSync(p).isDirectory()) p = path.join(p, 'index.html'); // as GitHub Pages serves a folder
   if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, { 'content-type': p.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/octet-stream' });
+  res.writeHead(200, { 'content-type': p.endsWith('.html') ? 'text/html; charset=utf-8' : p.endsWith('.js') ? 'text/javascript' : p.endsWith('.png') ? 'image/png' : 'application/octet-stream' });
   fs.createReadStream(p).pipe(res);
 });
 await new Promise(r => server.listen(0, '127.0.0.1', r));
@@ -55,7 +56,7 @@ const check = (name, ok, detail = '') => { results.push(`${ok ? 'PASS' : 'FAIL'}
 const browser = await chromium.launch({ args: ['--disable-audio-output'] });
 async function openPage(opts = {}) {
   const { noReveal, firstVisit, ...o } = opts;
-  const ctx = await browser.newContext({ acceptDownloads: true, ...o });
+  const ctx = await browser.newContext({ acceptDownloads: true, serviceWorkers: 'block', ...o });
   /* most checks start from the screens a returning visitor sees; firstVisit opts into a brand-new visitor's first screen */
   if (!opts.firstVisit) await ctx.addInitScript(() => { try { if (!localStorage.getItem('changes-tabs-v1')) localStorage.setItem('changes-tabs-v1', '{}'); } catch (e) {} });
   const page = await ctx.newPage(); page.errors = []; page.setDefaultTimeout(5000);
@@ -1706,6 +1707,59 @@ async function dragSuite() {
 }
 
 async function launchSuite() {
+  // 1.5 extended and altered chord names
+  {
+    const { ctx, page } = await openPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(URL_);
+    const names = '9 11 13 maj9 maj11 maj13 m9 m11 m13 7b9 7#9 7#11 7b13 7alt 7b9#5 7#5b9 7#5#9 7b5b9 7b5#9 7#9#11 7b9#11 9b5 9b13 13#9 13b5 13b9 13#11 maj9#11 maj13#11 maj7#11 maj7b5 m7#5 m9b5 m11b5 mMaj11 mMaj13 9sus4 13sus4 7sus4b9 6/9 add9 add11 add13 m(maj7) dim7 m7b5 ø9'.split(' ');
+    const r = await page.evaluate(names => { S.tonic = 0; S.mode = 'ionian'; S.symStyle = 'standard'; const bad = [], ok = [];
+      for (const q of names) for (const t of ['C' + q, 'F#' + q + '/Bb']) { const c = parseChord(t); if (!c) { bad.push(t + ':parse'); continue; }
+        const c2 = { ...c, id: uid(), beats: 4 }, back = parseChord(chordName(c2).replace(/\s/g, ''));
+        if (!back || back.q !== c.q || back.root !== c.root || (back.bass ?? null) !== (c.bass ?? null)) bad.push(t + ':roundtrip ' + chordName(c2));
+        const a = analyze(c2); if (!a || !a.kind || !a.num) bad.push(t + ':analyze');
+        if (Q[c.q].iv.length < 2) bad.push(t + ':iv'); if (!MXL_KIND[c.q]) bad.push(t + ':xml');
+        if (!(NUMSFX[c.q] != null)) bad.push(t + ':numeral'); if (!Q[c.q].fam) bad.push(t + ':family'); ok.push(c2); }
+      chords = ok; sel = ok[0].id; S.bars = ok.length; commit();
+      let xml = ''; try { xml = buildMusicXML(); } catch (e) { bad.push('xml threw ' + e); }
+      const harm = (xml.match(/<harmony/g) || []).length; return { bad, n: ok.length, harm, cn: document.querySelectorAll('#rows .slot').length, xmlOk: !new DOMParser().parseFromString(xml, 'application/xml').querySelector('parsererror') }; }, names);
+    check('chord names: extended and altered names parse, name back the same, and get a numeral, a family and a MusicXML kind', !r.bad.length, r.bad.slice(0, 12).join(' | '));
+    check('chord names: every one reaches the MusicXML as a chord symbol, in valid XML', r.harm >= r.n && r.xmlOk && r.cn >= r.n, JSON.stringify({ harm: r.harm, n: r.n, xmlOk: r.xmlOk }));
+    const safe = await page.evaluate(async () => { const out = []; for (const id of ['#rows .slot']) { const els = [...document.querySelectorAll(id)].slice(0, 40); for (const e of els) { e.click(); await new Promise(r => setTimeout(r, 8)); } } return out; });
+    check('chord names: selecting each one, with its guitar and piano panels, raises no errors', !page.errors.length, page.errors.slice(0, 3).join(' | '));
+    const limit = await page.evaluate(() => { S.vocab = ['sus', 'add']; const q = fitQ('7b9#5'), q2 = fitQ('maj13#11'); return { q, q2 }; });
+    check('chord names: Chords allowed still limits them (they step down to a plainer chord)', limit.q !== '7b9#5' && limit.q2 !== 'maj13#11', JSON.stringify(limit));
+    await ctx.close();
+  }
+  // 1.2 shared links
+  {
+    const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'), head = src.slice(0, src.indexOf('</title>') + 2000);
+    const need = ['name="description"', 'property="og:title"', 'property="og:description"', 'property="og:type"', 'property="og:url"', 'property="og:image"', 'name="twitter:card"', 'name="theme-color"', 'rel="icon"', 'rel="manifest"'];
+    check('share tags: description, Open Graph, Twitter card, theme colour, icon and manifest are all in the head', need.every(t => head.includes(t)), need.filter(t => !head.includes(t)).join());
+    const img = head.match(/og:image" content="https:\/\/[^/]+\/[^/]+\/([^"]+)"/)[1], r = await fetch(new URL(img, URL_));
+    check('share tags: the preview image is served, 1200x630', r.status === 200 && (b => b.readUInt32BE(16) === 1200 && b.readUInt32BE(20) === 630)(Buffer.from(await r.arrayBuffer())), img);
+  }
+  // 1.3 install and offline
+  {
+    const man = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.webmanifest'), 'utf8')), name = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').match(/APP_NAME='([^']+)'/)[1];
+    check('install: the manifest takes its name from the app, and all its icons exist', man.short_name === name && man.name === name + ' Workbench' && man.icons.every(i => fs.existsSync(path.join(ROOT, i.src))) && man.icons.some(i => i.purpose === 'maskable'));
+    const hash = (await import('node:crypto')).createHash('sha256'); for (const f of ['index.html', 'guide.html', 'how-it-works.html', 'manifest.webmanifest']) hash.update(fs.readFileSync(path.join(ROOT, f)));
+    check('offline: sw.js carries the current version (run docs-src/build.py after changing the app)', fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8').includes(`VERSION='${hash.digest('hex').slice(0, 12)}'`));
+    const { ctx, page } = await openPage({ viewport: { width: 1280, height: 800 }, serviceWorkers: 'allow' });
+    await page.goto(URL_);
+    await page.evaluate(() => Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(() => no(new Error('service worker never became ready')), 8000))]));
+    await page.reload(); await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+    await ctx.setOffline(true); await page.reload(); await page.waitForSelector('#rows .slot');
+    await page.click('#play'); await page.waitForTimeout(300);
+    const on = await page.evaluate(() => ({ slots: document.querySelectorAll('#rows .slot').length, playing: !!document.querySelector('.slot.playing') }));
+    check('offline: the app loads and plays with no network', on.slots > 0 && on.playing && !page.errors.length, JSON.stringify({ ...on, e: page.errors }));
+    await page.click('#play');
+    const guide = await ctx.newPage(); const g = await guide.goto(URL_.replace('index.html', 'guide.html')).catch(() => null);
+    check('offline: the help pages are there too', !!g && g.ok()); await ctx.close();
+    const { ctx: c2, page: p2 } = await openPage({ viewport: { width: 1280, height: 800 } });
+    await p2.addInitScript(() => { Object.defineProperty(Navigator.prototype, 'serviceWorker', { get: () => undefined }); });
+    await p2.goto(URL_); await p2.waitForSelector('#rows .slot');
+    check('offline: with no service worker available the app loads with no errors', !p2.errors.length, p2.errors.join()); await c2.close();
+  }
   // 1.1 phones open on the chart
   for (const [w, h] of [[360, 640], [320, 640], [390, 844]]) {
     const { ctx, page } = await openPage({ viewport: { width: w, height: h }, noReveal: true });
@@ -1763,9 +1817,9 @@ async function appName() {
   const got = await page.evaluate(() => ({ title: document.title, h1: document.querySelector('.brand h1').textContent, about: document.querySelector('#aboutRepo b').textContent, midi: APP_NAME, slug: APP_SLUG, xml: /<software>[^<]*<\/software>/.exec(buildMusicXML())?.[0] }));
   check('name: one constant names the page, header, About link and MusicXML', !!name && got.title === name + ' Workbench' && got.h1 === name && got.about === name + ' on GitHub' && got.xml === `<software>${name} Workbench</software>` && got.slug === name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), JSON.stringify(got));
   /* the text in the HTML before the script runs must match too, or a rename would flash the old name */
-  const fallback = [src.match(/<title>([^<]*)<\/title>/)[1], src.match(/<h1 data-app-name>([^<]*)</)[1], ...[...src.matchAll(/<span data-app-name>([^<]*)</g)].map(m => m[1])];
+  const fallback = [src.match(/<title>([^<]*)<\/title>/)[1], src.match(/<meta property="og:title" content="([^"]*)"/)[1], src.match(/<h1 data-app-name>([^<]*)</)[1], ...[...src.matchAll(/<span data-app-name>([^<]*)</g)].map(m => m[1])];
   const stray = (src.match(new RegExp(name, 'g')) || []).length - 1 - fallback.length;
-  check('name: the HTML fallbacks match the constant, and the name is written nowhere else', fallback[0] === name + ' Workbench' && fallback.slice(1).every(f => f === name) && stray === 0, JSON.stringify({ fallback, stray }));
+  check('name: the HTML fallbacks match the constant, and the name is written nowhere else', fallback[0] === name + ' Workbench' && fallback[1] === name + ' Workbench' && fallback.slice(2).every(f => f === name) && stray === 0, JSON.stringify({ fallback, stray }));
   const midiNames = await page.evaluate(() => { const b = buildMidi(false); const out = []; for (let i = 14; i < b.length - 3; i++) if (b[i] === 0xFF && b[i + 1] === 0x03) { out.push(new TextDecoder().decode(b.slice(i + 3, i + 3 + b[i + 2]))); break; } return out; });
   check('name: the MIDI file\'s first track carries the name', midiNames[0] === name, midiNames.join());
   for (const f of ['guide.html', 'how-it-works.html']) { const h = fs.readFileSync(path.join(ROOT, f), 'utf8'); check(`name: ${f} is built with the name and has no {APP} left`, h.includes(`<a class="name" href="./">${name}</a>`) && !h.includes('{APP}')); }

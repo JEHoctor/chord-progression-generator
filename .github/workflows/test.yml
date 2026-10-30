@@ -25,11 +25,11 @@ jobs:
         with:
           python-version: '3.12'
 
-      # the help pages are built from docs-src; a stale guide.html or how-it-works.html fails here
+      # the help pages are built from docs-src; a stale guide.html, how-it-works.html or sw.js version fails here
       - name: Help pages match their sources
         run: |
           python3 docs-src/build.py . docs-src
-          git diff --exit-code -- guide.html how-it-works.html
+          git diff --exit-code -- guide.html how-it-works.html sw.js
 
       - name: Install test dependencies
         working-directory: tests
