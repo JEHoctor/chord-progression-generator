@@ -1705,6 +1705,28 @@ async function dragSuite() {
   await ctx.close();
 }
 
+async function launchSuite() {
+  // 1.1 phones open on the chart
+  for (const [w, h] of [[360, 640], [320, 640], [390, 844]]) {
+    const { ctx, page } = await openPage({ viewport: { width: w, height: h }, noReveal: true });
+    await page.goto(URL_); await page.waitForTimeout(200);
+    const r = await page.evaluate(() => { const a = document.querySelector('#rows .slot').getBoundingClientRect(), d = document.querySelector('#dock').getBoundingClientRect(); return { top: a.top, bottom: a.bottom, dock: d.top, over: document.documentElement.scrollWidth - innerWidth }; });
+    check(`phone first screen (${w}x${h}): the first chord is fully above the Play bar, with no sideways scroll`, r.top >= 0 && r.bottom <= r.dock && r.over <= 0, JSON.stringify(r));
+    if (w === 360) {
+      const shut = await page.evaluate(() => !document.querySelector('#searchBtn').checkVisibility() && !document.querySelector('#library').checkVisibility());
+      await page.click('#moreBtn');
+      const open = await page.evaluate(() => ['#searchBtn', '#textSize', '#simpleToggle', '#library', '#helpMenu'].every(s => document.querySelector(s).checkVisibility()) && document.querySelector('#moreBtn').getAttribute('aria-expanded') === 'true');
+      check('phone first screen: Search, Text, Simple view, Library and Help fold behind More', shut && open);
+      const order = await page.evaluate(() => { const y = s => document.querySelector(s).getBoundingClientRect().top; return y('#rows') < y('#formBar') && y('#rows') < y('#exampleNote'); });
+      check('phone first screen: Song form and the example note come after the chords', order);
+      await page.evaluate(() => { document.querySelector('#formBar [data-fa="hidehint"]').click(); });
+      await page.reload();
+      check('Song form explainer: Got it dismisses it for good', await page.evaluate(() => !document.querySelector('.form-hint')));
+    }
+    await ctx.close();
+  }
+}
+
 async function searchSuite() {
   const { ctx, page } = await openPage({ viewport: { width: 1400, height: 900 } });
   await page.goto(URL_);
@@ -1811,6 +1833,7 @@ async function menus() {
   for (const [w, h, tag] of [[1440, 900, 'desktop'], [1280, 720, 'small laptop'], [900, 900, 'tablet'], [390, 844, 'phone']]) {
     const { ctx, page } = await openPage({ viewport: { width: w, height: h }, noReveal: true });
     await page.goto(URL_);
+    if (w < 760) await page.click('#moreBtn');
     for (const [id, inner] of [['library', '#libName'], ['helpMenu', '.helppop a']]) {
       await page.click(`#${id} > summary`);
       const r = await page.evaluate(s => { const e = document.querySelector(s), pop = e.closest('.libpop'), b = pop.getBoundingClientRect(), r = e.getBoundingClientRect(), hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
@@ -2023,6 +2046,7 @@ try {
   await keyCentresSuite();
   await searchSuite();
   await dragSuite();
+  await launchSuite();
   await menus();
   await layout();
   await hardening();

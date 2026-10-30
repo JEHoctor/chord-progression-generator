@@ -538,6 +538,22 @@ body.focus .app{margin-left:0;grid-template-columns:minmax(0,1fr);border-top-lef
 body.focus .dock{left:0}
 .focus-btn[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 @media (max-width:759px){ .focus-btn{display:none!important} }
+/* phones open on the chart: the app's menus fold behind More, and everything under the chords waits below them */
+.more-btn{display:none}
+@media (max-width:759px){
+  .more-btn{display:inline-flex;margin-left:auto;height:calc(36px*var(--fs,1));padding:0 14px}
+  .topbar .top-actions{display:none;flex:1 1 100%;margin:0}
+  body.more-open .topbar .top-actions{display:flex}
+  .chart-card{display:flex;flex-direction:column}
+  .chart-card>*{order:5}
+  .chart-card>.chart-head,.chart-card>#err,.chart-card>#arrBar{order:1}
+  .chart-card>#rows{order:2}
+  .chart-card>#exampleNote{order:3}
+  .chart-card>#tension,.chart-card>#formBar{order:4}
+  .chart-head{row-gap:6px}
+  #chartTitle{font-size:calc(26px*var(--fs,1));display:inline;margin-right:8px}
+  .chart-head>div:first-child{display:flex;align-items:baseline;flex-wrap:wrap}
+}
 /* tablet: the rail becomes a top bar; the side panel narrows */
 @media (max-width:1199px){
   .top-actions{flex-wrap:wrap;justify-content:flex-end}
@@ -1079,7 +1095,8 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
       <p>Write, generate or harmonize a progression, and every swap idea explains why it works, down to how each voice moves; then export MIDI or notation, share a link, or print a lead sheet.</p>
     </div>
     <div class="tabs phonetabs" id="phoneTabs" role="tablist" aria-label="Screens" data-tabs="phone"><button type="button" role="tab" id="tab-p-create" aria-controls="sideLeft" data-tab="p-create">Create<small>Your chords, or new ones</small></button><button type="button" role="tab" id="tab-p-chart" aria-controls="center" data-tab="p-chart">Chart<small>Your progression</small></button><button type="button" role="tab" id="tab-p-chord" aria-controls="sideRight" data-tab="p-chord">Chord<small>Shapes and swap ideas</small></button><button type="button" role="tab" id="tab-p-tools" aria-controls="tools" data-tab="p-tools">Tools<small>Chord finder, keys and modes</small></button></div>
-    <nav class="top-actions" aria-label="App">
+    <button type="button" class="btn small more-btn" id="moreBtn" aria-expanded="false" aria-controls="topActions">More</button>
+    <nav class="top-actions" id="topActions" aria-label="App">
       <button type="button" class="btn small search-btn" id="searchBtn" title="Search for any setting or action" aria-haspopup="dialog"><svg class="ic" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>Search <kbd id="searchKey">⌘K</kbd></button>
       <button type="button" class="btn small textsize" id="textSize" title="Make the text and buttons bigger"><span class="ts-a" aria-hidden="true">A<b>A</b></span> <span id="textSizeLabel">Text: Normal</span></button>
       <button type="button" class="btn small simple-toggle" id="simpleToggle" aria-pressed="false" title="Simple view: plain chords, what each one does, and what could come next">Simple view</button>
@@ -3130,6 +3147,7 @@ function markSection(name){
   pushHist(); chords[i].sec=name; if(i>0) chords[i].br=true; syncedTop=hist[hist.length-1]; commit(); toast(`Bar ${st[i]/L+1} now starts “${name}”`);
 }
 let formEdit=null; /* {k} while a chip's actions are open, {mark:true} while naming */
+const formHintGone=()=>{ try{ return localStorage.getItem('changes-formhint-v1')==='1'; }catch(e){ return false; } };
 function renderFormBar(){
   const el=$('#formBar'); if(!chords.length){ el.hidden=true; return; }
   const secs=formInfo(), L=barLen(), named=secs.some(s=>s.name), cur=chords.findIndex(c=>c.id===sel), curK=secs.findIndex(s=>cur>=s.i0&&cur<s.i1);
@@ -3147,7 +3165,7 @@ function renderFormBar(){
   el.innerHTML=`<div class="form-head"><span class="label">Song form</span><div class="fchips" role="group" aria-label="Sections in order">${secs.map(chip).join('')}</div>
     <button type="button" class="btn small" data-fa="mark" aria-expanded="${!!(formEdit&&formEdit.mark)}">+ Name a section</button>
     <span class="form-toggles"><label class="check"><input type="checkbox" id="foldForm" ${S.foldForm?'checked':''}> Fold repeats</label><label class="check" title="Changing a chord in one Chorus changes every Chorus that matched it"><input type="checkbox" id="linkForm" ${S.linkForm?'checked':''}> Link repeats</label></span></div>
-    ${acts}${!named&&!formEdit?'<p class="hint form-hint">Name the sections (Verse, Chorus…) to see the song’s form here. Repeats then fold to one line, and changing one Chorus changes them all.</p>':''}`;
+    ${acts}${!named&&!formEdit&&!formHintGone()?'<p class="hint form-hint">Name the sections (Verse, Chorus…) to see the song’s form here. Repeats then fold to one line, and changing one Chorus changes them all. <button type="button" class="linkbtn" data-fa="hidehint">Got it</button></p>':''}`;
 }
 /* ============ melody lane ============ */
 /* One cell per beat under the chords. A note is coloured by what it is against the chord above it: a chord tone (solid),
@@ -4427,8 +4445,10 @@ function screenFromHash(){ const h=location.hash.slice(1).toLowerCase(); return 
 function fitScreen(){ const cur=document.body.dataset.ptab; if(wideLayout()&&cur==='p-chart') selectTab('phone','p-chord'); }
 function setDrawer(open){ document.body.classList.toggle('drawer-open',open); $('#createToggle').setAttribute('aria-expanded',String(open)); if(open) $('#sideLeft').querySelector('[role=tab][aria-selected=true]')?.focus(); }
 /* makes a control visible wherever it lives: its tab, the Create drawer, the Library popover or the phone screen */
+function setMore(on){ document.body.classList.toggle('more-open',on); $('#moreBtn').setAttribute('aria-expanded',on); }
 function revealEl(el){
   if(!el) return;
+  if(el.closest('.top-actions')) setMore(true);
   /* something in a hidden menu or panel was asked for: bring them back */
   if(S.focus&&el.closest('.pane,.topbar')) setFocus(false);
   /* open enclosing <details>, except the one whose own summary is being clicked (that click toggles it) */
@@ -5485,6 +5505,7 @@ function boot(){
     const x=el._shown[+b.dataset.k]; if(!x) return; const idx=chords.findIndex(c=>c.id===x.id); if(idx<0) return;
     if(b.dataset.idea==='use'){ const was=chordName(chords[idx]); replaceAt(idx,x.it.chords); toast(`Swapped ${was} for ${x.it.chords.map(c=>chordName(c)).join(' → ')}`); return; }
     audition(contextSeq(idx,x.it.chords)); };
+  $('#moreBtn').onclick=()=>setMore(!document.body.classList.contains('more-open'));
   $('#addslot').onclick=()=>{ pushHist(); const c={id:uid(),root:null,q:'',bass:null,beats:barLen()}; chords.push(c); sel=c.id; commit(); };
   /* drag a chord to move it, Option/Alt-drop to copy it; the text box is rewritten from the new order. Touch needs a short press
      first so a swipe across the chart still scrolls the page. Line breaks and section labels stay with the chords around them.
@@ -5582,6 +5603,7 @@ function boot(){
       document.querySelector(`#formBar [data-fk="${k}"]`)?.focus(); return; }
     if(m){ formEdit=null; markSection(m.dataset.fm); return; }
     if(!a) return; const w=a.dataset.fa, k=formEdit?.k, s=k!=null?secs[k]:null;
+    if(w==='hidehint'){ try{ localStorage.setItem('changes-formhint-v1','1'); }catch(e){} a.closest('.form-hint').remove(); return; }
     if(w==='mark'){ formEdit=formEdit&&formEdit.mark?null:{mark:true}; renderFormBar(); $('#formBar [data-fn="mark"]')?.focus(); return; }
     if(w==='markname'){ const v=$('#formBar [data-fn="mark"]').value; formEdit=null; markSection(v); return; }
     if(!s) return;
