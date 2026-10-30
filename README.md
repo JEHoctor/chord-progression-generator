@@ -51,4 +51,4 @@ CI runs the same suite on every push and pull request, except the iPhone audio c
 
 ## Licence
 
-No licence has been chosen yet. Until one is added, all rights are reserved.
+All rights reserved. See [LICENSE](LICENSE).

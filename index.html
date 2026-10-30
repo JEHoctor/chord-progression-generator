@@ -549,6 +549,14 @@ body.focus .app{margin-left:0;grid-template-columns:minmax(0,1fr);border-top-lef
 body.focus .dock{left:0}
 .focus-btn[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 @media (max-width:759px){ .focus-btn{display:none!important} }
+/* every tap target on a phone is at least 32px tall. Links inside sentences grow by padding that a matching negative margin
+   takes back, so the lines of text stay where they were; a checkbox's label is its target. */
+@media (max-width:759px){
+  button.linkbtn{padding-block:7px;margin-block:-7px}
+  label.check{min-height:32px}
+  .check input{width:18px;height:18px}
+  #finder select,#finder button{min-height:32px}
+}
 /* phones open on the chart: the app's menus fold behind More, and everything under the chords waits below them */
 .more-btn{display:none}
 @media (max-width:759px){
@@ -1128,7 +1136,7 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
       </details>
       <details class="libmenu helpmenu" id="helpMenu">
         <summary class="btn">Help</summary>
-        <div class="libpop helppop"><a href="guide.html"><b>How to use it</b><small>A tour of every part of the app</small></a><a href="how-it-works.html"><b>How it works under the hood</b><small>The music theory and code behind it</small></a><button type="button" data-help="sound"><b>Sound check</b><small>No sound? Test what this device can play</small></button><div class="help-about" role="group" aria-label="About"><span class="label">About</span><a href="https://github.com/ssk0011/chord-progression-generator" target="_blank" rel="noopener" id="aboutRepo"><b><span data-app-name>Chord Changes</span> on GitHub</b><small>Source code, issues and updates</small></a><a href="https://github.com/ssk0011" target="_blank" rel="noopener"><b>Made by ssk0011</b><small>github.com/ssk0011</small></a></div></div>
+        <div class="libpop helppop"><a href="guide.html"><b>How to use it</b><small>A tour of every part of the app</small></a><a href="how-it-works.html"><b>How it works under the hood</b><small>The music theory and code behind it</small></a><button type="button" data-help="sound"><b>Sound check</b><small>No sound? Test what this device can play</small></button><div class="help-about" role="group" aria-label="About"><span class="label">About</span><a href="https://github.com/ssk0011/chord-progression-generator" target="_blank" rel="noopener" id="aboutRepo"><b><span data-app-name>Chord Changes</span> on GitHub</b><small>Source code, issues and updates</small></a><a href="https://github.com/ssk0011" target="_blank" rel="noopener"><b>Made by ssk0011</b><small>github.com/ssk0011</small></a><a href="https://github.com/ssk0011/chord-progression-generator/blob/main/LICENSE" target="_blank" rel="noopener"><b>Licence</b><small>All rights reserved</small></a></div></div>
       </details>
     </nav>
   </header>
@@ -1320,6 +1328,8 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
 <script>
 /* the app's name, in one place: the page title, header, MIDI, MusicXML, messages, file names and the help pages (docs-src/build.py reads it from here).
    Saved-data keys (changes-v1, …) deliberately don't follow it, so a rename keeps everyone's work. */
+/* links shown in Help > About when set, as https:// addresses; left empty, nothing appears */
+const SUPPORT_URL='', FEEDBACK_URL='';
 const APP_NAME='Chord Changes', APP_TITLE=APP_NAME+' Workbench', APP_SLUG=APP_NAME.toLowerCase().replace(/[^a-z0-9]+/g,'-');
 /* ============ theory core ============ */
 const Q={
@@ -5367,8 +5377,12 @@ function registerWorker(){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }catch(e){}
 }
+function aboutLinks(){
+  const box=$('.help-about'); [[FEEDBACK_URL,'Send feedback','Tell us what to fix or add'],[SUPPORT_URL,'Support this project','Help keep it free']].forEach(([u,t,sub])=>{ if(!/^https:\/\//.test(u)) return;
+    const a=document.createElement('a'); a.href=u; a.target='_blank'; a.rel='noopener noreferrer'; a.innerHTML=`<b>${esc(t)}</b><small>${esc(sub)}</small>`; box.appendChild(a); });
+}
 function boot(){
-  registerWorker();
+  registerWorker(); aboutLinks();
   document.title=APP_TITLE; document.querySelectorAll('[data-app-name]').forEach(el=>el.textContent=APP_NAME);
   $('#key').innerHTML=KEYLABEL.map((k,i)=>`<option value="${i}">${k}</option>`).join('');
   $('#mode').innerHTML=MODE_GROUPS.map(([g,ks])=>`<optgroup label="${g}">${ks.map(k=>`<option value="${k}">${MODE_LABEL[k]}</option>`).join('')}</optgroup>`).join('');

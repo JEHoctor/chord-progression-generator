@@ -678,7 +678,7 @@ async function notation() {
   await page.reload();
   check('notation: the choices are remembered', await page.evaluate(() => S.sym === 'jazz' && S.labels === 'names' && document.querySelector('#symStyle').value === 'jazz' && document.querySelector('#labelMode').value === 'names'));
   const about = await page.evaluate(() => [...document.querySelectorAll('#helpMenu .help-about a')].map(a => a.href + (a.target === '_blank' ? ' new tab' : '')));
-  check('help: About links to the project and its author on GitHub', about.join() === 'https://github.com/ssk0011/chord-progression-generator new tab,https://github.com/ssk0011 new tab', about.join());
+  check('help: About links to the project, its author and the licence on GitHub', about.join() === 'https://github.com/ssk0011/chord-progression-generator new tab,https://github.com/ssk0011 new tab,https://github.com/ssk0011/chord-progression-generator/blob/main/LICENSE new tab', about.join());
   check('no console errors (notation)', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 }
@@ -1707,6 +1707,38 @@ async function dragSuite() {
 }
 
 async function launchSuite() {
+  // 1.6 tap targets
+  {
+    const { ctx, page } = await openPage({ viewport: { width: 360, height: 740 }, hasTouch: true, isMobile: true, noReveal: true });
+    await page.goto(URL_); const small = [];
+    await page.click('#moreBtn');
+    for (const t of ['p-create', 'p-chart', 'p-chord', 'p-tools']) { await page.click('#tab-' + t); await page.waitForTimeout(100);
+      small.push(...await page.evaluate(() => [...document.querySelectorAll('button,a,summary,select,input,label.check')].filter(e => e.checkVisibility() && !(e.matches('input[type=checkbox]') && e.closest('label'))).map(e => [e, e.getBoundingClientRect()]).filter(([, r]) => r.width > 0 && r.height < 32).map(([e, r]) => (e.id || e.className || e.tagName) + ':' + Math.round(r.height)))); }
+    check('tap targets: nothing on any phone screen is under 32px tall', !small.length, [...new Set(small)].join(' '));
+    await ctx.close();
+  }
+  // 1.7 support and feedback links, off until set
+  {
+    const { ctx, page } = await openPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(URL_);
+    const extra = sel => page.evaluate(s => [...document.querySelectorAll(s)].map(a => a.textContent), sel);
+    check('About: with no addresses set, no support or feedback links appear', !(await extra('.help-about a')).some(t => /Support|feedback/.test(t)));
+    await page.route('**/index.html', async r => { const res = await r.fetch(); await r.fulfill({ response: res, body: (await res.text()).replace("SUPPORT_URL='', FEEDBACK_URL=''", "SUPPORT_URL='https://example.test/s', FEEDBACK_URL='https://example.test/f'") }); });
+    const off = []; page.on('request', q => { if (q.url().includes('example.test')) off.push(q.url()); });
+    await page.reload(); await page.waitForSelector('#rows .slot');
+    const links = await page.evaluate(() => [...document.querySelectorAll('.help-about a')].filter(a => /example\.test/.test(a.href)).map(a => [a.textContent, a.target, a.rel].join('|')));
+    check('About: set addresses show as safe new-tab links, and the app itself requests nothing from them', links.length === 2 && links.every(l => /Support|feedback/.test(l) && l.includes('_blank|noopener noreferrer')) && !off.length, links.join(' / '));
+    await ctx.close();
+  }
+  // 1.5 MIDI for the newer names
+  {
+    const { ctx, page } = await openPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(URL_);
+    const bytes = await page.evaluate(() => { chords = parseProg('C7b9#5 | Fmaj13#11 | Dm11b5 | G7sus4b9').chords; commit(); return Array.from(buildMidi(false)); });
+    const ons = parseMidi(Uint8Array.from(bytes)).tracks.flat().filter(e => e.st === 0x90 && e.d[1] > 0).length;
+    check('chord names: altered chords export to MIDI with all their voices', ons >= 12, String(ons));
+    await ctx.close();
+  }
   // 1.5 extended and altered chord names
   {
     const { ctx, page } = await openPage({ viewport: { width: 1280, height: 800 } });
