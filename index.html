@@ -148,6 +148,15 @@ header.top{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding-top
 .slot.drop-after{box-shadow:inset 3px 0 0 var(--k,transparent),5px 0 0 -1px var(--accent)}
 .slot.ghost{position:fixed;left:0;top:0;margin:0;z-index:50;pointer-events:none;opacity:.95;box-shadow:inset 3px 0 0 var(--k,transparent),0 0 0 2px var(--accent),0 18px 36px -12px rgb(0 0 0 / .45)}
 .slot.ghost.copy::after{content:"+";position:absolute;top:5px;right:8px;font-weight:700;color:var(--accent)}
+.slot.ghost.nodrop{opacity:.55}
+.slot.drop-on{outline:3px dashed var(--accent);outline-offset:3px}
+/* section drag: a floating name tag, and a line where it will land */
+.sec-ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;padding:4px 12px;border-radius:10px;background:var(--ink);color:var(--bg);font:700 calc(13px*var(--fs,1))/1.2 var(--f-ui);box-shadow:0 12px 28px -10px rgb(0 0 0 / .45)}
+.sec-ghost.copy::after{content:" +"}
+.sec-ghost.nodrop{opacity:.5}
+.sec-drop{position:fixed;z-index:49;pointer-events:none;background:var(--spike,var(--accent));border-radius:2px;box-shadow:0 0 0 1px var(--bg)}
+#formBar .fchip,.sec-label[data-sec]{touch-action:pan-x pan-y}
+.sec-label[data-sec]{cursor:grab}
 body.dragging-chord,body.dragging-chord *{cursor:grabbing!important;user-select:none}
 .prog-input textarea{transition:background .5s}
 .prog-input textarea.flash{background:var(--accent-soft);transition:none}
@@ -985,6 +994,7 @@ select.btn{border-radius:var(--r-pill)}
 .chart-card.show-tools .transport{display:flex;flex:1 1 100%;padding:12px 14px;background:var(--sunk);border-radius:var(--r-inset)}
 .slot.drop-before{box-shadow:-6px 0 0 -2px var(--ink)}
 .slot.drop-after{box-shadow:6px 0 0 -2px var(--ink)}
+.slot.drop-on{outline-color:var(--ink)}
 .slot.ghost{box-shadow:0 0 0 3px var(--ink),0 18px 36px -12px rgb(0 0 0 / .45)}
 .slot .lk{color:#141414}
 .slot.locked{border:0}
@@ -1210,7 +1220,7 @@ body.dock-compact .dock #play.play-big{height:calc(38px*var(--fs,1));font-size:c
       <div class="pbtns"><button class="btn" id="load" type="button" title="Ctrl/⌘ + Enter">Load</button>
       <button class="btn" id="addslot" type="button">+ Empty bar</button></div>
     </div>
-    <div class="hint">Write it like a chart: one line per phrase, <span class="mono">|</span> between bars, chords sharing a bar split it. Start a line with <span class="mono">[Verse]</span> or <span class="mono">Chorus:</span> to label a section. Add <span class="mono">:2</span> for an exact beat count, <span class="mono">?</span> for a slot you want ideas for. <span class="mono">Ctrl/⌘ + Enter</span> loads. Drag chords in the chart below to reorder them (hold Option/Alt as you drop to copy instead), or drag a chord’s right edge to change its length (hold Shift to trade beats with the next chord); the text updates to match.</div>
+    <div class="hint">Write it like a chart: one line per phrase, <span class="mono">|</span> between bars, chords sharing a bar split it. Start a line with <span class="mono">[Verse]</span> or <span class="mono">Chorus:</span> to label a section. Add <span class="mono">:2</span> for an exact beat count, <span class="mono">?</span> for a slot you want ideas for. <span class="mono">Ctrl/⌘ + Enter</span> loads. Drag chords in the chart below to reorder them (hold Option/Alt to copy instead: dropped on a chord or blank, the copy fills it), drag a section’s name or its Song form chip to move the whole section, or drag a chord’s right edge to change its length (hold Shift to trade beats with the next chord); the text updates to match.</div>
     </details>
     <div class="io-row" role="group" aria-label="Playback extras">
       <button class="btn small" id="soundCheck" type="button" title="Test what your device can play">Sound check</button>
@@ -1977,7 +1987,10 @@ function suggestions(idx){
   const C=chords[idx], n=chords.length, L=lvl();
   const P=n>1?chords[(idx-1+n)%n]:null, N=n>1?chords[(idx+1)%n]:null;
   const p=real(P)?P:null, nx=real(N)?N:null, hasC=real(C);
+  /* the last slot's "next" chord is bar 1, reached only when the chart loops, so it counts for less than the chord before */
+  const wrap=n>1&&idx===n-1, nw=wrap?.4:1;
   const sc=scaleSet(), seen=new Set([hasC?ckey(C):'?']), groups=[];
+  if(!hasC&&real(P)) seen.add(ckey(P)); /* an empty slot isn't offered the chord it follows */
   const tagOf=c=>{ const a=analyze(c); return a.kind; };
   const mk=(id,title,blurb)=>{ const g={id,title,blurb,items:[]}; groups.push(g); return g; };
   const add=(g,chs,why,extra={})=>{ if(!famOn('slash')&&chs.some(c=>c.bass!=null)) return; chs=chs.map(fitC); if(chs.length>1&&chs.every(c=>ckey(c)===ckey(chs[0]))) return; const k=chs.map(ckey).join(' '); if(seen.has(k)) return; seen.add(k); g.items.push({chords:chs,why,tag:extra.tag||tagOf(chs[0]),split:chs.length>1,outside:extra.outside}); };
@@ -1985,18 +1998,43 @@ function suggestions(idx){
   const sizes=L===2?[4,5]:[sizeFor(L)];
   const dias=sizes.flatMap(sz=>[0,1,2,3,4,5,6].map(d=>diatonic(S.mode,d,sz))).filter(Boolean);
 
+  // after the chord before: where it wants to go, for an empty slot. The last slot leads with these; mid-chart the key's chords,
+  // ranked against both neighbours, come first
+  const afterIdeas=()=>{ if(hasC||!p) return;
+    const pn=chordName(p), g0=mk('after',`After ${pn}`,`Where ${pn} wants to go next.`);
+    const keyChord=(root,q)=>dias.find(c=>c.root===mod(root))||{root:mod(root),q,bass:null};
+    const Vq=L===0?'':L===2?'9':'7', pq=Q[p.q];
+    if(pq.dom){
+      const res=keyChord(p.root+5,L===0?'':'maj7'), rn=chordName(res), lt=prettyNote(spell(mod(p.root+4)));
+      add(g0,[res],`Resolves ${pn}: down a 5th, the landing it is asking for.`);
+      [2,1].map(d=>mod(p.root+d)).filter(r=>sc.has(r)).forEach(r=>{ const x=keyChord(r,'');
+        add(g0,[x],`Deceptive resolution: ${pn}’s leading note ${lt} still rises a half step, but the bass steps up to ${chordName(x)} instead of ${rn}.`); });
+      add(g0,[{root:res.root,q:Vq,bass:null}],`Keeps the chain going: ${chordName(fitC({root:res.root,q:Vq}))} is a dominant too, so the pull carries on another 5th.`,{tag:'sec'});
+      const alt={root:res.root,q:isMinor(res)?(L===0?'':'maj7'):(L===0?'m':'m7'),bass:null};
+      add(g0,[alt],`Lands on the same root as ${rn}, but ${isMinor(res)?'major, for a brighter arrival':'minor, for a darker one'}.`);
+    } else if(pq.tri==='dim'){
+      const x=keyChord(p.root+1,''); add(g0,[x],`Resolves ${pn} up a half step, where a diminished chord wants to go.`);
+    } else {
+      [[5,'a 5th below',': the strongest root move'],[2,'a step above',', so the bass climbs'],[9,'a 3rd below',' and keeps two of its notes'],[7,'a 5th above',''],[10,'a step below',', so the bass falls']]
+        .filter(([d])=>sc.has(mod(p.root+d))&&(wrap||!nx||mod(p.root+d)!==nx.root)).slice(0,3).forEach(([d,t,more])=>{ const x=fitC(keyChord(p.root+d,'')); add(g0,[x],`${chordName(x)} is ${t} ${pn}${more}.`); });
+    }
+  };
+  if(wrap) afterIdeas();
+
   // 1 diatonic
   const g1=mk('dia',hasC?'Same job, different chord':'Chords from the key that fit here',hasC?'Diatonic chords that share notes with it, so the melody usually still works.':'Ranked by how smoothly they connect the chords on either side.');
   const sc1=dias.map(c=>{
-    let s=0; if(hasC){ if(c.root===C.root) return null; s=shared(c,C).length*2; } else { if(p) s+=shared(c,p).length*.6; }
-    const mo=motion(c,nx); s+=mo.s; if(nx) s+=shared(c,nx).length*.4; return {c,s,mo};
+    let s=0, mp={s:0,t:''}; if(hasC){ if(c.root===C.root) return null; s=shared(c,C).length*2; } else if(p){ s+=shared(c,p).length*.6; mp=motion(p,c); s+=mp.s*1.2; }
+    const mo=motion(c,nx); s+=mo.s*nw; if(nx) s+=shared(c,nx).length*.4*nw; return {c,s,mo,mp};
   }).filter(x=>x&&(!hasC||shared(x.c,C).length>=1)).sort((a,b)=>b.s-a.s)
     /* an empty slot lists every chord of the key, best first, one per scale degree, so none is cut for ranking last */
     .filter((x,i,arr)=>hasC||arr.findIndex(y=>y.c.root===x.c.root)===i).slice(0,hasC?4:7);
-  sc1.forEach(({c,mo})=>{
+  sc1.forEach(({c,mo,mp})=>{
     let why=hasC?`Shares ${sharedNames(c,C)} with ${chordName(C)}`:(p?`Shares ${sharedNames(c,p)||'no notes'} with ${chordName(p)}`:'In the key');
-    if(mo.t) why+=`, then ${mo.t}`; add(g1,[c],why+'.',{tag:'dia'});
+    if(!hasC&&p&&(wrap||!mo.t)){ if(mp.t) why+=`; ${chordName(p)} ${mp.t}`; } else if(mo.t) why+=`, then ${mo.t}`; add(g1,[c],why+'.',{tag:'dia'});
   });
+  if(!wrap) afterIdeas();
+
 
   // 2 color
   if(hasC){
@@ -2011,16 +2049,16 @@ function suggestions(idx){
   for(const m of BORROW_ORDER){ if(m===S.mode) continue;
     for(let d=0;d<7;d++){ const c=diatonic(m,d,sizes[0]); if(!c||corePcs(c).every(x=>sc.has(x))) continue;
       let s=0; if(hasC){ s+=shared(c,C).length*1.2+(c.root===C.root?3:0); } else if(p) s+=shared(c,p).length*.6;
-      s+=motion(c,nx).s*.8; s-=BORROW_ORDER.indexOf(m)*.15; cand.push({c,m,s}); } }
+      s+=motion(c,nx).s*.8*nw; if(!hasC&&p) s+=motion(p,c).s; s-=BORROW_ORDER.indexOf(m)*.15; cand.push({c,m,s}); } }
   cand.sort((a,b)=>b.s-a.s);
   const usedB=new Set();
   for(const {c,m} of cand){ if(g3.items.length>=5) break; const k=ckey(c); if(usedB.has(k)) continue; usedB.add(k);
-    const mo=motion(c,nx); const same=hasC&&c.root===C.root;
-    add(g3,[c],`${numeral(c)} from ${prettyNote(tonicName())} ${MODES[m].short}${same?'. Same root, new color':''}${mo.t?', '+mo.t:''}.`,{tag:'bor'}); }
+    const mo=wrap&&!hasC&&p?motion(p,c):motion(c,nx), same=hasC&&c.root===C.root, mt=mo.t?(wrap&&!hasC&&p?`; ${chordName(p)} ${mo.t}`:', '+mo.t):'';
+    add(g3,[c],`${numeral(c)} from ${prettyNote(tonicName())} ${MODES[m].short}${same?'. Same root, new color':''}${mt}.`,{tag:'bor'}); }
 
   // 4 lead into next
   if(nx){
-    const nn=chordName(nx), g4=mk('lead',`Lead into ${nn}`,'Chords that point straight at the next chord. Splits share this slot’s beats.');
+    const nn=chordName(nx), g4=mk('lead',wrap?`Lead back to ${nn} at the top`:`Lead into ${nn}`,wrap?`Chords that point back at bar 1, for when the chart loops. Splits share this slot’s beats.`:'Chords that point straight at the next chord. Splits share this slot’s beats.');
     const Vq=L===0?'':L===2?(isMinor(nx)?'7b9':'9'):'7';
     add(g4,[{root:mod(nx.root+7),q:Vq,bass:null}],`Dominant of ${nn}. The strongest pull there is.`,{tag:'sec'});
     add(g4,[{root:mod(nx.root-1),q:L===0?'dim':'dim7',bass:null}],`Leading-tone diminished. Climbs a half step into ${nn}.`,{tag:'sec'});
@@ -2794,6 +2832,7 @@ const SEARCH=[
   ['Show voice leading','voices moving','Under the chart','#vlToggle'],
   ['Quiz me','test ear training','Under the chart','#quizOn'],
   ['Name a section','verse chorus bridge song form','Song form','#formBar'],
+  ['Move or copy a section','drag reorder rearrange song form chorus verse','Song form: drag a chip, or a section’s name in the chart','#formBar'],
   ['Sound check','no sound silent audio iphone mute','Under the chart','#soundCheck'],
   ['I have chords','type my chords enter numbers numerals','Create','#doorIn'],
   ['Generate a progression','new random mood genre make','Create','#tab-gen'],
@@ -2978,7 +3017,8 @@ function renderChart(){
     if(row.fold){ const f=row.fold, o=secsNow[f.of], ids=chords.slice(f.i0,f.i1).map(c=>c.id).join(' ');
       html+=`<div class="sec-label">${esc(f.name)}</div><div class="fold-row" data-ids="${ids}"><span>Same as bar ${o.b0/L+1}${o.name&&o.name!==f.name?` (${esc(o.name)})`:''} · ${f.bars} bar${f.bars>1?'s':''} · bars ${f.b0/L+1}–${Math.ceil(f.b1/L)}</span><button type="button" class="btn small" data-unfold="${f.id}">Show</button></div>`; continue; }
     const r0=row.start*L, r1=(row.start+row.n)*L;
-    if(row.label||row.kc) html+=`<div class="sec-label">${row.label?esc(row.label):''}${row.kc?`<span class="kc-tag" title="Key change">Key: ${esc(keyLabel(row.kc))}</span>`:''}</div>`;
+    const rk=row.label?secsNow.findIndex(s=>s.b0===r0):-1;
+    if(row.label||row.kc) html+=`<div class="sec-label"${rk>=0?` data-sec="${rk}" title="Drag to move this section (hold Option/Alt to copy it)"`:''}>${row.label?esc(row.label):''}${row.kc?`<span class="kc-tag" title="Key change">Key: ${esc(keyLabel(row.kc))}</span>`:''}</div>`;
     html+=`<div class="row${S.showMel?' has-mel':''}${ar?' has-arr':''}${pp?' has-part':''}" data-rb="${rowBeats}" style="grid-template-columns:repeat(${rowBeats},minmax(0,1fr))">`;
     for(let b=0;b<row.n;b++){ const bi=row.start+b;
       html+=`<div class="bar${bi===nBars-1?' last':''}" style="grid-column:${b*L+1} / span ${L}${ar||pp?`;grid-row:1 / span ${span}`:''}"><span class="bn">${bi+1}</span><div class="ticks" style="grid-template-columns:repeat(${L},1fr)">${Array.from({length:L},(_,k)=>{ const cy=CYCLES[S.meter], gi=cy?cy.starts.indexOf(k):-1; return `<i class="${accents.has(k)?'g':''}"${gi>=0?` data-m="${cy.marks[gi]}"`:''}></i>`; }).join('')}</div></div>`; }
@@ -3063,6 +3103,24 @@ function repeatSection(k,where){
   melody.splice(at,0,...tune); melAnd.splice(at,0,...ands);
   if(!s.name) chords[s.i0].sec='Section';
   syncedTop=hist[hist.length-1]; sel=copy[0].id; commit(); toast(`Repeated ${s.name||'the section'} ${where==='end'?'at the end':'after itself'}`);
+}
+/* moves section k (or copies it) to just before or after section t, with its stretch of the tune */
+function moveSection(k,t,after,copy){
+  const secs=sectionsOf(), s=secs[k], d=secs[t]; if(!s||!d) return false;
+  let at=after?d.i1:d.i0, beat=after?d.b1:d.b0; if(!copy&&at>=s.i0&&at<=s.i1) return false;
+  pushHist(); const total=chords.reduce((a,c)=>a+c.beats,0), len=s.b1-s.b0, name=s.name||'Section';
+  while(melody.length<total) melody.push(null); while(melAnd.length<total) melAnd.push(null);
+  let piece=chords.slice(s.i0,s.i1), tune=melody.slice(s.b0,s.b1), ands=melAnd.slice(s.b0,s.b1);
+  if(copy) piece=piece.map(c=>{ const n={...c,id:uid()}; delete n.lock; return n; });
+  else { chords.splice(s.i0,s.i1-s.i0); melody.splice(s.b0,len); melAnd.splice(s.b0,len); if(at>s.i0){ at-=piece.length; beat-=len; } }
+  const head=piece[0]={...piece[0],sec:name}; if(at>0) head.br=true; else delete head.br;
+  /* the section now first in the chart, if it moved, no longer needs its line break */
+  chords.splice(at,0,...piece); melody.splice(beat,0,...tune); melAnd.splice(beat,0,...ands);
+  /* an unnamed opening section pushed down needs a name, or it would join the section now in front of it */
+  const nx=chords[at+piece.length]; if(nx&&!nx.sec&&at===0){ nx.sec='Section'; nx.br=true; }
+  if(chords[0]) delete chords[0].br;
+  syncedTop=hist[hist.length-1]; sel=head.id; commit();
+  toast(`${copy?'Copied':'Moved'} ${name} ${after?'after':'before'} ${d.name||'the start'}`); return true;
 }
 /* names a section starting at the selected chord's bar */
 function markSection(name){
@@ -4484,7 +4542,8 @@ function theoryName(C,it,P,N){
 /* one sentence built from this exact pair of chords and their neighbours */
 function explainIdea(C,it,P,N){
   const xs=it.chords, X=xs[0], last=xs[xs.length-1], nX=chordName(X);
-  const dest=N?`, then ${xs.length>1?chordName(last)+' ':'it '}${rootMove(last,N)}`:'';
+  const top=N&&chords.length>1&&chords.indexOf(C)===chords.length-1;
+  const dest=N?`, then ${xs.length>1?chordName(last)+' ':'it '}${rootMove(last,N)}${top?' at the top when the chart loops':''}`:'';
   if(xs.length>1){
     const same=xs.every(x=>x.root===X.root);
     if(same){
@@ -5428,10 +5487,13 @@ function boot(){
     audition(contextSeq(idx,x.it.chords)); };
   $('#addslot').onclick=()=>{ pushHist(); const c={id:uid(),root:null,q:'',bass:null,beats:barLen()}; chords.push(c); sel=c.id; commit(); };
   /* drag a chord to move it, Option/Alt-drop to copy it; the text box is rewritten from the new order. Touch needs a short press
-     first so a swipe across the chart still scrolls the page. Line breaks and section labels stay with the chords around them. */
+     first so a swipe across the chart still scrolls the page. Line breaks and section labels stay with the chords around them.
+     A copy dropped on the middle of a chord (or a blank) replaces it and keeps that slot's length, so the bars after it stay
+     put; dropped on an edge, it goes in between. Letting go away from the chart, or over the Play bar, drops nothing. Near the
+     top of the window or the Play bar, the page scrolls. */
   const rowsEl=$('#rows'); let drag=null, justDragged=false, rowsClick={};
-  const clearMarks=()=>rowsEl.querySelectorAll('.drop-before,.drop-after').forEach(x=>x.classList.remove('drop-before','drop-after'));
-  const cleanupDrag=d=>{ d.ghost?.remove(); clearMarks(); document.querySelectorAll('.slot.dragging').forEach(x=>x.classList.remove('dragging')); document.body.classList.remove('dragging-chord'); };
+  const clearMarks=()=>rowsEl.querySelectorAll('.drop-before,.drop-after,.drop-on').forEach(x=>x.classList.remove('drop-before','drop-after','drop-on'));
+  const cleanupDrag=d=>{ d.ghost?.remove(); clearMarks(); cancelAnimationFrame(d.scroll); d.scroll=0; document.querySelectorAll('.slot.dragging').forEach(x=>x.classList.remove('dragging')); document.body.classList.remove('dragging-chord'); };
   const moveGhost=(x,y)=>{ drag.ghost.style.transform=`translate(${x-drag.dx}px,${y-drag.dy}px) rotate(-2deg)`; };
   function startDrag(){
     drag.on=true; const r=drag.el.getBoundingClientRect(), g=drag.el.cloneNode(true);
@@ -5439,13 +5501,30 @@ function boot(){
     document.body.appendChild(g); drag.ghost=g; drag.dx=drag.x-r.left; drag.dy=drag.y-r.top;
     document.querySelectorAll(`.slot[data-id="${drag.id}"]`).forEach(x=>x.classList.add('dragging')); document.body.classList.add('dragging-chord'); moveGhost(drag.x,drag.y);
   }
-  function dropTarget(x,y){ let best=null,bd=Infinity;
-    rowsEl.querySelectorAll('.slot:not(.tie)').forEach(el=>{ const r=el.getBoundingClientRect(), dx=x<r.left?r.left-x:x>r.right?x-r.right:0, dy=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0, d=dx*dx+dy*dy*4;
-      if(d<bd){ bd=d; best={el,after:x>r.left+r.width/2}; } });
-    return best; }
+  const dockTop=()=>{ const dk=$('#dock'); return dk&&dk.offsetParent!==null?dk.getBoundingClientRect().top:innerHeight; };
+  /* where a drop at (x,y) lands: {el, after} to go between chords, {el, on} to replace one (copies only), or null */
+  function dropTarget(x,y,copy){
+    const box=rowsEl.getBoundingClientRect(); if(y>=dockTop()||x<box.left-24||x>box.right+24||y<box.top-24||y>box.bottom+24) return null;
+    let best=null,bd=Infinity;
+    rowsEl.querySelectorAll('.slot').forEach(el=>{ const r=el.getBoundingClientRect(), dx=x<r.left?r.left-x:x>r.right?x-r.right:0, dy=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0, d=dx*dx+dy*dy*4;
+      if(d<bd||(d===bd&&!el.classList.contains('tie'))){ bd=d; best={el,r}; } });
+    if(!best) return null; const {el,r}=best, f=(x-r.left)/r.width, tie=el.classList.contains('tie');
+    if(copy&&bd===0&&f>.22&&f<.78) return {el,on:true};
+    /* a carried-over strip's left edge is the chord's middle, not a gap, so it only takes drops after it */
+    return {el,after:tie||f>.5};
+  }
+  function markDrop(x,y,copy){ clearMarks(); const t=dropTarget(x,y,copy); drag.t=t; drag.copy=copy;
+    if(t) rowsEl.querySelectorAll(`.slot[data-id="${t.el.dataset.id}"]`).forEach(el=>{ if(t.on) el.classList.add('drop-on'); else if(el===t.el) el.classList.add(t.after?'drop-after':'drop-before'); });
+    drag.ghost.classList.toggle('copy',copy); drag.ghost.classList.toggle('nodrop',!t); }
+  /* scrolls the page while the pointer sits near the top of the window or just above the Play bar */
+  function edgeScroll(){ if(!drag||!drag.on) return; const top=dockTop(), v=drag.ly<60?-Math.min(20,(60-drag.ly)/3):drag.ly>top-60?Math.min(20,(drag.ly-(top-60))/3):0;
+    const y0=scrollY; if(v) scrollBy(0,v); if(scrollY!==y0){ markDrop(drag.lx,drag.ly,drag.copy); drag.scroll=requestAnimationFrame(edgeScroll); } else drag.scroll=0; }
   function finishDrag(d,copy){
-    cleanupDrag(d); const t=d.t; if(!t) return;
+    cleanupDrag(d); const t=d.t; if(!t){ toast('Dropped away from the chart: nothing changed'); return; }
     const from=chords.findIndex(c=>c.id===d.id), tgt=chords.findIndex(c=>c.id===t.el.dataset.id); if(from<0||tgt<0) return;
+    if(t.on){ if(from===tgt) return; const c=chords[from], o=chords[tgt]; pushHist();
+      const n={...c,id:o.id,beats:o.beats}; ['br','sec','kc','lock'].forEach(k=>{ if(o[k]!=null) n[k]=o[k]; else delete n[k]; });
+      chords[tgt]=n; sel=n.id; commit(); toast(`${real(c)?chordName(c):'A blank'} now fills bar ${Math.floor(chordStarts()[tgt]/barLen())+1}${real(o)?` in place of ${chordName(o)}`:''}`); return; }
     let to=tgt+(t.after?1:0); if(!copy&&(to===from||to===from+1)) return;
     pushHist(); const c=chords[from];
     if(copy){ const n={...c,id:uid()}; delete n.br; delete n.sec; delete n.kc; chords.splice(to,0,n); sel=n.id; }
@@ -5485,10 +5564,11 @@ function boot(){
   window.addEventListener('pointercancel',()=>{ if(!rsz) return; const r=rsz; rsz=null; rzTip.hidden=true; document.body.classList.remove('resizing-chord'); chords[r.i].beats=r.b0; if(chords[r.i+1]) chords[r.i+1].beats=r.n0; renderChart(); });
   window.addEventListener('pointermove',e=>{ if(!drag||e.pointerId!==drag.pid) return;
     if(!drag.on){ const m=Math.hypot(e.clientX-drag.x,e.clientY-drag.y); if(drag.touch){ if(m>8){ clearTimeout(drag.timer); drag=null; } return; } if(m<6) return; startDrag(); }
-    moveGhost(e.clientX,e.clientY); clearMarks(); const t=dropTarget(e.clientX,e.clientY); drag.t=t;
-    if(t) t.el.classList.add(t.after?'drop-after':'drop-before'); drag.ghost.classList.toggle('copy',e.altKey); });
-  window.addEventListener('pointerup',e=>{ if(!drag||e.pointerId!==drag.pid) return; const d=drag; drag=null; clearTimeout(d.timer);
-    if(!d.on) return; justDragged=true; setTimeout(()=>justDragged=false,0); finishDrag(d,e.altKey); });
+    moveGhost(e.clientX,e.clientY); drag.lx=e.clientX; drag.ly=e.clientY; markDrop(e.clientX,e.clientY,e.altKey); if(!drag.scroll) edgeScroll(); });
+  window.addEventListener('pointerup',e=>{ if(!drag||e.pointerId!==drag.pid) return; const d=drag; clearTimeout(d.timer);
+    if(!d.on){ drag=null; return; } markDrop(e.clientX,e.clientY,e.altKey); drag=null; justDragged=true; setTimeout(()=>justDragged=false,0); finishDrag(d,e.altKey); });
+  /* pressing or letting go of Option/Alt mid-drag switches between moving and copying without moving the mouse */
+  ['keydown','keyup'].forEach(ev=>document.addEventListener(ev,e=>{ if(e.key==='Alt'&&drag&&drag.on&&drag.lx!=null) markDrop(drag.lx,drag.ly,e.type==='keydown'); }));
   window.addEventListener('pointercancel',()=>{ if(!drag) return; clearTimeout(drag.timer); if(drag.on) cleanupDrag(drag); drag=null; });
   rowsEl.addEventListener('touchmove',e=>{ if(drag&&drag.on) e.preventDefault(); },{passive:false});
   rowsEl.addEventListener('contextmenu',e=>{ if(drag&&drag.touch) e.preventDefault(); });
@@ -5515,6 +5595,50 @@ function boot(){
     if(e.key==='Enter'){ e.preventDefault(); $('#formBar').querySelector(inp.dataset.fn==='mark'?'[data-fa="markname"]':'[data-fa="rename"]').click(); }
     if(e.key==='Escape'){ formEdit=null; renderFormBar(); } });
   $('#formBar').addEventListener('change',e=>{ if(e.target.id==='foldForm'){ S.foldForm=e.target.checked; unfolded.clear(); commit(); } if(e.target.id==='linkForm'){ S.linkForm=e.target.checked; save(); } });
+  /* drag a section, by its chip in Song form or its name in the chart, to move it before or after another section; hold
+     Option/Alt to copy it. Drops land in the chips or anywhere over the chart; a line shows where. */
+  { let sd=null, sdJust=false; const line=document.createElement('div'); line.className='sec-drop'; line.hidden=true; document.body.appendChild(line);
+    const end=()=>{ if(!sd) return; sd.ghost?.remove(); line.hidden=true; document.body.classList.remove('dragging-chord'); clearTimeout(sd.timer); sd=null; };
+    /* each section's box in the chart: the rows its chords are drawn in, label included */
+    const secBox=s=>{ const ids=new Set(chords.slice(s.i0,s.i1).map(c=>c.id)); let t=Infinity,b=-Infinity,l=Infinity,r=-Infinity;
+      document.querySelectorAll('#rows .slot,#rows .fold-row').forEach(el=>{ const mine=el.dataset.id?ids.has(el.dataset.id):(el.dataset.ids||'').split(' ').some(id=>ids.has(id)); if(!mine) return;
+        const rw=el.closest('.row')||el, lb=rw.previousElementSibling?.classList.contains('sec-label')?rw.previousElementSibling:rw, q=rw.getBoundingClientRect(); t=Math.min(t,lb.getBoundingClientRect().top); b=Math.max(b,q.bottom); l=Math.min(l,q.left); r=Math.max(r,q.right); });
+      return t<b?{top:t,bottom:b,left:l,right:r}:null; };
+    function target(x,y){
+      const secs=sectionsOf(), chipEls=[...document.querySelectorAll('#formBar [data-fk]')], fb=$('#formBar').getBoundingClientRect();
+      if(y>=fb.top-8&&y<=fb.bottom+8&&x>=fb.left&&x<=fb.right){ let best=null,bd=Infinity;
+        chipEls.forEach(el=>{ const r=el.getBoundingClientRect(), dx=x<r.left?r.left-x:x>r.right?x-r.right:0, dy=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0, d=dx*dx+dy*dy*4; if(d<bd){ bd=d; best={el,r}; } });
+        if(!best) return null; const after=x>best.r.left+best.r.width/2;
+        return {k:+best.el.dataset.fk,after,line:{left:(after?best.r.right+3:best.r.left-5),top:best.r.top,width:3,height:best.r.height}}; }
+      const box=rowsEl.getBoundingClientRect(), dt=$('#dock'), dkTop=dt&&dt.offsetParent!==null?dt.getBoundingClientRect().top:innerHeight;
+      if(y>=dkTop||x<box.left-24||x>box.right+24||y<box.top-40||y>box.bottom+24) return null;
+      let best=null,bd=Infinity; secs.forEach((s,k)=>{ const b=secBox(s); if(!b) return; const d=y<b.top?b.top-y:y>b.bottom?y-b.bottom:0; if(d<bd){ bd=d; best={k,b}; } });
+      if(!best) return null; const after=y>(best.b.top+best.b.bottom)/2;
+      return {k:best.k,after,line:{left:best.b.left,top:(after?best.b.bottom+1:best.b.top-6),width:best.b.right-best.b.left,height:4}}; }
+    function mark(x,y,copy){ const t=target(x,y); sd.t=t; sd.copy=copy; sd.ghost.classList.toggle('copy',copy); sd.ghost.classList.toggle('nodrop',!t);
+      const noop=t&&!copy&&(t.k===sd.k||(t.k===sd.k-1&&t.after)||(t.k===sd.k+1&&!t.after));
+      line.hidden=!t||noop; if(t&&!noop) Object.assign(line.style,{left:t.line.left+'px',top:t.line.top+'px',width:t.line.width+'px',height:t.line.height+'px'}); }
+    function start(){ sd.on=true; const r=sd.el.getBoundingClientRect(), g=document.createElement('div'); g.className='sec-ghost';
+      g.textContent=sd.name; document.body.appendChild(g); sd.ghost=g; sd.dx=sd.x-r.left; sd.dy=sd.y-r.top; document.body.classList.add('dragging-chord'); }
+    const down=e=>{ const el=e.target.closest('#formBar [data-fk],#rows .sec-label[data-sec]'); if(!el||e.button>0) return;
+      const k=+(el.dataset.fk??el.dataset.sec), s=sectionsOf()[k]; if(!s) return;
+      sd={k,el,name:s.name||'Untitled',x:e.clientX,y:e.clientY,pid:e.pointerId,on:false,touch:e.pointerType==='touch'};
+      if(sd.touch) sd.timer=setTimeout(()=>{ if(sd&&!sd.on){ start(); navigator.vibrate?.(10); } },260); };
+    $('#formBar').addEventListener('pointerdown',down); rowsEl.addEventListener('pointerdown',down);
+    window.addEventListener('pointermove',e=>{ if(!sd||e.pointerId!==sd.pid) return;
+      if(!sd.on){ const m=Math.hypot(e.clientX-sd.x,e.clientY-sd.y); if(sd.touch){ if(m>8){ clearTimeout(sd.timer); sd=null; } return; } if(m<6) return; start(); }
+      e.preventDefault(); sd.lx=e.clientX; sd.ly=e.clientY; sd.ghost.style.transform=`translate(${e.clientX+12}px,${e.clientY+10}px)`; mark(e.clientX,e.clientY,e.altKey); });
+    window.addEventListener('pointerup',e=>{ if(!sd||e.pointerId!==sd.pid) return; if(!sd.on){ end(); return; }
+      mark(e.clientX,e.clientY,e.altKey); const {k,t,copy}=sd; end(); sdJust=true; setTimeout(()=>sdJust=false,0);
+      if(!t){ toast('Dropped away from the chart: nothing changed'); return; } formEdit=null; moveSection(k,t.k,t.after,copy); });
+    window.addEventListener('pointercancel',end);
+    ['keydown','keyup'].forEach(ev=>document.addEventListener(ev,e=>{ if(e.key==='Alt'&&sd&&sd.on&&sd.lx!=null) mark(sd.lx,sd.ly,e.type==='keydown'); if(e.key==='Escape'&&sd&&sd.on) end(); }));
+    /* a drag isn't a click: the chip's menu stays shut */
+    $('#formBar').addEventListener('click',e=>{ if(sdJust){ e.stopPropagation(); e.preventDefault(); } },true);
+    $('#formBar').addEventListener('touchmove',e=>{ if(sd&&sd.on) e.preventDefault(); },{passive:false});
+    rowsEl.addEventListener('touchmove',e=>{ if(sd&&sd.on) e.preventDefault(); },{passive:false});
+    $('#formBar').addEventListener('contextmenu',e=>{ if(sd&&sd.touch) e.preventDefault(); });
+  }
   $('#rows').addEventListener('click',e=>{ const u=e.target.closest('[data-unfold]'); if(!u) return; e.stopPropagation(); unfolded.add(u.dataset.unfold); renderAll(); },true);
   $('#arrToggle').onclick=()=>{ if(arrOn()){ S.arrShow=false; arrSolo=null; } else { S.arrShow=true; if(!S.showMel){ S.showMel=true; if(!melSel&&chords.length) melSel={a:0,b:0}; } } commit(); renderMelPad(); };
   $('#arrBar').addEventListener('click',e=>{ const st=e.target.closest('[data-astyle]'), mu=e.target.closest('[data-amute]'), so=e.target.closest('[data-asolo]'), a=e.target.closest('[data-aact]');

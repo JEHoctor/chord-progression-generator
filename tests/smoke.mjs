@@ -1600,8 +1600,8 @@ async function feedbackRound2() {
   check('round 2: the Create tab for new chords is called Generate', r.tab === 'Generate', r.tab);
   const strip = await page.evaluate(async () => { chords = parseProg('G | C').chords; S.tonic = 7; renderAll(); markPlaying(chords[0].id); await new Promise(r => setTimeout(r, 600)); const el = document.querySelector('.slot.playing'), sh = getComputedStyle(el).boxShadow, ink = getComputedStyle(document.body).color; markPlaying(null); return { sh, ink }; });
   check('round 2: the playing strip is drawn in the ink colour, not the play green that matched Home', strip.sh.startsWith(strip.ink.replace('rgb(', 'rgb(')) && /-8px/.test(strip.sh), JSON.stringify(strip));
-  const empty = await page.evaluate(() => { chords = parseProg('G | B7 | Em | Cm | G | F#m7b5 | Am7 | Cmaj7 | Bm | D7 | F#dim7 | ?').chords; S.tonic = 7; S.mode = 'ionian'; renderAll(); const g = suggestions(11).groups.find(g => g.id === "dia"); return g.items.map(i => chordName(i.chords[0])).join(' '); });
-  check('round 2: an empty slot offers every chord of the key (Em7 after F♯°7 included)', empty.split(' ').length === 7 && /Em/.test(empty), empty);
+  const empty = await page.evaluate(() => { chords = parseProg('G | B7 | Em | Cm | G | F#m7b5 | Am7 | Cmaj7 | Bm | D7 | F#dim7 | ?').chords; S.tonic = 7; S.mode = 'ionian'; renderAll(); const gs = suggestions(11).groups.filter(g => g.id === 'dia' || g.id === 'after'); return [...new Set(gs.flatMap(g => g.items.map(i => chordName(i.chords[0]))))].filter(n => /^(G|A|B|C|D|E|F♯)m?(maj7|7|m7|m7♭5)?$/.test(n)).join(' '); });
+  check('round 2: an empty slot offers every chord of the key (Em7 after F♯°7 included)', new Set(empty.split(' ').map(n => n.match(/^[A-G]♯?/)[0])).size === 7 && /Em/.test(empty), empty);
   const noTune = await page.evaluate(() => { chords = parseProg('C | Am | F | G7').chords; melody = []; melAnd = []; S.tonic = 0; S.mode = 'ionian'; S.showMel = true; S.arrShow = true; const o = {};
     for (const k of ['close', 'barber', 'choir', 'drop2']) { S.arr = k; arrCache = {}; const ar = arrange(k); o[k] = ar.lines.every(l => l.length >= 4); }
     S.arr = 'close'; renderAll(); o.ghost = document.querySelectorAll('#rows .mcell .ghost').length; o.hint = /No tune yet/.test(document.querySelector('#arrBar').textContent); o.untouched = melody.length === 0;
@@ -1639,6 +1639,72 @@ async function keyCentresSuite() {
   check('centres: no page errors', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 }
+async function dragSuite() {
+  const { ctx, page } = await openPage({ viewport: { width: 1400, height: 900 } });
+  await page.goto(URL_);
+  const load = txt => page.evaluate(txt => { S.tonic = 0; S.mode = 'ionian'; S.showMel = false; S.foldForm = false; S.focus = true; applyFocus(); chords = parseProg(txt).chords; melody = []; melAnd = []; hist = []; sel = chords[0].id; formEdit = null; commit(); scrollTo(0, 0); }, txt);
+  const names = () => page.evaluate(() => chords.map(c => (real(c) ? chordName(c) : '?') + ':' + c.beats).join(' '));
+  const form = () => page.evaluate(() => sectionsOf().map(s => s.name || '-').join(','));
+  const box = sel => page.locator(sel).first().boundingBox();
+  /* a real mouse drag from the middle of one element to a fraction across another */
+  const drag = async (from, to, fx = .5, { alt = false, fy = .5 } = {}) => {
+    const a = await box(from), b = typeof to === 'string' ? await box(to) : to;
+    await page.mouse.move(a.x + 12, a.y + a.height / 2); await page.mouse.down();
+    await page.mouse.move(a.x + 30, a.y + a.height / 2 + 4, { steps: 3 });
+    if (alt) await page.keyboard.down('Alt');
+    await page.mouse.move(b.x + b.width * fx, b.y + b.height * fy, { steps: 8 }); await page.mouse.up();
+    if (alt) await page.keyboard.up('Alt');
+    await page.waitForTimeout(60);
+  };
+  const slot = i => `#rows .slot:not(.tie) >> nth=${i}`;
+  await load('C | Am | F | ?');
+  await drag(slot(0), slot(3), .5, { alt: true });
+  check('drag: Option/Alt-dropping a chord on a blank fills the blank, so later bars stay put', await names() === 'C:4 Am:4 F:4 C:4', await names());
+  await load('C | Am | F | ?');
+  await drag(slot(3), slot(1), .5, { alt: true });
+  check('drag: copying a blank onto a chord clears that chord, keeping its length', await names() === 'C:4 ?:4 F:4 ?:4', await names());
+  await load('C | Am | F | G');
+  await drag(slot(0), slot(2), .95, { alt: true });
+  check('drag: a copy dropped on a chord’s edge goes in between', await names() === 'C:4 Am:4 F:4 C:4 G:4', await names());
+  await load('C | Am | F | G');
+  await drag(slot(0), slot(2), .7);
+  check('drag: a plain drag still moves the chord', await names() === 'Am:4 F:4 C:4 G:4', await names());
+  await load('C | Am | F | G');
+  await drag(slot(0), { x: 1390, y: 10, width: 1, height: 1 });
+  check('drag: letting go away from the chart changes nothing', await names() === 'C:4 Am:4 F:4 G:4', await names());
+  await load('C | Am | F | G');
+  await drag(slot(0), '#dock', .5);
+  check('drag: letting go over the Play bar changes nothing', await names() === 'C:4 Am:4 F:4 G:4', await names());
+
+  const T = '[Verse] C | Am | F | G\n[Chorus] F | G | C | C\n[Bridge] Am | Em | F | G';
+  await load(T); await page.evaluate(() => { melody = [60]; commit(); });
+  await drag('#formBar [data-fk="0"]', '#formBar [data-fk="2"]', .95);
+  const moved = await page.evaluate(() => ({ f: sectionsOf().map(s => s.name).join(','), mel: melody.indexOf(60), open: !!formEdit }));
+  check('section drag: a Song form chip dragged past another moves the section, its tune going with it', moved.f === 'Chorus,Bridge,Verse' && moved.mel === 32 && !moved.open, JSON.stringify(moved));
+  await load(T);
+  await drag('#formBar [data-fk="2"]', '#formBar [data-fk="0"]', .05, { alt: true });
+  check('section drag: holding Option/Alt copies the section instead', await form() === 'Bridge,Verse,Chorus,Bridge', await form());
+  await load(T);
+  await drag('#rows .sec-label[data-sec="2"]', '#rows .row >> nth=0', .3, { fy: .2 });
+  check('section drag: a section’s name in the chart drags too, dropping over the chart', await form() === 'Bridge,Verse,Chorus', await form());
+  await load('C | Am | F | G\n[Chorus] F | G | C | C');
+  await drag('#formBar [data-fk="0"]', '#formBar [data-fk="1"]', .95);
+  check('section drag: an unnamed opening section that moves gets a name, so it stays its own section', await form() === 'Chorus,Section', await form());
+  await page.evaluate(() => undo()); check('section drag: one Undo puts it back', await form() === '-,Chorus', await form());
+
+  /* empty-slot ideas follow the chord before; bar 1 only matters for the loop back */
+  const ideas = await page.evaluate(() => { S.tonic = 0; S.mode = 'aeolian'; chords = parseProg('Cm7 | D7/C | Ab7 Gm | Dm7b5 G7 | ?').chords; sel = chords.at(-1).id; commit();
+    const { groups } = suggestions(chords.length - 1); return groups.map(g => ({ id: g.id, title: g.title, items: g.items.map(i => i.chords.map(chordName).join(' ')) })); });
+  check('gap ideas: the last slot leads with what follows G7 (resolution, deceptive)', ideas[0].id === 'after' && ideas[0].title === 'After G7' && ideas[0].items.includes('Cm7') && ideas[0].items.includes('A♭maj7'), JSON.stringify(ideas[0]));
+  const lead = ideas.find(g => g.id === 'lead');
+  check('gap ideas: leading back to bar 1 is labelled as the loop back and comes later', lead && /at the top/.test(lead.title) && ideas.indexOf(lead) > 1, lead && lead.title);
+  const all = ideas.flatMap(g => g.items);
+  check('gap ideas: every chord of the key is still offered somewhere', ['Cm7', 'Dm7♭5', 'E♭maj7', 'Fm7', 'Gm7', 'A♭maj7', 'B♭7'].every(c => all.includes(c)), all.join(' '));
+  const mid = await page.evaluate(() => { S.mode = 'ionian'; chords = parseProg('C | ? | F | G').chords; const { groups } = suggestions(1); return groups.map(g => g.id); });
+  check('gap ideas: mid-chart, the key’s chords ranked against both neighbours still come first', mid[0] === 'dia', mid.join(','));
+  await ctx.close();
+}
+
 async function searchSuite() {
   const { ctx, page } = await openPage({ viewport: { width: 1400, height: 900 } });
   await page.goto(URL_);
@@ -1956,6 +2022,7 @@ try {
   await feedbackRound2();
   await keyCentresSuite();
   await searchSuite();
+  await dragSuite();
   await menus();
   await layout();
   await hardening();
